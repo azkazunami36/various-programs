@@ -1,0 +1,93 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: rgb(188 231 255);
+}
+
+.Top-Pop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.Top-Message {
+    border: black solid 1.5px;
+    border-radius: 10px;
+    margin: 10px;
+    padding: 2.5px;
+    background: rgb(255 255 255);
+}
+
+.App-List {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    border: black solid 1.5px;
+    width: 90%;
+    min-height: 100px;
+    border-radius: 15px;
+    background: rgb(245 244 255);
+}
+
+.Apps {
+    display: flex;
+    justify-content: center;
+    border: black solid 1.5px;
+    padding: 5px;
+    border-radius: 15px;
+    margin: 5px;
+    width: 300px;
+    min-height: 150px;
+    background: rgb(255, 234, 172);
+}
+
+@keyframes In-Popups {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+        border-radius: 30px;
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+        border-radius: 0px;
+    }
+}
+
+@keyframes Out-Popups {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+        border-radius: 0px;
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.9);
+        border-radius: 30px;
+    }
+}
+
+.Fullsize-Popup {
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    position: fixed;
+    background: rgb(0, 0, 0);
+    z-index: 10;
+    opacity: 0;
+    transform: scale(0.9);
+    border-radius: 30px;
+    animation: Out-Popups 0.25s;
+}
+
+.Popup-Viewed {
+    animation: In-Popups 0.25s;
+    opacity: 1;
+    transform: scale(1);
+    border-radius: 0px;
+}
