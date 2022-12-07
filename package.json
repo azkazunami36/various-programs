@@ -1,8 +1,8 @@
 {
   "name": "sumwave-variousprograms",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "dependencies": {
-    "@discordjs/voice": "github:discordjs/voice",
+    "@discordjs/voice": "^0.14.0",
     "cors": "^2.8.5",
     "discord-api-types": "^0.37.21",
     "discord.js": "^14.7.1",

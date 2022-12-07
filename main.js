@@ -29,12 +29,12 @@
     /**
      * Discord.jsに関連して使用できるVoiceを利用する際に使用する。
      */
-    const { entersState, createAudioPlayer, createAudioResource, joinVoiceChannel, StreamType, AudioPlayerStatus } = require('@discordjs/voice'); //Discord.jsVoice
+    const { entersState, createAudioPlayer, createAudioResource, joinVoiceChannel, StreamType, AudioPlayerStatus } = require("@discordjs/voice"); //Discord.jsVoice
     /**
      * envファイルを生成します。
      * 既に存在している場合、このコードはスキップされます。
      */
-    if (!fs.existsSync(".env")) fs.readFileSync(".env", "TOKEN=");
+    if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=");
     /**
      * envファイルからデータを読み込み、process.envに格納します。
      */
