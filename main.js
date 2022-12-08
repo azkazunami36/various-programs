@@ -114,6 +114,14 @@
                 res.end(fs.readFileSync("sources/ytdlpage/stylesheet.css"));
                 break;
             }
+            case "/favicon.ico": {
+                res.status(204);
+                res.end();
+            }
+            default: {
+                res.status(400);
+                res.end();
+            }
         }
     });
     app.post("*", async (req, res) => {
@@ -122,10 +130,19 @@
              * YouTube動画の情報を取得し保存します。
              * クライアントにもRawデータを送信はしますが、用途は不明です。
              */
-            case "youtube-info": {
+            case "/youtube-info": {
                 let data = "";
                 req.on("data", async chunk => data =+ chunk );
                 req.on("end", async () => {});
+                break;
+            }
+            /**
+             * アプリ情報をjsonで送信します。
+             */
+            case "/applcation-info": {
+                res.header("Content-Type", "text/plain;charset=utf-8");
+                res.end(JSON.stringify(dbs.Apps));
+                break;
             }
         }
     });

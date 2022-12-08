@@ -1,45 +1,13 @@
-let app = [
-    {
-        name: "YouTube Downloader",
-        id: "youtubedownloader",
-        compact: "ytdl",
-        iconURL: "",
-        status: {
-            loaded: false,
-            viewed: false
-        }
-    },
-    {
-        name: "Discord Bot",
-        id: "discordbot",
-        compact: "ggbot",
-        iconURL: "",
-        status: {
-            loaded: false,
-            viewed: false
-        }
-    },
-    {
-        name: "FFmpeg Converter",
-        id: "ffmpegconverter",
-        compact: "ffcvr",
-        iconURL: "",
-        status: {
-            loaded: false,
-            viewed: false
-        }
-    },
-    {
-        name: "JSON Data Server",
-        id: "jsondataserver",
-        compact: "jsonds",
-        iconURL: "",
-        status: {
-            loaded: false,
-            viewed: false
-        }
-    }
-]
+const xhr = new XMLHttpRequest();
+let app
+xhr.open("POST", "http://" + location.hostname + ":" + location.port + "/applcation-info");
+xhr.send();
+xhr.onreadystatechange = () => {
+    if (xhr.readyState === 4 && xhr.status === 200) { //通信が完了し、成功をマークしていたら
+        console.log(xhr.responseText);
+        app = JSON.parse(xhr.responseText);
+    };
+};
 addEventListener("load", async () => {
     (await fetch("stylesheet.css"))
         .text().then(data => document.getElementsByTagName("style")[0].innerHTML = data);
