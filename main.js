@@ -23,9 +23,14 @@
      */
     const ytdl = require("ytdl-core");
     /**
+     * ネットなどで使用するクエリをjsonに変換する際に使用
+     * url=http... = {"url": "http..."}
+     */
+    const querystring = require("querystring");
+    /**
      * Discord.jsを実行するために使用する。
      */
-    const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
+    const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require("discord.js");
     /**
      * Discord.jsに関連して使用できるVoiceを利用する際に使用する。
      */
@@ -57,7 +62,7 @@
      * ポートを割り当てる。
      * env内にPORT情報が乗っている場合、そちらを使用する。
      */
-    const port = parseInt(process.env.PORT || "81", 10);
+    const port = parseInt(process.env.PORT || "80", 10);
     /**
      * 使用するポートを設定する。
      */
@@ -94,10 +99,35 @@
                 res.end(fs.readFileSync("sources/stylesheet.css"));
                 break;
             }
+            case "/ytdlindex.html": {
+                res.header("Content-Type", "text/plain;charset=utf-8");
+                res.end(fs.readFileSync("sources/ytdlpage/index.html"));
+                break;
+            }
+            case "/ytdlindex.js": {
+                res.header("Content-Type", "text/plain;charset=utf-8");
+                res.end(fs.readFileSync("sources/ytdlpage/index.js"));
+                break;
+            }
+            case "/ytdlstylesheet.css": {
+                res.header("Content-Type", "text/plain;charset=utf-8");
+                res.end(fs.readFileSync("sources/ytdlpage/stylesheet.css"));
+                break;
+            }
         }
     });
     app.post("*", async (req, res) => {
-
+        switch (req.url) {
+            /**
+             * YouTube動画の情報を取得し保存します。
+             * クライアントにもRawデータを送信はしますが、用途は不明です。
+             */
+            case "youtube-info": {
+                let data = "";
+                req.on("data", async chunk => data =+ chunk );
+                req.on("end", async () => {});
+            }
+        }
     });
 /**
  * Discord.js実行用関数
@@ -147,3 +177,5 @@ const Discord_JS = () => {
     });
     client.login(process.env.token);
 };
+
+const youtubedownload = () => {};

@@ -22,7 +22,7 @@ body {
     background: rgb(255 255 255);
 }
 
-.App-List {
+#App-List {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
@@ -41,8 +41,28 @@ body {
     border-radius: 15px;
     margin: 5px;
     width: 300px;
+    overflow: hidden;
     min-height: 150px;
     background: rgb(255, 234, 172);
+    position: relative;
+}
+
+.clickme {
+    background: rgba(0, 0, 0, 0);
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    position: absolute;
+    z-index: 2;
+}
+
+.clickme:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.clickme:active {
+    background: rgb(0, 0, 0, 0.2);
 }
 
 @keyframes In-Popups {
@@ -80,7 +100,7 @@ body {
     background: rgb(0, 0, 0);
     z-index: 10;
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0);
     border-radius: 30px;
     animation: Out-Popups 0.25s;
 }
@@ -90,4 +110,34 @@ body {
     opacity: 1;
     transform: scale(1);
     border-radius: 0px;
+}
+
+.Popup-header {
+    background: rgb(255, 255, 255);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.Popup-body {
+    width: 100%;
+    height: 100%;
+}
+
+.Popup-name {
+    font-size: 25px;
+    font-weight: 600;
+    margin: 10px;
+}
+
+.Popup-close {
+    font-size: 40px;
+    font-weight: 600;
+    margin: 10px;
+    position: relative;
+    overflow: hidden;
 }
