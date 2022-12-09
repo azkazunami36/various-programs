@@ -37,7 +37,7 @@ addEventListener("load", async () => {
         const clickme2 = document.createElement("div");
         clickme2.classList.add("clickme");
         const closeicon = document.createElement("div");
-        closeButton.innerHTML = "×";
+        closeicon.innerHTML = "×";
         const inscript = document.createElement("div");
         const instyle = document.createElement("div");
         const inbody = document.createElement("div");

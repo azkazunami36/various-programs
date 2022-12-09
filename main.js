@@ -1,151 +1,152 @@
-    /**
-     * GET、POSTを使用する。
-     */
-    const express = require("express");
-    /**
-     * コンソールの詳細な表示のために使用する。
-     */
-    const readline = require("readline");
-    /**
-     * ファイルの読み書きに使用する。
-     */
-    const fs = require("fs");
-    /**
-     * FFmpegで動画を変換するために使用する。
-     */
-    const ffmpeg = require("fluent-ffmpeg");
-    /**
-     * なんで使うかを忘れた。
-     */
-    const cors = require("cors");
-    /**
-     * YouTubeの動画データ等を入手する際に使用する。
-     */
-    const ytdl = require("ytdl-core");
-    /**
-     * ネットなどで使用するクエリをjsonに変換する際に使用
-     * url=http... = {"url": "http..."}
-     */
-    const querystring = require("querystring");
-    /**
-     * Discord.jsを実行するために使用する。
-     */
-    const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require("discord.js");
-    /**
-     * Discord.jsに関連して使用できるVoiceを利用する際に使用する。
-     */
-    const { entersState, createAudioPlayer, createAudioResource, joinVoiceChannel, StreamType, AudioPlayerStatus } = require("@discordjs/voice"); //Discord.jsVoice
-    /**
-     * envファイルを生成します。
-     * 既に存在している場合、このコードはスキップされます。
-     */
-    if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=");
-    /**
-     * envファイルからデータを読み込み、process.envに格納します。
-     */
-    require("dotenv").config();
-    /**
-     * 最初にjsonファイルを生成します。
-     * 既に存在している場合、このコードはスキップされます。
-     */
-    if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}");
-    /**
-     * データを格納しています。
-     * このjson内を操作する際は、プログラムを終了してから変更を加えてください。
-     */
-    const dbs = JSON.parse(fs.readFileSync("data.json"));
-    /**
-     * Appです(？)
-     */
-    const app = express();
-    /**
-     * ポートを割り当てる。
-     * env内にPORT情報が乗っている場合、そちらを使用する。
-     */
-    const port = parseInt(process.env.PORT || "80", 10);
-    /**
-     * 使用するポートを設定する。
-     */
-    app.listen(port, async () => {
-        let address = "http://localhost";
-        if (port != "80") address += ":" + port;
-        console.info("ポート" + port + "でWebを公開しました！ " + address + " にアクセスして、操作を開始します！");
-    });
-    /**
-     * なんでこれを使うかを忘れた。
-     */
-    app.use(cors());
-    /**
-     * GET、POSTのデータをすべてここで受信する。
-     * GET、POSTのパス等はif等で判断する。
-     */
-    app.get("*", async (req, res) => {
-        console.log(req.url)
-        switch (req.url) {
-            case "/": {
-                res.header("Content-Type", "text/html;charset=utf-8");
-                res.end(fs.readFileSync("sources/index.html"));
-            }
-            case "/index.html": {
-                break;
-            }
-            case "/index.js": {
-                res.header("Content-Type", "text/plain;charset=utf-8");
-                res.end(fs.readFileSync("sources/index.js"));
-                break;
-            }
-            case "/stylesheet.css": {
-                res.header("Content-Type", "text/plain;charset=utf-8");
-                res.end(fs.readFileSync("sources/stylesheet.css"));
-                break;
-            }
-            case "/ytdlindex.html": {
-                res.header("Content-Type", "text/plain;charset=utf-8");
-                res.end(fs.readFileSync("sources/ytdlpage/index.html"));
-                break;
-            }
-            case "/ytdlindex.js": {
-                res.header("Content-Type", "text/plain;charset=utf-8");
-                res.end(fs.readFileSync("sources/ytdlpage/index.js"));
-                break;
-            }
-            case "/ytdlstylesheet.css": {
-                res.header("Content-Type", "text/plain;charset=utf-8");
-                res.end(fs.readFileSync("sources/ytdlpage/stylesheet.css"));
-                break;
-            }
-            case "/favicon.ico": {
-                res.status(204);
-                res.end();
-            }
-            default: {
-                res.status(400);
-                res.end();
-            }
+/**
+ * GET、POSTを使用する。
+ */
+const express = require("express");
+/**
+ * コンソールの詳細な表示のために使用する。
+ */
+const readline = require("readline");
+/**
+ * ファイルの読み書きに使用する。
+ */
+const fs = require("fs");
+/**
+ * FFmpegで動画を変換するために使用する。
+ */
+const ffmpeg = require("fluent-ffmpeg");
+/**
+ * なんで使うかを忘れた。
+ */
+const cors = require("cors");
+/**
+ * YouTubeの動画データ等を入手する際に使用する。
+ */
+const ytdl = require("ytdl-core");
+/**
+ * ネットなどで使用するクエリをjsonに変換する際に使用
+ * url=http... = {"url": "http..."}
+ */
+const querystring = require("querystring");
+/**
+ * Discord.jsを実行するために使用する。
+ */
+const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require("discord.js");
+/**
+ * Discord.jsに関連して使用できるVoiceを利用する際に使用する。
+ */
+const { entersState, createAudioPlayer, createAudioResource, joinVoiceChannel, StreamType, AudioPlayerStatus } = require("@discordjs/voice"); //Discord.jsVoice
+/**
+ * envファイルを生成します。
+ * 既に存在している場合、このコードはスキップされます。
+ */
+if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=");
+/**
+ * envファイルからデータを読み込み、process.envに格納します。
+ */
+require("dotenv").config();
+/**
+ * 最初にjsonファイルを生成します。
+ * 既に存在している場合、このコードはスキップされます。
+ */
+if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}");
+/**
+ * データを格納しています。
+ * このjson内を操作する際は、プログラムを終了してから変更を加えてください。
+ */
+const dtbs = JSON.parse(fs.readFileSync("data.json"));
+/**
+ * Appです(？)
+ */
+const app = express();
+/**
+ * ポートを割り当てる。
+ * env内にPORT情報が乗っている場合、そちらを使用する。
+ */
+const port = parseInt(process.env.PORT || "80", 10);
+/**
+ * 使用するポートを設定する。
+ */
+app.listen(port, async () => {
+    let address = "http://localhost";
+    if (port != "80") address += ":" + port;
+    console.info("ポート" + port + "でWebを公開しました！ " + address + " にアクセスして、操作を開始します！");
+});
+/**
+ * なんでこれを使うかを忘れた。
+ */
+app.use(cors());
+/**
+ * GET、POSTのデータをすべてここで受信する。
+ * GET、POSTのパス等はif等で判断する。
+ */
+app.get("*", async (req, res) => {
+    console.log("Get :", req.url);
+    switch (req.url) {
+        case "/": {
+            res.header("Content-Type", "text/html;charset=utf-8");
+            res.end(fs.readFileSync("sources/index.html"));
         }
-    });
-    app.post("*", async (req, res) => {
-        switch (req.url) {
-            /**
-             * YouTube動画の情報を取得し保存します。
-             * クライアントにもRawデータを送信はしますが、用途は不明です。
-             */
-            case "/youtube-info": {
-                let data = "";
-                req.on("data", async chunk => data =+ chunk );
-                req.on("end", async () => {});
-                break;
-            }
-            /**
-             * アプリ情報をjsonで送信します。
-             */
-            case "/applcation-info": {
-                res.header("Content-Type", "text/plain;charset=utf-8");
-                res.end(JSON.stringify(dbs.Apps));
-                break;
-            }
+        case "/index.html": {
+            break;
         }
-    });
+        case "/index.js": {
+            res.header("Content-Type", "text/plain;charset=utf-8");
+            res.end(fs.readFileSync("sources/index.js"));
+            break;
+        }
+        case "/stylesheet.css": {
+            res.header("Content-Type", "text/plain;charset=utf-8");
+            res.end(fs.readFileSync("sources/stylesheet.css"));
+            break;
+        }
+        case "/ytdlindex.html": {
+            res.header("Content-Type", "text/plain;charset=utf-8");
+            res.end(fs.readFileSync("sources/ytdlpage/index.html"));
+            break;
+        }
+        case "/ytdlindex.js": {
+            res.header("Content-Type", "text/plain;charset=utf-8");
+            res.end(fs.readFileSync("sources/ytdlpage/index.js"));
+            break;
+        }
+        case "/ytdlstylesheet.css": {
+            res.header("Content-Type", "text/plain;charset=utf-8");
+            res.end(fs.readFileSync("sources/ytdlpage/stylesheet.css"));
+            break;
+        }
+        case "/favicon.ico": {
+            res.status(204);
+            res.end();
+        }
+        default: {
+            res.status(400);
+            res.end();
+        }
+    }
+});
+app.post("*", async (req, res) => {
+    console.log("Post:", req.url);
+    switch (req.url) {
+        /**
+         * YouTube動画の情報を取得し保存します。
+         * クライアントにもRawデータを送信はしますが、用途は不明です。
+         */
+        case "/youtube-info": {
+            let data = "";
+            req.on("data", async chunk => data = + chunk);
+            req.on("end", async () => { });
+            break;
+        }
+        /**
+         * アプリ情報をjsonで送信します。
+         */
+        case "/applcation-info": {
+            res.header("Content-Type", "text/plain;charset=utf-8");
+            res.end(JSON.stringify(dtbs.Apps));
+            break;
+        }
+    }
+});
 /**
  * Discord.js実行用関数
  */
@@ -195,4 +196,4 @@ const Discord_JS = () => {
     client.login(process.env.token);
 };
 
-const youtubedownload = () => {};
+const youtubedownload = () => { };
