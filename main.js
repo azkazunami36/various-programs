@@ -28,6 +28,11 @@ const ytdl = require("ytdl-core");
  */
 const querystring = require("querystring");
 /**
+ * 主にデータを取得する際に使用する。
+ * 予定ではYouTubeのサムネイルを取得する。
+ */
+const axios = require("axios");
+/**
  * Discord.jsを実行するために使用する。
  */
 const {
@@ -62,10 +67,15 @@ require("dotenv").config();
  */
 if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}");
 /**
+ * cacheフォルダを生成します。
+ * 既に存在している場合。このコードはスキップされます。
+ */
+if (!fs.existsSync("cache/")) fs.mkdirSync("cache");
+/**
  * データを格納しています。
  * このjson内を操作する際は、プログラムを終了してから変更を加えてください。
  */
-const dtbs = JSON.parse(fs.readFileSync("data.json"));
+const dtbs = require("./data.json");
 /**
  * Appです(？)
  */
@@ -93,48 +103,37 @@ app.use(cors());
  */
 app.get("*", async (req, res) => {
     console.log("Get :", req.url);
-    switch (req.url) {
-        case "/": {
-            res.header("Content-Type", "text/html;charset=utf-8");
-            res.end(fs.readFileSync("sources/index.html"));
-        }
-        case "/index.html": {
-            break;
-        }
-        case "/index.js": {
-            res.header("Content-Type", "text/plain;charset=utf-8");
-            res.end(fs.readFileSync("sources/index.js"));
-            break;
-        }
-        case "/stylesheet.css": {
-            res.header("Content-Type", "text/plain;charset=utf-8");
-            res.end(fs.readFileSync("sources/stylesheet.css"));
-            break;
-        }
-        case "/ytdlindex.html": {
-            res.header("Content-Type", "text/plain;charset=utf-8");
-            res.end(fs.readFileSync("sources/ytdlpage/index.html"));
-            break;
-        }
-        case "/ytdlindex.js": {
-            res.header("Content-Type", "text/plain;charset=utf-8");
-            res.end(fs.readFileSync("sources/ytdlpage/index.js"));
-            break;
-        }
-        case "/ytdlstylesheet.css": {
-            res.header("Content-Type", "text/plain;charset=utf-8");
-            res.end(fs.readFileSync("sources/ytdlpage/stylesheet.css"));
-            break;
-        }
-        case "/favicon.ico": {
-            res.status(204);
-            res.end();
-        }
-        default: {
+    if (req.url == "/" || req.url == "/sources/index.html") {
+        res.header("Content-Type", "text/html;charset=utf-8");
+        res.end(fs.readFileSync("sources/index.html"));
+    } else if (req.url == "/sources/ytdl/" || req.url == "/sources/ytdl/index.html") {
+        res.header("Content-Type", "text/html;charset=utf-8");
+        res.end(fs.readFileSync("sources/ytdl/index.html"));
+    } else if (req.url == "/favicon.ico") {
+        res.status(204);
+        res.end();
+    } else if (req.url.match(/\/sources\/*/)) {
+        const filelink = "sources/" + String(req.url).split("/sources/")[1];
+        if (fs.existsSync(filelink)) {
+            try {
+                res.header("Content-Type", "text/plain;charset=utf-8");
+                const file = fs.readFileSync(filelink);
+                res.end(file);
+            } catch (e) { res.status(404); res.end(); }
+        } else {
             res.status(400);
             res.end();
-        }
-    }
+        };
+    } else if (req.url.match(/\/ytimage\/*/)) {
+        const videoid = String(req.url).split("/ytimage/")[1];
+        res.header("Content-Type", "image/jpeg");
+    } else if (false) {
+    } else if (false) {
+    } else {
+        console.log("404 : " + req.url)
+        res.status(404);
+        res.end();
+    };
 });
 app.post("*", async (req, res) => {
     console.log("Post:", req.url);
@@ -151,10 +150,15 @@ app.post("*", async (req, res) => {
                 let VID = data;
                 res.header("Content-Type", "text/plain;charset=utf-8");
                 if (ytdl.validateURL(data) || ytdl.validateID(data)) {
-                    if (ytdl.validateURL(VID)) ytdl.getVideoID(VID);
+                    if (ytdl.validateURL(VID)) VID = ytdl.getVideoID(VID);
+                    console.log(VID)
                     if (!dtbs.ytdlRawInfoData) dtbs.ytdlRawInfoData = {};
                     if (!dtbs.ytdlRawInfoData[VID]) await ytdl.getInfo(VID).then(async info => {
                         dtbs.ytdlRawInfoData[VID] = info.videoDetails;
+                        const thumbnails = info.videoDetails.thumbnails;
+                        const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" });
+                        if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail");
+                        fs.writeFileSync("cache/YouTubeThumbnail/" + VID + ".jpg", new Buffer.from(imagedata.data), "binary");
                     });
                     res.end(JSON.stringify(dtbs.ytdlRawInfoData[VID]));
                 } else {
@@ -211,10 +215,10 @@ const Discord_JS = () => {
         console.log(client.user.username + "の準備が完了しました！");
     });
     client.on("messageCreate", message => {
-        for (let for0 = 0; dbs.replys.length != for0; for0++) {
-            for (let for1 = 0; dbs.replys[for0].input.length != for1; for1++) {
-                if (message.content.match(dbs.replys[for0].input[for1])) {
-                    message.channel.send(dbs.replys[for0].output[Math.floor(Math.random() * dbs.replys[for0].output.length)]);
+        for (let for0 = 0; dtbs.replys.length != for0; for0++) {
+            for (let for1 = 0; dtbs.replys[for0].input.length != for1; for1++) {
+                if (message.content.match(dtbs.replys[for0].input[for1])) {
+                    message.channel.send(dtbs.replys[for0].output[Math.floor(Math.random() * dtbs.replys[for0].output.length)]);
                 };
             };
         };

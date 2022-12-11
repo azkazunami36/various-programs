@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "dependencies": {
     "@discordjs/voice": "^0.14.0",
+    "axios": "^1.2.1",
     "cors": "^2.8.5",
     "discord-api-types": "^0.37.21",
     "discord.js": "^14.7.1",

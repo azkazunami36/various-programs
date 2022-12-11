@@ -1,0 +1,80 @@
+body {
+    background: rgb(11, 43, 104);
+}
+
+#URLBox {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    padding: 5px;
+    font-size: 20px;
+    font-weight: 600;
+    border: 0;
+}
+
+.URL {
+    margin: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.URLBox {
+    width: 75%;
+    min-width: 65px;
+    height: 41px;
+    border-radius: 10px;
+}
+
+.BoxEnterButton {
+    width: 65px;
+    min-width: 65px;
+    height: 41px;
+    border-radius: 10px;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
+    margin-left: 10px;
+    font-size: 20px;
+    background: rgb(255, 255, 255);
+    font-weight: 600;
+}
+
+.BlackBack {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 20;
+    opacity: 0;
+    transform: scale(0);
+    animation: Out-Fade 0.25s;
+}
+
+@keyframes In-Fade {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes Out-Fade {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+.Blacked { 
+    transform: scale(1);
+    opacity: 1;
+    animation: In-Fade 0.25s;
+}

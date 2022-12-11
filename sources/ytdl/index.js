@@ -1,6 +1,8 @@
 const ytURLSend = document.getElementById("ytURLSend");
 ytURLSend.addEventListener("click", e => {
     const ytURLBox = document.getElementById("ytURLBox");
+    const ytBlackBackground = document.getElementById("ytBlackBackground");
+    ytBlackBackground.classList.add("yBlacked");
     const url = ytURLBox.value;
     console.log(url);
     const xhr = new XMLHttpRequest();
