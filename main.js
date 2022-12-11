@@ -133,8 +133,22 @@ app.post("*", async (req, res) => {
          */
         case "/youtube-info": {
             let data = "";
-            req.on("data", async chunk => data = + chunk);
-            req.on("end", async () => { });
+            req.on("data", async chunk => data += chunk);
+            req.on("end", async () => {
+                console.log(data);
+                let VID = data;
+                res.header("Content-Type", "text/plain;charset=utf-8");
+                if (ytdl.validateURL(data) || ytdl.validateID(data)) {
+                    if (ytdl.validateURL(VID)) ytdl.getVideoID(VID);
+                    if (!dtbs.ytdlRawInfoData) dtbs.ytdlRawInfoData = {};
+                    if (!dtbs.ytdlRawInfoData[VID]) await ytdl.getInfo(VID).then(async info => {
+                        dtbs.ytdlRawInfoData[VID] = info.videoDetails;
+                    });
+                    res.end(JSON.stringify(dtbs.ytdlRawInfoData[VID]));
+                } else {
+                    res.end(JSON.stringify({ error: "不明" }));
+                };
+            });
             break;
         }
         /**
@@ -195,5 +209,3 @@ const Discord_JS = () => {
     });
     client.login(process.env.token);
 };
-
-const youtubedownload = () => { };
