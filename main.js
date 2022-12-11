@@ -30,11 +30,23 @@ const querystring = require("querystring");
 /**
  * Discord.jsを実行するために使用する。
  */
-const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require("discord.js");
+const {
+    Client,
+    GatewayIntentBits,
+    Partials,
+    EmbedBuilder
+} = require("discord.js");
 /**
  * Discord.jsに関連して使用できるVoiceを利用する際に使用する。
  */
-const { entersState, createAudioPlayer, createAudioResource, joinVoiceChannel, StreamType, AudioPlayerStatus } = require("@discordjs/voice"); //Discord.jsVoice
+const {
+    entersState,
+    createAudioPlayer,
+    createAudioResource,
+    joinVoiceChannel,
+    StreamType,
+    AudioPlayerStatus
+} = require("@discordjs/voice"); //Discord.jsVoice
 /**
  * envファイルを生成します。
  * 既に存在している場合、このコードはスキップされます。
