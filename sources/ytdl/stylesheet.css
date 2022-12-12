@@ -48,11 +48,12 @@ body {
     height: 100%;
     position: absolute;
     top: 0;
+    left: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: 20;
     opacity: 0;
     transform: scale(0);
-    animation: Out-Fade 0.25s;
+    animation: Out-Fade .25s;
 }
 
 @keyframes In-Fade {
@@ -76,5 +77,54 @@ body {
 .Blacked { 
     transform: scale(1);
     opacity: 1;
-    animation: In-Fade 0.25s;
+    animation: In-Fade .25s;
+}
+
+@keyframes In-Popup {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes Out-Popup {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {opacity: 0;
+        transform: scale(0.9);
+    }
+}
+
+.infoPopup {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: scale(0);
+    opacity: 0;
+    z-index: 25;
+    animation: Out-Popup .35s;
+}
+
+.infoPopuped {
+    transform: scale(1);
+    opacity: 1;
+    animation: In-Popup .35s;
+}
+
+.infoPopupWindow {
+    width: 75%;
+    height: 75%;
+    background: white;
+    border-radius: 15px;
 }

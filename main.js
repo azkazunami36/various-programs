@@ -119,14 +119,21 @@ app.get("*", async (req, res) => {
                 res.header("Content-Type", "text/plain;charset=utf-8");
                 const file = fs.readFileSync(filelink);
                 res.end(file);
-            } catch (e) { res.status(404); res.end(); }
+            } catch (e) { res.status(404); res.end(); };
         } else {
             res.status(400);
             res.end();
         };
     } else if (req.url.match(/\/ytimage\/*/)) {
         const videoid = String(req.url).split("/ytimage/")[1];
-        res.header("Content-Type", "image/jpeg");
+        const thumbnailpath = "cache/YouTubeThumbnail/" + videoid + ".jpg";
+        if (fs.existsSync(thumbnailpath)) {
+            res.header("Content-Type", "image/jpeg");
+            res.end(fs.readFileSync(thumbnailpath));
+        } else {
+            res.status(400);
+            res.end();
+        };
     } else if (false) {
     } else if (false) {
     } else {
@@ -147,20 +154,20 @@ app.post("*", async (req, res) => {
             req.on("data", async chunk => data += chunk);
             req.on("end", async () => {
                 console.log(data);
-                let VID = data;
+                let VideoID = data;
                 res.header("Content-Type", "text/plain;charset=utf-8");
                 if (ytdl.validateURL(data) || ytdl.validateID(data)) {
-                    if (ytdl.validateURL(VID)) VID = ytdl.getVideoID(VID);
-                    console.log(VID)
+                    if (ytdl.validateURL(VideoID)) VideoID = ytdl.getVideoID(VideoID);
+                    console.log(VideoID)
                     if (!dtbs.ytdlRawInfoData) dtbs.ytdlRawInfoData = {};
-                    if (!dtbs.ytdlRawInfoData[VID]) await ytdl.getInfo(VID).then(async info => {
-                        dtbs.ytdlRawInfoData[VID] = info.videoDetails;
+                    if (!dtbs.ytdlRawInfoData[VideoID]) await ytdl.getInfo(VideoID).then(async info => {
+                        dtbs.ytdlRawInfoData[VideoID] = info.videoDetails;
                         const thumbnails = info.videoDetails.thumbnails;
                         const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" });
                         if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail");
-                        fs.writeFileSync("cache/YouTubeThumbnail/" + VID + ".jpg", new Buffer.from(imagedata.data), "binary");
+                        fs.writeFileSync("cache/YouTubeThumbnail/" + VideoID + ".jpg", new Buffer.from(imagedata.data), "binary");
                     });
-                    res.end(JSON.stringify(dtbs.ytdlRawInfoData[VID]));
+                    res.end(JSON.stringify(dtbs.ytdlRawInfoData[VideoID]));
                 } else {
                     res.end(JSON.stringify({ error: "不明" }));
                 };
