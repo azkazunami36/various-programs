@@ -33,6 +33,10 @@ const querystring = require("querystring");
  */
 const axios = require("axios");
 /**
+ * uuidを作成するために使用する。
+ */
+const uuid = require("uuid");
+/**
  * Discord.jsを実行するために使用する。
  */
 const {
@@ -125,8 +129,8 @@ app.get("*", async (req, res) => {
             res.end();
         };
     } else if (req.url.match(/\/ytimage\/*/)) {
-        const videoid = String(req.url).split("/ytimage/")[1];
-        const thumbnailpath = "cache/YouTubeThumbnail/" + videoid + ".jpg";
+        const videoId = String(req.url).split("/ytimage/")[1];
+        const thumbnailpath = "cache/YouTubeThumbnail/" + videoId + ".jpg";
         if (fs.existsSync(thumbnailpath)) {
             res.header("Content-Type", "image/jpeg");
             res.end(fs.readFileSync(thumbnailpath));
@@ -137,7 +141,7 @@ app.get("*", async (req, res) => {
     } else if (false) {
     } else if (false) {
     } else {
-        console.log("404 : " + req.url)
+        console.log("404 : " + req.url);
         res.status(404);
         res.end();
     };
@@ -154,23 +158,77 @@ app.post("*", async (req, res) => {
             req.on("data", async chunk => data += chunk);
             req.on("end", async () => {
                 console.log(data);
-                let VideoID = data;
-                res.header("Content-Type", "text/plain;charset=utf-8");
-                if (ytdl.validateURL(data) || ytdl.validateID(data)) {
-                    if (ytdl.validateURL(VideoID)) VideoID = ytdl.getVideoID(VideoID);
-                    console.log(VideoID)
-                    if (!dtbs.ytdlRawInfoData) dtbs.ytdlRawInfoData = {};
-                    if (!dtbs.ytdlRawInfoData[VideoID]) await ytdl.getInfo(VideoID).then(async info => {
-                        dtbs.ytdlRawInfoData[VideoID] = info.videoDetails;
-                        const thumbnails = info.videoDetails.thumbnails;
-                        const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" });
-                        if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail");
-                        fs.writeFileSync("cache/YouTubeThumbnail/" + VideoID + ".jpg", new Buffer.from(imagedata.data), "binary");
-                    });
-                    res.end(JSON.stringify(dtbs.ytdlRawInfoData[VideoID]));
-                } else {
-                    res.end(JSON.stringify({ error: "不明" }));
+                const videolist = JSON.parse(data);
+                const videoinfos = [];
+                for (let i = 0; i != videolist.length; i++) {
+                    let videoId = videolist[i];
+                    res.header("Content-Type", "text/plain;charset=utf-8");
+                    if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) {
+                        if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId);
+                        console.log(videoId);
+                        if (!dtbs.ytdlRawInfoData) { console.log(true, "ytdlRawInfoData"); dtbs.ytdlRawInfoData = {}; };
+                        if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
+                            console.log((info.videoDetails) ? true : false);
+                            dtbs.ytdlRawInfoData[videoId] = info.videoDetails;
+                            saveingJson();
+                            const thumbnails = info.videoDetails.thumbnails;
+                            const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" });
+                            if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail");
+                            fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary")
+                            const videoDownload = ytdl(videoId, { filter: "videoonly", quality: "highest" });
+                            let starttime = {};
+                            videoDownload.once("response", () => { starttime.video = Date.now(); });
+                            videoDownload.on("progress", (chunkLength, downloaded, total) => {
+                                const floatDownloaded = downloaded / total;
+                                const downloadedSeconds = (Date.now() - starttime.video) / 1000;
+                                //推定残り時間
+                                const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds;
+                                //パーセント
+                                const percent = (floatDownloaded * 100).toFixed();
+                                //ダウンロード済みサイズ
+                                const mbyte = mb(downloaded);
+                                //最大ダウンロード量
+                                const totalMbyte = mb(total);
+                                //推定残り時間
+                                const elapsedTime = time(downloadedSeconds);
+                            });
+                            videoDownload.on("error", async err => { console.log("error"); });
+                            videoDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingVideo/" + id + ".mp4"));
+                            videoDownload.on("end", () => {
+                                if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl");
+                                fs.createReadStream("cache/YouTubeDownloadingVideo/" + id + ".mp4")
+                                    .pipe(fs.createWriteStream("cache/YTDl/" + id + ".mp4"));
+                            });
+                            const audioDownload = ytdl(videoId, { filter: "audioonly", quality: "highest" });
+                            audioDownload.once("response", () => { starttime.audio = Date.now(); });
+                            audioDownload.on("progress", (chunkLength, downloaded, total) => {
+                                const floatDownloaded = downloaded / total;
+                                const downloadedSeconds = (Date.now() - starttime.audio) / 1000;
+                                //推定残り時間
+                                const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds;
+                                //パーセント
+                                const percent = (floatDownloaded * 100).toFixed();
+                                //ダウンロード済みサイズ
+                                const mbyte = mb(downloaded);
+                                //最大ダウンロード量
+                                const totalMbyte = mb(total);
+                                //推定残り時間
+                                const elapsedTime = time(downloadedSeconds);
+                            });
+                            audioDownload.on("error", async err => { console.log("error"); });
+                            audioDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingAudio/" + id + ".mp3"));
+                            audioDownload.on("end", () => {
+                                if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl");
+                                fs.createReadStream("cache/YouTubeDownloadingAudio/" + id + ".mp3")
+                                    .pipe(fs.createWriteStream("cache/YTDl/" + id + ".mp3"));
+                            });
+                        }).catch((e) => { console.log(e); res.status(506); });
+                        videoinfos.push(dtbs.ytdlRawInfoData[videoId]);
+                    } else {
+                        videoinfos.push({ error: "不明" });
+                    };
                 };
+                res.end(JSON.stringify(videoinfos));
             });
             break;
         }
@@ -184,6 +242,32 @@ app.post("*", async (req, res) => {
         }
     }
 });
+/**
+ * jsonデータ保存関数
+ */
+const saveingJson = () => fs.writeFileSync("data.json", JSON.stringify(dtbs));
+/**
+ * Numberで構成された秒数を文字列「x時間x分x秒」に変換します。
+ * @param {Number} sec 秒数を入力します。
+ * @returns 文字列を返します。
+ */
+const time = (sec) => {
+    let output = "";
+    let minute = 0;
+    let hour = 0;
+    for (minute; sec > 59; minute++) sec -= 60;
+    for (hour; minute > 59; hour++) minute -= 60;
+    if (hour != 0) output += hour + "時間";
+    if (minute != 0) output += minute + "分";
+    output += (sec).toFixed() + "秒";
+    return output;
+};
+/**
+ * 数値をByteからMBに変換します。
+ * @param {Number} byte Byteを入力します。
+ * @returns {Number} MBを返します。
+ */
+const mb = (byte) => { return (byte / 1024 / 1024).toFixed(1); };
 /**
  * Discord.js実行用関数
  */
