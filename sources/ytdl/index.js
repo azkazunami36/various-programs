@@ -1,19 +1,30 @@
 //Webサイトの読み込みが終わると実行
 addEventListener("load", async () => {
+    let backgroundstatus = false;
+    const BlackBackground = status => {
+        //暗転するための要素を取得
+        const ytBlackBackground = document.getElementById("BlackBackground");
+        if (status && backgroundstatus == false) { 
+            //クラス「暗転用」を追加
+            ytBlackBackground.classList.add("Blacked"); 
+            backgroundstatus = true; 
+        } else if (!status && backgroundstatus == true) { 
+            //クラス「暗転用」を削除
+            ytBlackBackground.classList.remove("Blacked"); 
+            backgroundstatus = false; 
+        };
+    };
     //ボタンの取得
     const ytURLSend = document.getElementById("URLSend");
-    //暗転するための要素を取得
-    const ytBlackBackground = document.getElementById("BlackBackground");
     //ポップアップウィンドウを取得
     const infoPopup = document.getElementById("infoPopup");
     //クリックされたら
     ytURLSend.addEventListener("click", e => {
         //テキストボックスの取得
         const ytURLBox = document.getElementById("URLBox");
-        //クラス「暗転用」を追加
-        ytBlackBackground.classList.add("Blacked");
+        BlackBackground(true);
         //クラス「ポップアップ有効化用」を追加
-        infoPopup.classList.add("infoPopuped");
+        infoPopup.classList.add("Popuped");
         //関数に送信
         ytdlInfoGet([ytURLBox.value]);
     });
@@ -21,10 +32,9 @@ addEventListener("load", async () => {
     const infoPopupCloseBtn = document.getElementById("infoPopupCloseBtn");
     //クリックされたら
     infoPopupCloseBtn.addEventListener("click", e => {
-        //クラス「暗転用」を削除
-        ytBlackBackground.classList.remove("Blacked");
         //クラス「ポップアップ有効化用」を削除
-        infoPopup.classList.remove("infoPopuped");
+        infoPopup.classList.remove("Popuped");
+        BlackBackground(true);
     });
 });
 const ytdlInfoGet = async videolist => {

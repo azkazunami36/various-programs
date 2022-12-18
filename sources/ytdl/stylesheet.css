@@ -5,7 +5,6 @@ body {
 #URLBox {
     width: 100%;
     height: 100%;
-    border-radius: 10px;
     padding: 5px;
     font-size: 20px;
     font-weight: 600;
@@ -19,28 +18,48 @@ body {
     align-items: center;
 }
 
-.URLBox {
-    width: 75%;
-    min-width: 65px;
+.URLBar {
+    display: flex;
+    overflow: hidden;
+    width: 85%;
     height: 41px;
     border-radius: 10px;
+}
+
+.URLBox {
+    width: 100%;
+    min-width: 65px;
+    height: 100%;
 }
 
 .BoxEnterButton {
     width: 65px;
     min-width: 65px;
-    height: 41px;
-    border-radius: 10px;
+    height: 100%;
     display: flex;
     position: relative;
-    overflow: hidden;
     justify-content: space-around;
     align-items: center;
     padding: 0;
-    margin-left: 10px;
     font-size: 20px;
     background: rgb(255, 255, 255);
     font-weight: 600;
+    border-left: 1px solid black;
+}
+
+.multiChoiceButton {
+    width: 90px;
+    min-width: 90px;
+    height: 100%;
+    display: flex;
+    position: relative;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
+    font-size: 20px;
+    background: rgb(255, 255, 255);
+    font-weight: 600;
+    border-left: 1px solid black;
 }
 
 .BlackBack {
@@ -101,7 +120,7 @@ body {
     }
 }
 
-.infoPopup {
+.Popup {
     width: 100%;
     height: 100%;
     position: absolute;
@@ -116,13 +135,13 @@ body {
     animation: Out-Popup .35s;
 }
 
-.infoPopuped {
+.Popuped {
     transform: scale(1);
     opacity: 1;
     animation: In-Popup .35s;
 }
 
-.infoPopupWindow {
+.PopupWindow {
     width: 75%;
     height: 75%;
     background: white;
@@ -182,7 +201,7 @@ div.infoVideoImage {
     overflow-y: scroll;
 }
 
-.infoPopupClose {
+.PopupClose {
     width: 100%;
     height: 50px;
     display: flex;
@@ -190,7 +209,7 @@ div.infoVideoImage {
     align-items: center;
 }
 
-.infoPopupCloseButton {
+.PopupCloseButton {
     width: 50px;
     height: 100%;
     font-size: 35px;

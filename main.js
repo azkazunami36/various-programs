@@ -174,10 +174,10 @@ app.post("*", async (req, res) => {
                             const thumbnails = info.videoDetails.thumbnails;
                             const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" });
                             if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail");
-                            fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary")
-                            const videoDownload = ytdl(videoId, { filter: "videoonly", quality: "highest" });
+                            fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary");
                             let starttime = {};
-                            videoDownload.once("response", () => { starttime.video = Date.now(); });
+                            const videoDownload = ytdl(videoId, { filter: "videoonly", quality: "highest" });
+                            videoDownload.once("response", () => starttime.video = Date.now());
                             videoDownload.on("progress", (chunkLength, downloaded, total) => {
                                 const floatDownloaded = downloaded / total;
                                 const downloadedSeconds = (Date.now() - starttime.video) / 1000;
@@ -200,7 +200,7 @@ app.post("*", async (req, res) => {
                                     .pipe(fs.createWriteStream("cache/YTDl/" + id + ".mp4"));
                             });
                             const audioDownload = ytdl(videoId, { filter: "audioonly", quality: "highest" });
-                            audioDownload.once("response", () => { starttime.audio = Date.now(); });
+                            audioDownload.once("response", () => starttime.audio = Date.now());
                             audioDownload.on("progress", (chunkLength, downloaded, total) => {
                                 const floatDownloaded = downloaded / total;
                                 const downloadedSeconds = (Date.now() - starttime.audio) / 1000;
@@ -222,7 +222,7 @@ app.post("*", async (req, res) => {
                                 fs.createReadStream("cache/YouTubeDownloadingAudio/" + id + ".mp3")
                                     .pipe(fs.createWriteStream("cache/YTDl/" + id + ".mp3"));
                             });
-                        }).catch((e) => { console.log(e); res.status(506); });
+                        }).catch((e) => { console.log(e); videoinfos.push({ error: "不明" }); });
                         videoinfos.push(dtbs.ytdlRawInfoData[videoId]);
                     } else {
                         videoinfos.push({ error: "不明" });

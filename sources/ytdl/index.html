@@ -9,19 +9,40 @@
 
 <body>
     <div class="URL">
-        <div class="URLBox">
-            <input type="text" id="URLBox" placeholder="YouTube URLまたはVideo ID">
-        </div>
-        <div class="BoxEnterButton">送信
-            <div id="URLSend" class="clickme"></div>
+        <div class="URLBar">
+            <div class="URLBox">
+                <input type="text" id="URLBox" placeholder="YouTube URLまたはVideo ID">
+            </div>
+            <div class="multiChoiceButton">複数選択
+                <div id="multichoice" class="clickme"></div>
+            </div>
+            <div class="BoxEnterButton">送信
+                <div id="URLSend" class="clickme"></div>
+            </div>
         </div>
     </div>
     <div id="BlackBackground" class="BlackBack"></div>
-    <div id="infoPopup" class="infoPopup">
-        <div class="infoPopupWindow">
-            <div class="infoPopupClose">
-                <div class="infoPopupCloseButton">×
+    <div id="infoPopup" class="Popup">
+        <div class="PopupWindow">
+            <div class="PopupClose">
+                <div class="PopupCloseButton">×
                     <div id="infoPopupCloseBtn" class="clickme"></div>
+                </div>
+            </div>
+            <div class="infoPopupBody">
+                <div id="infoTitle">サーバーの返答を待っています...</div>
+                <div class="infoVideoList">
+                    <div id="infoVideos">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="msPopup" class="Popup">
+        <div class="PopupWindow">
+            <div class="PopupClose">
+                <div class="PopupCloseButton">×
+                    <div id="msPopupCloseBtn" class="clickme"></div>
                 </div>
             </div>
             <div class="infoPopupBody">
