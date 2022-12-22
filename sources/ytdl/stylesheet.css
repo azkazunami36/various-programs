@@ -228,3 +228,25 @@ div.infoVideoImage {
     align-items: center;
     flex-direction: column;
 }
+
+.msPopupBody {
+    width: 100%;
+    height: calc(100% - 40px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.msTitle {
+    font-size: 30px;
+    color: black;
+    font-weight: 700;
+    margin-top: -10%;
+}
+
+.msTextBox {
+    min-width: 75%;
+    height: 60%;
+    border: 1px solid black;
+}

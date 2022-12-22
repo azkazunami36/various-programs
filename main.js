@@ -1,41 +1,41 @@
 /**
  * GET、POSTを使用する。
  */
-const express = require("express");
+const express = require("express")
 /**
  * コンソールの詳細な表示のために使用する。
  */
-const readline = require("readline");
+const readline = require("readline")
 /**
  * ファイルの読み書きに使用する。
  */
-const fs = require("fs");
+const fs = require("fs")
 /**
  * FFmpegで動画を変換するために使用する。
  */
-const ffmpeg = require("fluent-ffmpeg");
+const ffmpeg = require("fluent-ffmpeg")
 /**
  * なんで使うかを忘れた。
  */
-const cors = require("cors");
+const cors = require("cors")
 /**
  * YouTubeの動画データ等を入手する際に使用する。
  */
-const ytdl = require("ytdl-core");
+const ytdl = require("ytdl-core")
 /**
  * ネットなどで使用するクエリをjsonに変換する際に使用
  * url=http... = {"url": "http..."}
  */
-const querystring = require("querystring");
+const querystring = require("querystring")
 /**
  * 主にデータを取得する際に使用する。
  * 予定ではYouTubeのサムネイルを取得する。
  */
-const axios = require("axios");
+const axios = require("axios")
 /**
  * uuidを作成するために使用する。
  */
-const uuid = require("uuid");
+const uuid = require("uuid")
 /**
  * Discord.jsを実行するために使用する。
  */
@@ -44,7 +44,7 @@ const {
     GatewayIntentBits,
     Partials,
     EmbedBuilder
-} = require("discord.js");
+} = require("discord.js")
 /**
  * Discord.jsに関連して使用できるVoiceを利用する際に使用する。
  */
@@ -55,219 +55,246 @@ const {
     joinVoiceChannel,
     StreamType,
     AudioPlayerStatus
-} = require("@discordjs/voice"); //Discord.jsVoice
+} = require("@discordjs/voice") //Discord.jsVoice
 /**
  * envファイルを生成します。
  * 既に存在している場合、このコードはスキップされます。
  */
-if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=");
+if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
 /**
  * envファイルからデータを読み込み、process.envに格納します。
  */
-require("dotenv").config();
+require("dotenv").config()
 /**
  * 最初にjsonファイルを生成します。
  * 既に存在している場合、このコードはスキップされます。
  */
-if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}");
+if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
 /**
  * cacheフォルダを生成します。
  * 既に存在している場合。このコードはスキップされます。
  */
-if (!fs.existsSync("cache/")) fs.mkdirSync("cache");
+if (!fs.existsSync("cache/")) fs.mkdirSync("cache")
 /**
  * データを格納しています。
  * このjson内を操作する際は、プログラムを終了してから変更を加えてください。
  */
-const dtbs = require("./data.json");
+const dtbs = require("./data.json")
 /**
  * Appです(？)
  */
-const app = express();
+const app = express()
 /**
  * ポートを割り当てる。
  * env内にPORT情報が乗っている場合、そちらを使用する。
  */
-const port = parseInt(process.env.PORT || "80", 10);
+const port = parseInt(process.env.PORT || "80", 10)
 /**
  * 使用するポートを設定する。
  */
 app.listen(port, async () => {
-    let address = "http://localhost";
-    if (port != "80") address += ":" + port;
-    console.info("ポート" + port + "でWebを公開しました！ " + address + " にアクセスして、操作を開始します！");
-});
+    let address = "http://localhost"
+    if (port != "80") address += ":" + port
+    console.info("ポート" + port + "でWebを公開しました！ " + address + " にアクセスして、操作を開始します！")
+})
 /**
  * なんでこれを使うかを忘れた。
  */
-app.use(cors());
+app.use(cors())
 /**
  * GET、POSTのデータをすべてここで受信する。
  * GET、POSTのパス等はif等で判断する。
  */
 app.get("*", async (req, res) => {
-    console.log("Get :", req.url);
+    console.log("Get :", req.url)
     if (req.url == "/" || req.url == "/sources/index.html") {
-        res.header("Content-Type", "text/html;charset=utf-8");
-        res.end(fs.readFileSync("sources/index.html"));
+        res.header("Content-Type", "text/html;charset=utf-8")
+        res.end(fs.readFileSync("sources/index.html"))
     } else if (req.url == "/sources/ytdl/" || req.url == "/sources/ytdl/index.html") {
-        res.header("Content-Type", "text/html;charset=utf-8");
-        res.end(fs.readFileSync("sources/ytdl/index.html"));
+        res.header("Content-Type", "text/html;charset=utf-8")
+        res.end(fs.readFileSync("sources/ytdl/index.html"))
     } else if (req.url == "/favicon.ico") {
-        res.status(204);
-        res.end();
+        res.status(204)
+        res.end()
     } else if (req.url.match(/\/sources\/*/)) {
-        const filelink = "sources/" + String(req.url).split("/sources/")[1];
+        const filelink = "sources/" + String(req.url).split("/sources/")[1]
         if (fs.existsSync(filelink)) {
             try {
-                res.header("Content-Type", "text/plain;charset=utf-8");
-                const file = fs.readFileSync(filelink);
-                res.end(file);
-            } catch (e) { res.status(404); res.end(); };
+                res.header("Content-Type", "text/plain;charset=utf-8")
+                const file = fs.readFileSync(filelink)
+                res.end(file)
+            } catch (e) { res.status(404); res.end() }
         } else {
-            res.status(400);
-            res.end();
-        };
+            res.status(400)
+            res.end()
+        }
     } else if (req.url.match(/\/ytimage\/*/)) {
-        const videoId = String(req.url).split("/ytimage/")[1];
-        const thumbnailpath = "cache/YouTubeThumbnail/" + videoId + ".jpg";
+        const videoId = String(req.url).split("/ytimage/")[1]
+        const thumbnailpath = "cache/YouTubeThumbnail/" + videoId + ".jpg"
         if (fs.existsSync(thumbnailpath)) {
-            res.header("Content-Type", "image/jpeg");
-            res.end(fs.readFileSync(thumbnailpath));
+            res.header("Content-Type", "image/jpeg")
+            res.end(fs.readFileSync(thumbnailpath))
         } else {
-            res.status(400);
-            res.end();
-        };
-    } else if (false) {
+            res.status(400)
+            res.end()
+        }
+    } else if (req.url.match(/\/ytvideo\/*/)) {
+        const videoId = String(req.url).split("/ytvideo/")[1]
+        const videopath = "cache/YTDl/" + videoId + ".mp4"
+        if (fs.existsSync(videopath)) {
+            const range = req.headers.range || "0"
+            const videoSize = fs.statSync(videopath).size
+            const chunkSize = 1 * 1e6
+            const start = Number(range.replace(/\D/g, ""))
+            const end = Math.min(start + chunkSize, videoSize - 1)
+
+            const contentrange = "bytes " + start + "-" + end + "/" + videoSize
+            const contentLength = end - start + 1
+            console.log("Content-Range: " + contentrange + " Content-Length: " + contentLength)
+
+            const headers = {
+                "Content-Range": contentrange,
+                "Accept-Ranges": "bytes",
+                "Content-Length": contentLength,
+                "Content-Type": "video/mp4"
+            };
+            res.writeHead(206, headers)
+            const Stream = fs.createReadStream(videopath, { start, end })
+            Stream.pipe(res)
+        } else {
+            res.status(400)
+            res.end()
+        }
     } else if (false) {
     } else {
-        console.log("404 : " + req.url);
-        res.status(404);
-        res.end();
-    };
-});
+        console.log("404 : " + req.url)
+        res.status(404)
+        res.end()
+    }
+})
 app.post("*", async (req, res) => {
-    console.log("Post:", req.url);
+    console.log("Post:", req.url)
     switch (req.url) {
         /**
          * YouTube動画の情報を取得し保存します。
          * クライアントにもRawデータを送信はしますが、用途は不明です。
          */
         case "/youtube-info": {
-            let data = "";
-            req.on("data", async chunk => data += chunk);
+            let data = ""
+            req.on("data", async chunk => data += chunk)
             req.on("end", async () => {
-                console.log(data);
-                const videolist = JSON.parse(data);
-                const videoinfos = [];
+                console.log(data)
+                const videolist = JSON.parse(data)
+                const videoinfos = []
                 for (let i = 0; i != videolist.length; i++) {
-                    let videoId = videolist[i];
-                    res.header("Content-Type", "text/plain;charset=utf-8");
+                    let videoId = videolist[i]
+                    res.header("Content-Type", "text/plaincharset=utf-8")
                     if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) {
-                        if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId);
-                        console.log(videoId);
-                        if (!dtbs.ytdlRawInfoData) { console.log(true, "ytdlRawInfoData"); dtbs.ytdlRawInfoData = {}; };
+                        if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId)
+                        console.log(videoId)
+                        if (!dtbs.ytdlRawInfoData) { console.log(true, "ytdlRawInfoData"); dtbs.ytdlRawInfoData = {} }
                         if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
-                            console.log((info.videoDetails) ? true : false);
-                            dtbs.ytdlRawInfoData[videoId] = info.videoDetails;
-                            saveingJson();
-                            const thumbnails = info.videoDetails.thumbnails;
-                            const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" });
-                            if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail");
-                            fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary");
-                            let starttime = {};
-                            const videoDownload = ytdl(videoId, { filter: "videoonly", quality: "highest" });
-                            videoDownload.once("response", () => starttime.video = Date.now());
+                            dtbs.ytdlRawInfoData[videoId] = info.videoDetails
+                            saveingJson()
+                            const thumbnails = info.videoDetails.thumbnails
+                            const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
+                            if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
+                            fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary")
+                            let starttime = {}
+                            if (!fs.existsSync("cache/YouTubeDownloadingVideo")) fs.mkdirSync("cache/YouTubeDownloadingVideo")
+                            if (!fs.existsSync("cache/YouTubeDownloadingAudio")) fs.mkdirSync("cache/YouTubeDownloadingAudio")
+                            const videoDownload = ytdl(videoId, { filter: "videoonly", quality: "highest" })
+                            videoDownload.once("response", () => starttime.video = Date.now())
                             videoDownload.on("progress", (chunkLength, downloaded, total) => {
-                                const floatDownloaded = downloaded / total;
-                                const downloadedSeconds = (Date.now() - starttime.video) / 1000;
+                                const floatDownloaded = downloaded / total
+                                const downloadedSeconds = (Date.now() - starttime.video) / 1000
                                 //推定残り時間
-                                const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds;
+                                const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds
                                 //パーセント
-                                const percent = (floatDownloaded * 100).toFixed();
+                                const percent = (floatDownloaded * 100).toFixed()
                                 //ダウンロード済みサイズ
-                                const mbyte = mb(downloaded);
+                                const mbyte = mb(downloaded)
                                 //最大ダウンロード量
-                                const totalMbyte = mb(total);
+                                const totalMbyte = mb(total)
                                 //推定残り時間
-                                const elapsedTime = time(downloadedSeconds);
-                            });
-                            videoDownload.on("error", async err => { console.log("error"); });
-                            videoDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingVideo/" + id + ".mp4"));
+                                const elapsedTime = time(downloadedSeconds)
+                            })
+                            videoDownload.on("error", async err => { console.log("error") })
+                            videoDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingVideo/" + videoId + ".mp4"))
                             videoDownload.on("end", () => {
-                                if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl");
-                                fs.createReadStream("cache/YouTubeDownloadingVideo/" + id + ".mp4")
-                                    .pipe(fs.createWriteStream("cache/YTDl/" + id + ".mp4"));
-                            });
-                            const audioDownload = ytdl(videoId, { filter: "audioonly", quality: "highest" });
-                            audioDownload.once("response", () => starttime.audio = Date.now());
+                                if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl")
+                                fs.createReadStream("cache/YouTubeDownloadingVideo/" + videoId + ".mp4")
+                                    .pipe(fs.createWriteStream("cache/YTDl/" + videoId + ".mp4"))
+                            })
+                            const audioDownload = ytdl(videoId, { filter: "audioonly", quality: "highest" })
+                            audioDownload.once("response", () => starttime.audio = Date.now())
                             audioDownload.on("progress", (chunkLength, downloaded, total) => {
-                                const floatDownloaded = downloaded / total;
-                                const downloadedSeconds = (Date.now() - starttime.audio) / 1000;
+                                const floatDownloaded = downloaded / total
+                                const downloadedSeconds = (Date.now() - starttime.audio) / 1000
                                 //推定残り時間
-                                const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds;
+                                const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds
                                 //パーセント
-                                const percent = (floatDownloaded * 100).toFixed();
+                                const percent = (floatDownloaded * 100).toFixed()
                                 //ダウンロード済みサイズ
-                                const mbyte = mb(downloaded);
+                                const mbyte = mb(downloaded)
                                 //最大ダウンロード量
-                                const totalMbyte = mb(total);
+                                const totalMbyte = mb(total)
                                 //推定残り時間
-                                const elapsedTime = time(downloadedSeconds);
-                            });
-                            audioDownload.on("error", async err => { console.log("error"); });
-                            audioDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingAudio/" + id + ".mp3"));
+                                const elapsedTime = time(downloadedSeconds)
+                            })
+                            audioDownload.on("error", async err => { console.log("error") })
+                            audioDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingAudio/" + videoId + ".mp3"))
                             audioDownload.on("end", () => {
-                                if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl");
-                                fs.createReadStream("cache/YouTubeDownloadingAudio/" + id + ".mp3")
-                                    .pipe(fs.createWriteStream("cache/YTDl/" + id + ".mp3"));
-                            });
-                        }).catch((e) => { console.log(e); videoinfos.push({ error: "不明" }); });
-                        videoinfos.push(dtbs.ytdlRawInfoData[videoId]);
+                                if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl")
+                                fs.createReadStream("cache/YouTubeDownloadingAudio/" + videoId + ".mp3")
+                                    .pipe(fs.createWriteStream("cache/YTDl/" + videoId + ".mp3"))
+                            })
+                        }).catch((e) => { console.log(e); videoinfos.push({ error: "不明" }) })
+                        videoinfos.push(dtbs.ytdlRawInfoData[videoId])
                     } else {
-                        videoinfos.push({ error: "不明" });
-                    };
-                };
-                res.end(JSON.stringify(videoinfos));
-            });
-            break;
+                        videoinfos.push({ error: "不明" })
+                    }
+                }
+                res.end(JSON.stringify(videoinfos))
+            })
+            break
         }
         /**
          * アプリ情報をjsonで送信します。
          */
         case "/applcation-info": {
-            res.header("Content-Type", "text/plain;charset=utf-8");
-            res.end(JSON.stringify(dtbs.Apps));
-            break;
+            res.header("Content-Type", "text/plaincharset=utf-8")
+            res.end(JSON.stringify(dtbs.Apps))
+            break
         }
     }
-});
+})
 /**
  * jsonデータ保存関数
  */
-const saveingJson = () => fs.writeFileSync("data.json", JSON.stringify(dtbs));
+const saveingJson = () => fs.writeFileSync("data.json", JSON.stringify(dtbs))
 /**
  * Numberで構成された秒数を文字列「x時間x分x秒」に変換します。
  * @param {Number} sec 秒数を入力します。
  * @returns 文字列を返します。
  */
 const time = (sec) => {
-    let output = "";
-    let minute = 0;
-    let hour = 0;
-    for (minute; sec > 59; minute++) sec -= 60;
-    for (hour; minute > 59; hour++) minute -= 60;
-    if (hour != 0) output += hour + "時間";
-    if (minute != 0) output += minute + "分";
-    output += (sec).toFixed() + "秒";
-    return output;
-};
+    let output = ""
+    let minute = 0
+    let hour = 0
+    for (minute; sec > 59; minute++) sec -= 60
+    for (hour; minute > 59; hour++) minute -= 60
+    if (hour != 0) output += hour + "時間"
+    if (minute != 0) output += minute + "分"
+    output += (sec).toFixed() + "秒"
+    return output
+}
 /**
  * 数値をByteからMBに変換します。
  * @param {Number} byte Byteを入力します。
  * @returns {Number} MBを返します。
  */
-const mb = (byte) => { return (byte / 1024 / 1024).toFixed(1); };
+const mb = (byte) => { return (byte / 1024 / 1024).toFixed(1) }
 /**
  * Discord.js実行用関数
  */
@@ -301,18 +328,18 @@ const Discord_JS = () => {
             GatewayIntentBits.Guilds,
             GatewayIntentBits.MessageContent
         ]
-    });
+    })
     client.on("ready", () => {
-        console.log(client.user.username + "の準備が完了しました！");
-    });
+        console.log(client.user.username + "の準備が完了しました！")
+    })
     client.on("messageCreate", message => {
         for (let for0 = 0; dtbs.replys.length != for0; for0++) {
             for (let for1 = 0; dtbs.replys[for0].input.length != for1; for1++) {
                 if (message.content.match(dtbs.replys[for0].input[for1])) {
-                    message.channel.send(dtbs.replys[for0].output[Math.floor(Math.random() * dtbs.replys[for0].output.length)]);
-                };
-            };
-        };
-    });
-    client.login(process.env.token);
-};
+                    message.channel.send(dtbs.replys[for0].output[Math.floor(Math.random() * dtbs.replys[for0].output.length)])
+                }
+            }
+        }
+    })
+    client.login(process.env.token)
+}

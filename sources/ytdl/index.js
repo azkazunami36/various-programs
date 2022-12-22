@@ -22,9 +22,9 @@ addEventListener("load", async () => {
     ytURLSend.addEventListener("click", e => {
         //テキストボックスの取得
         const ytURLBox = document.getElementById("URLBox");
-        BlackBackground(true);
         //クラス「ポップアップ有効化用」を追加
         infoPopup.classList.add("Popuped");
+        BlackBackground(true);
         //関数に送信
         ytdlInfoGet([ytURLBox.value]);
     });
@@ -34,8 +34,40 @@ addEventListener("load", async () => {
     infoPopupCloseBtn.addEventListener("click", e => {
         //クラス「ポップアップ有効化用」を削除
         infoPopup.classList.remove("Popuped");
+        BlackBackground(false);
+    });
+    //ボタンの取得
+    const ytmultichoice = document.getElementById("multichoice");
+    //ポップアップウィンドウを取得
+    const multichoicePopup = document.getElementById("msPopup");
+    //クリックされたら
+    ytmultichoice.addEventListener("click", e => {
+        //クラス「ポップアップ有効化用」を追加
+        multichoicePopup.classList.add("Popuped");
         BlackBackground(true);
     });
+    //ポップアップを閉じるボタンの取得
+    const multichoiceCloseBtn = document.getElementById("msPopupCloseBtn");
+    //クリックされたら
+    multichoiceCloseBtn.addEventListener("click", e => {
+        //クラス「ポップアップ有効化用」を削除
+        multichoicePopup.classList.remove("Popuped");
+        BlackBackground(false);
+    });
+    const MultiURLSend = document.getElementById("MultiURLSend")
+    MultiURLSend.addEventListener("click", e => {
+        //テキストボックスの取得
+        const msDataBox = document.getElementById("msDataBox");
+        const text = msDataBox.value;
+        try {
+            ytdlInfoGet(JSON.parse(text));
+        } catch (e) {
+            ytdlInfoGet(text.split("\n"));
+        };
+        multichoicePopup.classList.remove("Popuped");
+        //クラス「ポップアップ有効化用」を追加
+        infoPopup.classList.add("Popuped");
+    })
 });
 const ytdlInfoGet = async videolist => {
     const infoTitle = document.getElementById("infoTitle");
@@ -59,7 +91,7 @@ const ytdlInfoGet = async videolist => {
             const VLCLoop = setInterval(() => {
                 console.log((i + 1) + "回目のループ。");
                 if (i == data.length) {
-                    infoTitle.innerHTML = "取得が完了しました！";
+                    infoTitle.innerHTML = data.length + "本の動画が取得完了しました！";
                     clearInterval(VLCLoop);
                 };
                 if (!data[i].error) {
