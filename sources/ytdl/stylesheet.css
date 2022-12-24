@@ -1,3 +1,7 @@
+ :root {
+    --video-layout: 3
+ }
+
 body {
     background: rgb(11, 43, 104);
 }
@@ -16,6 +20,9 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    position: absolute;
+    width: calc(100% - 20px);
+    z-index: 3;
 }
 
 .URLBar {
@@ -184,7 +191,9 @@ div.infoVideoImage {
 }
 
 .infoVideoInfo {
+    width: calc(100% - 16 / 9 * 79px);
     height: 100%;
+    object-fit: contain;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -249,4 +258,90 @@ div.infoVideoImage {
     min-width: 75%;
     height: 60%;
     border: 1px solid black;
+}
+
+.msEnterButton {
+    width: 65px;
+    min-width: 65px;
+    height: 50px;
+    display: flex;
+    position: relative;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
+    font-size: 20px;
+    background: rgb(255, 255, 255);
+    font-weight: 600;
+    border-left: 1px solid black;
+}
+
+.VideoList {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.13);
+    position: relative;
+    top: 0;
+    left: 0;
+}
+
+.VideoListTop {
+    width: 100%;
+    height: 61px;
+}
+
+.VideoLink {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 15px;
+    width: calc(100% / var(--video-layout));
+    height: auto;
+    aspect-ratio: 8/7;
+    position: relative;
+}
+
+.VideoWindow {
+    width: 95%;
+    height: 95%;
+}
+
+.ThumbnailImage {
+    width: 100%;
+    aspect-ratio: 16/9;
+}
+
+.Thumbnailimg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 15px;
+}
+
+.TitleAria {
+    overflow: hidden;
+}
+
+.VideoTitle {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    margin: 0;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    margin-top: 5px;
+}
+
+.VideoAuthor {
+    margin: 0;
+    font-size: 9px;
+    font-weight: 600;
+    color: white;
 }
