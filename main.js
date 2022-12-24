@@ -278,7 +278,49 @@ app.post("*", async (req, res) => {
          */
         case "/applcation-info": {
             res.header("Content-Type", "text/plain;charset=utf-8")
-            res.end(JSON.stringify(dtbs.Apps))
+            const Apps = [
+                {
+                    "name": "YouTube Downloader",
+                    "id": "youtubedownloader",
+                    "compact": "ytdl",
+                    "iconURL": "",
+                    "status": {
+                        "loaded": false,
+                        "viewed": false
+                    }
+                },
+                {
+                    "name": "Discord Bot",
+                    "id": "discordbot",
+                    "compact": "ggbot",
+                    "iconURL": "",
+                    "status": {
+                        "loaded": false,
+                        "viewed": false
+                    }
+                },
+                {
+                    "name": "FFmpeg Converter",
+                    "id": "ffmpegconverter",
+                    "compact": "ffcvr",
+                    "iconURL": "",
+                    "status": {
+                        "loaded": false,
+                        "viewed": false
+                    }
+                },
+                {
+                    "name": "JSON Data Server",
+                    "id": "jsondataserver",
+                    "compact": "jsonds",
+                    "iconURL": "",
+                    "status": {
+                        "loaded": false,
+                        "viewed": false
+                    }
+                }
+            ]
+            res.end(JSON.stringify(Apps))
             break
         }
         case "/ytvideo-list": {
