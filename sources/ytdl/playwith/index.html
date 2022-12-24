@@ -1,0 +1,38 @@
+<html lang="ja">
+
+<head>
+    <title>YouTube Player</title>
+    <script src="./playwith/index.js"></script>
+    <link type="text/css" rel="stylesheet" href="./playwith/stylesheet.css">
+    <link type="text/css" rel="stylesheet" href="../publicstylesheet.css">
+</head>
+
+<body>
+    <div class="leftAria">
+        <div class="playerWindow">
+            <video id="video" src="" poster="" preload="metadata"></video>
+            <div class="playerPopup">
+                <div class="playerHeader"></div>
+                <div class="playerFooter">
+                    <div id="seekbar-wrap">
+                        <div id="seek-point"></div>
+                        <div id="seekbar-out">
+                            <div id="seekbar-load"></div>
+                            <div id="seekbar-in"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="rightAria">
+        <input type="button" value="再生" onclick="video.play()">
+        <input type="button" value="一時停止" onclick="video.pause()">
+        <input type="button" value="ミュート" onclick="video.muted = true">
+        <input type="button" value="ミュート解除" onclick="video.muted = false">
+        <input type="button" value="ループ" onclick="video.loop = true">
+        <input type="button" value="ループ解除" onclick="video.loop = false">
+    </div>
+</body>
+
+</html>

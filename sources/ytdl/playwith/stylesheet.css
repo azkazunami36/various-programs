@@ -1,0 +1,93 @@
+body {
+    background: rgb(11, 43, 104);
+    display: flex;
+    margin: 0;
+}
+
+#video {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: contain;
+}
+
+#seekbar-wrap {
+    display: flex;
+    align-content: center;
+    align-items: center;
+    width: 80%;
+    height: 3px;
+    position: relative;
+}
+
+#seekbar-out,
+#seekbar-in,
+#seekbar-load {
+    width: 100%;
+    height: 100%;
+}
+
+#seekbar-out {
+    display: flex;
+    background-color: rgb(131, 131, 131);
+    transform: scaleY(1);
+    border-radius: 100px;
+}
+
+#seekbar-in {
+    position: absolute;
+    margin: 0 auto 0 0;
+    background-color: #00c3ff;
+    transform-origin: top left;
+}
+
+#seekbar-load {
+    margin: 0 auto 0 0;
+    background-color: #ffffff88;
+    transform-origin: top left;
+}
+
+#seek-point {
+    width: 10px;
+    height: 10px;
+    background-color: #00c3ff;
+    border-radius: 20px;
+    position: absolute;
+    z-index: 1;
+}
+
+.playerWindow {
+    margin: 10px;
+    width: calc(100% - 20px);
+    aspect-ratio: 16/9;
+    background: black;
+    position: relative;
+}
+
+.leftAria {
+    width: calc(100% - 350px);
+}
+
+.rightAria {
+    width: 350px;
+}
+
+.playerPopup {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.playerFooter {
+    display: flex;
+    flex-direction: row;
+    align-content: center;
+    align-items: center;
+    justify-content: space-around;
+    width: 100%;
+    aspect-ratio: 16/1;
+}
