@@ -17,6 +17,7 @@ const wait = async time => {
 }
 addEventListener("load", async () => {
     const videoList = document.getElementById("videoList")
+    const VideoListCenter = document.getElementById("VideoListCenter")
     addEventListener("resize", e => videoNumberReload())
     const videoNumberReload = () => {
         const videonum = (document.body.clientWidth / 300).toFixed()
@@ -70,10 +71,11 @@ addEventListener("load", async () => {
             videoTitle.classList.add("VideoTitle")
             videoAuthor.classList.add("VideoAuthor")
             clickme.classList.add("clickme")
-            thumbnailimg.src = "../../ytimage/" + videoId
+            thumbnailimg.src = "../../ytimage/" + videoId + "?query=low"
             clickme.href = "./watch?v=" + videoId
             videoTitle.innerHTML = title
             videoAuthor.innerHTML = author
+            VideoListCenter.appendChild(videoLink)
             videoLink.appendChild(videoWindow)
             videoWindow.appendChild(thumbnailImage)
             videoWindow.appendChild(titleAria)
@@ -81,7 +83,6 @@ addEventListener("load", async () => {
             thumbnailImage.appendChild(thumbnailimg)
             titleAria.appendChild(videoTitle)
             titleAria.appendChild(videoAuthor)
-            videoList.appendChild(videoLink)
             wait(20)
         }
         if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100) videoLoad(true)
