@@ -30,143 +30,117 @@ const {
 const mbyteString = require("./modules/mbyteString").mbyteString
 const timeString = require("./modules/timeString").timeString
 const arrayRamdom = require("./modules/arrayRamdom").arrayRamdom
+const VASourceGet = require("./modules/VASourceGet").VASourceGet
 const wait = util.promisify(setTimeout)
-// envファイルを生成します。
 if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
-// envファイルからデータを読み込み、process.envに格納します。
 require("dotenv").config()
-// 最初にjsonファイルを生成します。
 if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
-// cacheフォルダを生成します。
 if (!fs.existsSync("cache/")) fs.mkdirSync("cache")
 /**
  * データを格納しています。
  * このjson内を操作する際は、プログラムを終了してから変更を加えてください。
  */
 const dtbs = require("./data.json")
-// Appです(？)
+const processJson = require("./processJson.json")
 const app = express()
 /**
  * 使用するポート番号を決定します。
  * env内にポートが設定されている場合、それを使用します。
  */
 const port = parseInt(process.env.PORT || "80", 10)
-// 受信を開始します。
 app.listen(port, async () => {
     let address = "http://localhost"
-    if (port != "80") address += ":" + port
+    if (port != "80") address += ":" + port //Webではポート80がデフォルトなため、省略としてif
     console.info("ポート" + port + "でWebを公開しました！ " + address + " にアクセスして、操作を開始します！")
 })
 app.use(cors())
-/**
- * GET、POSTのデータをすべてここで受信する。
- * GET、POSTのパス等はif等で判断する。
- */
 app.get("*", async (req, res) => {
-    console.log("Get :", req.url)
-    if (req.url == "/" || req.url == "/sources/index.html") {
+    console.log("Get :", req.url) //URL確認
+    if (req.url == "/" || req.url == "/sources/index.html") { //ルートとindex.htmlが取得できる
         res.header("Content-Type", "text/html;charset=utf-8")
         res.end(fs.readFileSync("sources/index.html"))
-    } else if (req.url == "/sources/ytdl/" || req.url == "/sources/ytdl/index.html") {
+    } else if (req.url == "/sources/ytdl/" || req.url == "/sources/ytdl/index.html") { //ルートとind (ry
         res.header("Content-Type", "text/html;charset=utf-8")
         res.end(fs.readFileSync("sources/ytdl/index.html"))
     } else if (req.url.match("/sources/ytdl/watch?")) {
+        //watchというリンクは少々特殊なため、matchで検出し返答します
         res.header("Content-Type", "text/html;charset=utf-8")
         res.end(fs.readFileSync("sources/ytdl/playwith/index.html"))
-    } else if (req.url == "/favicon.ico") {
+    } else if (req.url == "/favicon.ico") { //faviconまだ準備してないので204
         res.status(204)
         res.end()
-    } else if (req.url.match(/\/sources\/*/)) {
+    } else if (req.url.match(/\/sources\/*/)) { //ソースフォルダへ直接アクセス
+        //sourcesパスとクエリを切り取ってファイルパスを取得
         const filelink = "sources/" + String(req.url).split("/sources/")[1].split("?")[0]
-        console.log(filelink)
+        console.log(filelink) //表示
         if (fs.existsSync(filelink)) {
             try {
                 res.header("Content-Type", "text/plain;charset=utf-8")
                 const file = fs.readFileSync(filelink)
                 res.end(file)
-            } catch (e) { res.status(404); res.end() }
-        } else {
+            } catch (e) { //指定したファイルが何故か取得出来ない時は404
+                console.log(e)
+                res.status(404)
+                res.end()
+            }
+        } else { //ファイルが見つからない時は400
             res.status(400)
             res.end()
         }
-    } else if (req.url.match(/\/modules\/*/)) {
+    } else if (req.url.match(/\/modules\/*/)) { //モジュールへ直接アクセス
+        //modules/パスとクエリを切り取ってファイルパスを取得
         const filelink = "modules/" + (String(req.url).split("/modules/")[1])
-        console.log(filelink)
+        console.log(filelink) //表示
         if (fs.existsSync(filelink)) {
             try {
                 res.header("Content-Type", "text/javascript;charset=utf-8")
                 const file = fs.readFileSync(filelink)
                 res.end(file)
-            } catch (e) { res.status(404); res.end() }
-        } else {
+            } catch (e) { //指定したファイルが何故か取得出来ない時は404
+                console.log(e)
+                res.status(404)
+                res.end()
+            }
+        } else { //ファイルが存在しない場合400
             res.status(400)
             res.end()
         }
-    } else if (req.url.match(/\/ytimage\/*/)) {
-        await wait(Math.floor(Math.random() * 450) + 50)
-        const videoId = String(req.url).split("/ytimage/")[1].split("?")[0]
-        const { query } = querystring.parse(String(req.url).split("/ytimage/")[1].split("?")[1])
+    } else if (req.url.match(/\/ytimage\/*/)) { //YouTubeサムネイルにアクセスする
+        await wait(Math.floor(Math.random() * 450) + 50) //安定のため応答にラグを作る
+        const info = String(req.url).split("/ytimage/")[1].split("?") //urlから情報を取得
+        const videoId = info[0] //urlからVideoIDを取得
+        const { query } = querystring.parse(info[1]) //urlから品質要求を取得
         let type
         if (query == "high") type = ""
-        if (query == "low") type = "LowQuality"
-        const thumbnailpath = "cache/YouTubeThumbnail" + type + "/" + videoId + ".jpg"
-        if (dtbs.ytdlRawInfoData[videoId]) if (!fs.existsSync(thumbnailpath)) await ytThumbnailGet(videoId)
-        if (fs.existsSync(thumbnailpath)) {
+        if (query == "low") type = "LowQuality" //lowだったらフォルダパスを変更
+        const thumbnailpath = "cache/YouTubeThumbnail" + type + "/" + videoId + ".jpg" //パス
+
+        //これはVideoIDが有効かつ画像がうまく取得出来なかった際に使用するif文です
+        if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
+            if (!fs.existsSync(thumbnailpath)) //画像が存在してい無かったら
+                await ytThumbnailGet(videoId)  //画像を取得する
+        if (fs.existsSync(thumbnailpath)) { //上のifを遠し、画像が存在したら
             res.header("Content-Type", "image/jpeg")
-            res.end(fs.readFileSync(thumbnailpath))
-        } else {
+            res.end(fs.readFileSync(thumbnailpath)) //返答
+        } else { //上のifを通しても存在しない場合は400
             res.status(400)
             res.end()
         }
-    } else if (req.url.match(/\/ytvideo\/*/)) {
-        const videoId = String(req.url).split("/ytvideo/")[1]
-        const videopath = "cache/YTDl/" + videoId + ".mp4"
-        if (fs.existsSync(videopath)) {
-            const videoSize = fs.statSync(videopath).size
-            const chunkSize = 1 * 1e6
-            const start = Number((req.headers.range || "0").replace(/\D/g, ""))
-            const end = Math.min(start + chunkSize, videoSize - 1)
-
-            const contentrange = "bytes " + start + "-" + end + "/" + videoSize
-            const contentLength = end - start + 1
-            console.log("Content-Range: " + contentrange + " Content-Length: " + contentLength)
-
-            const headers = {
-                "Content-Range": contentrange,
-                "Accept-Ranges": "bytes",
-                "Content-Length": contentLength,
-                "Content-Type": "video/mp4"
-            };
-            res.writeHead(206, headers)
-            const Stream = fs.createReadStream(videopath, { start, end })
-            Stream.pipe(res)
-        } else {
+    } else if (req.url.match(/\/ytvideo\/*/)) { //YouTube動画にアクセスする
+        const videoId = String(req.url).split("/ytvideo/")[1] //urlから情報を取得
+        const videopath = "cache/YTDl/" + videoId + ".mp4" //パス
+        if (fs.existsSync(videopath)) //動画が存在したら
+            VASourceGet(videopath, req.headers.range, "video/mp4", res) //動画を送信
+        else { //存在しない場合400
             res.status(400)
             res.end()
         }
-    } else if (req.url.match(/\/ytaudio\/*/)) {
-        const videoId = String(req.url).split("/ytaudio/")[1]
-        const audiopath = "cache/YTDl/" + videoId + ".mp3"
-        if (fs.existsSync(audiopath)) {
-            const audioSize = fs.statSync(audiopath).size
-            const chunkSize = 1 * 1e6
-            const start = Number((req.headers.range || "0").replace(/\D/g, ""))
-            const end = Math.min(start + chunkSize, audioSize - 1)
-
-            const contentrange = "bytes " + start + "-" + end + "/" + audioSize
-            const contentLength = end - start + 1
-            console.log("Content-Range: " + contentrange + " Content-Length: " + contentLength)
-
-            const headers = {
-                "Content-Range": contentrange,
-                "Accept-Ranges": "bytes",
-                "Content-Length": contentLength,
-                "Content-Type": "audio/mp3"
-            };
-            res.writeHead(206, headers)
-            const Stream = fs.createReadStream(audiopath, { start, end })
-            Stream.pipe(res)
-        } else {
+    } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
+        const videoId = String(req.url).split("/ytaudio/")[1] //urlから情報を取得
+        const audiopath = "cache/YTDl/" + videoId + ".mp3" //パス
+        if (fs.existsSync(audiopath)) //音声が存在したら
+            VASourceGet(audiopath, req.headers.range, "audio/mp3", res) //音声を送信
+        else { //存在しない場合400
             res.status(400)
             res.end()
         }
@@ -175,8 +149,8 @@ app.get("*", async (req, res) => {
     } else if (false) {
     } else if (false) {
     } else if (false) {
-    } else if (false) {
-    } else {
+    } else if (false) { //falseで空のif
+    } else { //どのパスも一致しない場合は製作の想定外なので404
         console.log("404 : " + req.url)
         res.status(404)
         res.end()
@@ -185,44 +159,35 @@ app.get("*", async (req, res) => {
 app.post("*", async (req, res) => {
     console.log("Post:", req.url)
     switch (req.url) {
-        /**
-         * YouTube動画の情報を取得し保存します。
-         * クライアントにもRawデータを送信はしますが、用途は不明です。
-         */
-        case "/youtube-info": {
+        case "/youtube-info": { //YouTube動画の情報を保存します。
             let data = ""
             req.on("data", async chunk => data += chunk)
             req.on("end", async () => {
-                console.log(data)
-                const videolist = JSON.parse(data)
-                const videoinfos = []
-                for (let i = 0; i != videolist.length; i++) {
-                    let videoId = videolist[i]
-                    res.header("Content-Type", "text/plaincharset=utf-8")
-                    if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) {
-                        if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId)
-                        console.log(videoId)
-                        if (!dtbs.ytdlRawInfoData) { dtbs.ytdlRawInfoData = {} }
-                        await new Promise(async (resolve, reject) => {
+                const videolist = JSON.parse(data) //VideoIDかURLの入った配列を取得
+                const videoIds = [] //VideoIDの配列をクライアントに返すため
+                for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
+                    let videoId = videolist[i] //VideoIDとなるもの
+                    if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) { //YouTubeに存在するかどうか
+                        if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
+                        if (!dtbs.ytdlRawInfoData) { dtbs.ytdlRawInfoData = {} } //jsonにキーがなかった場合
+                        await new Promise(async (resolve, reject) => { //情報取得をPromiseで待機させる
+                            //VideoIDから情報を取得
                             if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
-                                dtbs.ytdlRawInfoData[videoId] = info.videoDetails
-                                saveingJson()
-                                console.log("ytdlinfo-get")
-                                ytIndexCreate(videoId)
-                            }).catch((e) => { console.log(e); videoinfos.push({ error: "不明" }) })
-                            resolve();
+                                dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
+                                saveingJson() //保存
+                                ytIndexCreate(videoId) //インデックス作成
+                                videoIds.push(videoId) //IDをプッシュ
+                            }).catch((e) => console.log(e))
+                            resolve(); //取得完了を意味する
                         }).then(async () => {
-                            let starttime = {}
-                            ytThumbnailGet(videoId)
-                            ytVideoGet(videoId)
-                            ytAudioGet(videoId)
+                            ytThumbnailGet(videoId) //サムネを取得
+                            ytVideoGet(videoId) //動画を取得
+                            ytAudioGet(videoId) //音声を取得
                         })
-                        videoinfos.push(dtbs.ytdlRawInfoData[videoId])
-                    } else {
-                        videoinfos.push({ error: "不明" })
-                    }
+                    } else videoIds.push("ないわこんなもん") //存在しない旨をプッシュ
                 }
-                res.end(JSON.stringify(videoinfos))
+                res.header("Content-Type", "text/plaincharset=utf-8")
+                res.end(JSON.stringify(videoIds))
             })
             break
         }
@@ -231,49 +196,7 @@ app.post("*", async (req, res) => {
          */
         case "/applcation-info": {
             res.header("Content-Type", "text/plain;charset=utf-8")
-            const Apps = [
-                {
-                    "name": "YouTube Downloader",
-                    "id": "youtubedownloader",
-                    "compact": "ytdl",
-                    "iconURL": "",
-                    "status": {
-                        "loaded": false,
-                        "viewed": false
-                    }
-                },
-                {
-                    "name": "Discord Bot",
-                    "id": "discordbot",
-                    "compact": "ggbot",
-                    "iconURL": "",
-                    "status": {
-                        "loaded": false,
-                        "viewed": false
-                    }
-                },
-                {
-                    "name": "FFmpeg Converter",
-                    "id": "ffmpegconverter",
-                    "compact": "ffcvr",
-                    "iconURL": "",
-                    "status": {
-                        "loaded": false,
-                        "viewed": false
-                    }
-                },
-                {
-                    "name": "JSON Data Server",
-                    "id": "jsondataserver",
-                    "compact": "jsonds",
-                    "iconURL": "",
-                    "status": {
-                        "loaded": false,
-                        "viewed": false
-                    }
-                }
-            ]
-            res.end(JSON.stringify(Apps))
+            res.end(JSON.stringify(processJson.Apps))
             break
         }
         case "/ytvideo-list": {
