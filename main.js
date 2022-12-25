@@ -100,6 +100,19 @@ app.get("*", async (req, res) => {
             res.status(400)
             res.end()
         }
+    } else if (req.url.match(/\/modules\/*/)) {
+        const filelink = "modules/" + (String(req.url).split("/modules/")[1])
+        console.log(filelink)
+        if (fs.existsSync(filelink)) {
+            try {
+                res.header("Content-Type", "text/javascript;charset=utf-8")
+                const file = fs.readFileSync(filelink)
+                res.end(file)
+            } catch (e) { res.status(404); res.end() }
+        } else {
+            res.status(400)
+            res.end()
+        }
     } else if (req.url.match(/\/ytimage\/*/)) {
         const videoId = String(req.url).split("/ytimage/")[1]
         const thumbnailpath = "cache/YouTubeThumbnail/" + videoId + ".jpg"
@@ -326,11 +339,20 @@ app.post("*", async (req, res) => {
         case "/ytvideo-list": {
             res.header("Content-Type", "text/plain;charset=utf-8")
             const videoIds = arrayRamdom(Object.keys(dtbs.youtubedata))
-            let data = {}
-            for (let i = 0; i != videoIds.length; i++) {
-                data[videoIds[i]] = dtbs.youtubedata[videoIds[i]]
-            }
-            res.end(JSON.stringify(data))
+            res.end(JSON.stringify(videoIds))
+            break
+        }
+        case "/ytdlRawInfoData": {
+            let data = ""
+            req.on("data", chunk => data += chunk)
+            req.on("end", () => {
+                const { videoId, request } = JSON.parse(data)
+                res.header("Content-Type", "text/plain;charset=utf-8")
+                const details = dtbs.ytdlRawInfoData[videoId]
+                if (!details) return res.end("不明")
+                const text = JSON.stringify(details[request])
+                res.end(text || "不明")
+            })
             break
         }
     }
@@ -339,13 +361,7 @@ const ytIndexCreate = videoId => {
     if (!dtbs.youtubedata) dtbs.youtubedata = {}
     if (!dtbs.youtubedata[videoId]) console.log("YouTubeInfoIndex Created: " + videoId)
     else console.log("YouTubeInfoIndex Rebuilded: " + videoId)
-    dtbs.youtubedata[videoId] = {
-        title: dtbs.ytdlRawInfoData[videoId].title,
-        author: {
-            name: dtbs.ytdlRawInfoData[videoId].author.name,
-            link: dtbs.ytdlRawInfoData[videoId].author.id
-        }
-    }
+    dtbs.youtubedata[videoId] = ""
 }
 const ytIndexReBuild = () => {
     const videoIds = Object.keys(dtbs.ytdlRawInfoData)
@@ -360,6 +376,7 @@ const ytIndexReBuild = () => {
         ytIndexCreate(videoIds[i])
     }, 10);
 }
+
 const saveingJson = () => fs.writeFileSync("data.json", JSON.stringify(dtbs))
 const Discord_JS = () => {
     const client = new Client({
