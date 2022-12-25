@@ -18,16 +18,6 @@ const wait = async time => {
 addEventListener("load", async () => {
     const videoList = document.getElementById("videoList")
     const VideoListCenter = document.getElementById("VideoListCenter")
-    addEventListener("resize", e => videoNumberReload())
-    const videoNumberReload = () => {
-        const videonum = (document.body.clientWidth / 300).toFixed()
-        console.log(videonum)
-        document.documentElement.style.setProperty("--video-layout", String(videonum));
-    }
-    videoNumberReload()
-    videoList.addEventListener("scroll", e => {
-        if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100) videoLoad()
-    })
     let videoLoaded = 0
     let videos
     let videoloading = false
@@ -88,6 +78,17 @@ addEventListener("load", async () => {
         if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100) videoLoad(true)
         else videoloading = false
     }
+    addEventListener("resize", e => videoNumberReload())
+    const videoNumberReload = () => {
+        const videonum = (document.body.clientWidth / 300).toFixed()
+        console.log(videonum)
+        document.documentElement.style.setProperty("--video-layout", String(videonum));
+        if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < videonum * 100) videoLoad()
+    }
+    videoNumberReload()
+    videoList.addEventListener("scroll", e => {
+        if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100) videoLoad()
+    })
     videoLoad()
     let backgroundstatus = false
     const BlackBackground = status => {
