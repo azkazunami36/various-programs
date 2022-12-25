@@ -3,7 +3,7 @@
  * @param {[]} array 配列を入力します。
  * @returns 配列が出力されます。
  */
-const arrayRamdom = (array) => {
+const arrayRamdom = array => {
     for (let i = (array.length - 1); i != 0; i--) {
         const random = Math.floor(Math.random() * i)
         let tmp = array[i]
