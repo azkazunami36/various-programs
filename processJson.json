@@ -1,0 +1,44 @@
+{
+    "Apps": [
+        {
+            "name": "YouTube Downloader",
+            "id": "youtubedownloader",
+            "compact": "ytdl",
+            "iconURL": "",
+            "status": {
+                "loaded": false,
+                "viewed": false
+            }
+        },
+        {
+            "name": "Discord Bot",
+            "id": "discordbot",
+            "compact": "ggbot",
+            "iconURL": "",
+            "status": {
+                "loaded": false,
+                "viewed": false
+            }
+        },
+        {
+            "name": "FFmpeg Converter",
+            "id": "ffmpegconverter",
+            "compact": "ffcvr",
+            "iconURL": "",
+            "status": {
+                "loaded": false,
+                "viewed": false
+            }
+        },
+        {
+            "name": "JSON Data Server",
+            "id": "jsondataserver",
+            "compact": "jsonds",
+            "iconURL": "",
+            "status": {
+                "loaded": false,
+                "viewed": false
+            }
+        }
+    ]
+}
