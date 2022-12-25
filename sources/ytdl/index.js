@@ -1,48 +1,61 @@
-//Webサイトの読み込みが終わると実行
+const httpDataRequest = async (request, send) => {
+    return new Promise(resolve => {
+        console.log(send)
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://" + location.hostname + ":" + location.port + "/" + request);
+        xhr.setRequestHeader("content-type", "text/plain;charset=UTF-8");
+        xhr.send(send);
+        xhr.onreadystatechange = async () => { if (xhr.readyState === 4 && xhr.status === 200) resolve(xhr.responseText) }
+    })
+}
+const wait = async time => {
+    await new Promise(resolve => {
+        setTimeout(() => {
+            resolve()
+        }, time)
+    })
+}
 addEventListener("load", async () => {
     const videoList = document.getElementById("videoList")
     addEventListener("resize", e => videoNumberReload())
     const videoNumberReload = () => {
         const videonum = (document.body.clientWidth / 300).toFixed()
         console.log(videonum)
-        document.documentElement.style.setProperty("--video-layout",String(videonum));
+        document.documentElement.style.setProperty("--video-layout", String(videonum));
     }
     videoNumberReload()
     videoList.onscroll = async e => {
         const clientHeight = videoList.clientHeight;
         const scrollHeight = videoList.scrollHeight;
-        console.log(clientHeight, scrollHeight, videoList.scrollTop)
-        if (scrollHeight - (clientHeight + videoList.scrollTop) < 380) videoLoad()
+        if (scrollHeight - (clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100) videoLoad()
     }
     let videoLoaded = 0
     let videos
+    let videoloading = false
     const videoLoad = async () => {
+        if (videoloading) return
+        videoloading = true
         let loading = 0
-        if (videoLoaded == 0) loading = 21
-        else loading = 10
+        const row = (document.body.clientWidth / 300).toFixed()
+        console.log(row)
+        if (videoLoaded == 0) loading = row * 3
+        else loading = row * 2
         const target = videoLoaded + loading
-        if (!videos) {
-            await new Promise(resolve => {
-                const xhr = new XMLHttpRequest();
-                xhr.open("POST", "http://" + location.hostname + ":" + location.port + "/ytvideo-list");
-                xhr.setRequestHeader("content-type", "text/plain;charset=UTF-8");
-                xhr.send();
-                xhr.onreadystatechange = async () => {
-                    if (xhr.readyState === 4 && xhr.status === 200) {
-                        videos = JSON.parse(xhr.responseText)
-                        console.log("取得", videos)
-                        resolve()
-                    }
-                }
-            })
-        }
-        const videoIds = Object.keys(videos)
+        if (!videos) videos = JSON.parse(await httpDataRequest("ytvideo-list"))
+        if (videoLoaded > videos.length) return
         for (videoLoaded; videoLoaded != target; videoLoaded++) {
-            console.log(videoLoaded + ": ", videos[videoIds[videoLoaded]])
+            if (videoLoaded > videos.length) return
+            console.log(videoLoaded + ": ", videos[videoLoaded])
 
-            const videoId = videoIds[videoLoaded]
-            const title = videos[videoIds[videoLoaded]].title
-            const author = videos[videoIds[videoLoaded]].author.name
+            const videoId = videos[videoLoaded]
+            const title = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                videoId: videoId,
+                request: "title"
+            })))
+            const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                videoId: videoId,
+                request: "author"
+            }))).name
             const videoLink = document.createElement("div")
             const videoWindow = document.createElement("div")
             const thumbnailImage = document.createElement("div")
@@ -71,7 +84,9 @@ addEventListener("load", async () => {
             titleAria.appendChild(videoTitle)
             titleAria.appendChild(videoAuthor)
             videoList.appendChild(videoLink)
+            wait(20)
         }
+        videoloading = false
     }
     videoLoad()
     let backgroundstatus = false
