@@ -88,7 +88,7 @@ app.get("*", async (req, res) => {
         res.status(204)
         res.end()
     } else if (req.url.match(/\/sources\/*/)) {
-        const filelink = "sources/" + (String(req.url).split("/sources/")[1]).split("?")[0]
+        const filelink = "sources/" + String(req.url).split("/sources/")[1].split("?")[0]
         console.log(filelink)
         if (fs.existsSync(filelink)) {
             try {
@@ -114,8 +114,13 @@ app.get("*", async (req, res) => {
             res.end()
         }
     } else if (req.url.match(/\/ytimage\/*/)) {
-        const videoId = String(req.url).split("/ytimage/")[1]
-        const thumbnailpath = "cache/YouTubeThumbnail/" + videoId + ".jpg"
+        const videoId = String(req.url).split("/ytimage/")[1].split("?")[0]
+        const { query } = querystring.parse(String(req.url).split("/ytimage/")[1].split("?")[1])
+        let type
+        if (query == "high") type = ""
+        if (query == "low") type = "LowQuality"
+        const thumbnailpath = "cache/YouTubeThumbnail" + type + "/" + videoId + ".jpg"
+        if (dtbs.ytdlRawInfoData[videoId]) if (!fs.existsSync(thumbnailpath)) await ytThumbnailGet(videoId)
         if (fs.existsSync(thumbnailpath)) {
             res.header("Content-Type", "image/jpeg")
             res.end(fs.readFileSync(thumbnailpath))
@@ -217,65 +222,10 @@ app.post("*", async (req, res) => {
                             }).catch((e) => { console.log(e); videoinfos.push({ error: "不明" }) })
                             resolve();
                         }).then(async () => {
-                            if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg")) {
-                                let thumbnails = dtbs.ytdlRawInfoData[videoId].thumbnails
-                                const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
-                                if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
-                                fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary")
-                            }
                             let starttime = {}
-                            if (!fs.existsSync("cache/YTDl/" + videoId + ".mp4")) {
-                                if (!fs.existsSync("cache/YouTubeDownloadingVideo")) fs.mkdirSync("cache/YouTubeDownloadingVideo")
-                                const videoDownload = ytdl(videoId, { filter: "videoonly", quality: "highest" })
-                                videoDownload.once("response", () => starttime.video = Date.now())
-                                videoDownload.on("progress", (chunkLength, downloaded, total) => {
-                                    const floatDownloaded = downloaded / total
-                                    const downloadedSeconds = (Date.now() - starttime.video) / 1000
-                                    //推定残り時間
-                                    const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds
-                                    //パーセント
-                                    const percent = (floatDownloaded * 100).toFixed()
-                                    //ダウンロード済みサイズ
-                                    const mbyte = mbyteString(downloaded)
-                                    //最大ダウンロード量
-                                    const totalMbyte = mbyteString(total)
-                                    //推定残り時間
-                                    const elapsedTime = timeString(downloadedSeconds)
-                                })
-                                videoDownload.on("error", async err => { console.log("Video Get Error " + videoId) })
-                                videoDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingVideo/" + videoId + ".mp4"))
-                                videoDownload.on("end", () => {
-                                    if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl")
-                                    fs.createReadStream("cache/YouTubeDownloadingVideo/" + videoId + ".mp4")
-                                        .pipe(fs.createWriteStream("cache/YTDl/" + videoId + ".mp4"))
-                                })
-                            }
-                            if (!fs.existsSync("cache/YTDl/" + videoId + ".mp3")) {
-                                if (!fs.existsSync("cache/YouTubeDownloadingAudio")) fs.mkdirSync("cache/YouTubeDownloadingAudio")
-                                const audioDownload = ytdl(videoId, { filter: "audioonly", quality: "highest" })
-                                audioDownload.once("response", () => starttime.audio = Date.now())
-                                audioDownload.on("progress", (chunkLength, downloaded, total) => {
-                                    const floatDownloaded = downloaded / total
-                                    const downloadedSeconds = (Date.now() - starttime.audio) / 1000
-                                    //推定残り時間
-                                    const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds
-                                    //パーセント
-                                    const percent = (floatDownloaded * 100).toFixed()
-                                    //ダウンロード済みサイズ
-                                    const mbyte = mbyteString(downloaded)
-                                    //最大ダウンロード量
-                                    const totalMbyte = mbyteString(total)
-                                    //推定残り時間
-                                    const elapsedTime = timeString(downloadedSeconds)
-                                })
-                                audioDownload.on("error", async err => { console.log("Audio Get Error " + videoId) })
-                                audioDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingAudio/" + videoId + ".mp3"))
-                                audioDownload.on("end", () => {
-                                    if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl")
-                                    fs.createReadStream("cache/YouTubeDownloadingAudio/" + videoId + ".mp3")
-                                        .pipe(fs.createWriteStream("cache/YTDl/" + videoId + ".mp3"))
-                                })
-                            }
+                            ytThumbnailGet(videoId)
+                            ytVideoGet(videoId)
+                            ytAudioGet(videoId)
                         })
                         videoinfos.push(dtbs.ytdlRawInfoData[videoId])
                     } else {
@@ -357,13 +307,88 @@ app.post("*", async (req, res) => {
         }
     }
 })
-const ytIndexCreate = videoId => {
+const ytThumbnailGet = async videoId => {
+    let thumbnails = dtbs.ytdlRawInfoData[videoId].thumbnails
+    if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg")) {
+        if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
+        const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
+        fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary")
+    }
+    if (!fs.existsSync("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg")) {
+        if (thumbnails[thumbnails.length - 2]) {
+            if (!fs.existsSync("cache/YouTubeThumbnailLowQuality")) fs.mkdirSync("cache/YouTubeThumbnailLowQuality")
+            const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
+            fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary")
+            const lowimagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
+            fs.writeFileSync("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg", new Buffer.from(lowimagedata.data), "binary")
+        }
+    }
+}
+const ytVideoGet = videoId => {
+    if (!fs.existsSync("cache/YTDl/" + videoId + ".mp4")) {
+        let starttime
+        if (!fs.existsSync("cache/YouTubeDownloadingVideo")) fs.mkdirSync("cache/YouTubeDownloadingVideo")
+        const videoDownload = ytdl(videoId, { filter: "videoonly", quality: "highest" })
+        videoDownload.once("response", () => starttime = Date.now())
+        videoDownload.on("progress", (chunkLength, downloaded, total) => {
+            const floatDownloaded = downloaded / total
+            const downloadedSeconds = (Date.now() - starttime) / 1000
+            //推定残り時間
+            const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds
+            //パーセント
+            const percent = (floatDownloaded * 100).toFixed()
+            //ダウンロード済みサイズ
+            const mbyte = mbyteString(downloaded)
+            //最大ダウンロード量
+            const totalMbyte = mbyteString(total)
+            //推定残り時間
+            const elapsedTime = timeString(downloadedSeconds)
+        })
+        videoDownload.on("error", async err => { console.log("Video Get Error " + videoId) })
+        videoDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingVideo/" + videoId + ".mp4"))
+        videoDownload.on("end", () => {
+            if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl")
+            fs.createReadStream("cache/YouTubeDownloadingVideo/" + videoId + ".mp4")
+                .pipe(fs.createWriteStream("cache/YTDl/" + videoId + ".mp4"))
+        })
+    }
+}
+const ytAudioGet = videoId => {
+    if (!fs.existsSync("cache/YTDl/" + videoId + ".mp3")) {
+        let starttime
+        if (!fs.existsSync("cache/YouTubeDownloadingAudio")) fs.mkdirSync("cache/YouTubeDownloadingAudio")
+        const audioDownload = ytdl(videoId, { filter: "audioonly", quality: "highest" })
+        audioDownload.once("response", () => starttime = Date.now())
+        audioDownload.on("progress", (chunkLength, downloaded, total) => {
+            const floatDownloaded = downloaded / total
+            const downloadedSeconds = (Date.now() - starttime) / 1000
+            //推定残り時間
+            const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds
+            //パーセント
+            const percent = (floatDownloaded * 100).toFixed()
+            //ダウンロード済みサイズ
+            const mbyte = mbyteString(downloaded)
+            //最大ダウンロード量
+            const totalMbyte = mbyteString(total)
+            //推定残り時間
+            const elapsedTime = timeString(downloadedSeconds)
+        })
+        audioDownload.on("error", async err => { console.log("Audio Get Error " + videoId) })
+        audioDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingAudio/" + videoId + ".mp3"))
+        audioDownload.on("end", () => {
+            if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl")
+            fs.createReadStream("cache/YouTubeDownloadingAudio/" + videoId + ".mp3")
+                .pipe(fs.createWriteStream("cache/YTDl/" + videoId + ".mp3"))
+        })
+    }
+}
+const ytIndexCreate = async videoId => {
     if (!dtbs.youtubedata) dtbs.youtubedata = {}
     if (!dtbs.youtubedata[videoId]) console.log("YouTubeInfoIndex Created: " + videoId)
     else console.log("YouTubeInfoIndex Rebuilded: " + videoId)
     dtbs.youtubedata[videoId] = ""
 }
-const ytIndexReBuild = () => {
+const ytIndexReBuild = async () => {
     const videoIds = Object.keys(dtbs.ytdlRawInfoData)
     let i = 0
     const timefor = setInterval(() => {
@@ -376,9 +401,8 @@ const ytIndexReBuild = () => {
         ytIndexCreate(videoIds[i])
     }, 10);
 }
-
-const saveingJson = () => fs.writeFileSync("data.json", JSON.stringify(dtbs))
-const Discord_JS = () => {
+const saveingJson = async () => fs.writeFileSync("data.json", JSON.stringify(dtbs))
+const Discord_JS = async () => {
     const client = new Client({
         partials: [
             Partials.Channel,
