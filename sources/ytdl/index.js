@@ -24,16 +24,14 @@ addEventListener("load", async () => {
         document.documentElement.style.setProperty("--video-layout", String(videonum));
     }
     videoNumberReload()
-    videoList.onscroll = async e => {
-        const clientHeight = videoList.clientHeight;
-        const scrollHeight = videoList.scrollHeight;
-        if (scrollHeight - (clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100) videoLoad()
-    }
+    videoList.addEventListener("scroll", e => {
+        if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100) videoLoad()
+    })
     let videoLoaded = 0
     let videos
     let videoloading = false
-    const videoLoad = async () => {
-        if (videoloading) return
+    const videoLoad = async g => {
+        if (videoloading && !g) return
         videoloading = true
         let loading = 0
         const row = (document.body.clientWidth / 300).toFixed()
@@ -86,7 +84,8 @@ addEventListener("load", async () => {
             videoList.appendChild(videoLink)
             wait(20)
         }
-        videoloading = false
+        if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100) videoLoad(true)
+        else videoloading = false
     }
     videoLoad()
     let backgroundstatus = false
