@@ -8,6 +8,9 @@ const querystring = require("querystring")
 const axios = require("axios")
 const uuid = require("uuid")
 const path = require("path")
+const util = require("util")
+const sharp = require("sharp")
+const imageSize = require("image-size")
 const {
     Client,
     GatewayIntentBits,
@@ -27,47 +30,33 @@ const {
 const mbyteString = require("./modules/mbyteString").mbyteString
 const timeString = require("./modules/timeString").timeString
 const arrayRamdom = require("./modules/arrayRamdom").arrayRamdom
-/**
- * envファイルを生成します。
- */
+const wait = util.promisify(setTimeout)
+// envファイルを生成します。
 if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
-/**
- * envファイルからデータを読み込み、process.envに格納します。
- */
+// envファイルからデータを読み込み、process.envに格納します。
 require("dotenv").config()
-/**
- * 最初にjsonファイルを生成します。
- */
+// 最初にjsonファイルを生成します。
 if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
-/**
- * cacheフォルダを生成します。
- */
+// cacheフォルダを生成します。
 if (!fs.existsSync("cache/")) fs.mkdirSync("cache")
 /**
  * データを格納しています。
  * このjson内を操作する際は、プログラムを終了してから変更を加えてください。
  */
 const dtbs = require("./data.json")
-/**
- * Appです(？)
- */
+// Appです(？)
 const app = express()
 /**
  * 使用するポート番号を決定します。
  * env内にポートが設定されている場合、それを使用します。
  */
 const port = parseInt(process.env.PORT || "80", 10)
-/**
- * 受信を開始します。
- */
+// 受信を開始します。
 app.listen(port, async () => {
     let address = "http://localhost"
     if (port != "80") address += ":" + port
     console.info("ポート" + port + "でWebを公開しました！ " + address + " にアクセスして、操作を開始します！")
 })
-/**
- * なんでこれを使うかを忘れた。
- */
 app.use(cors())
 /**
  * GET、POSTのデータをすべてここで受信する。
@@ -114,6 +103,7 @@ app.get("*", async (req, res) => {
             res.end()
         }
     } else if (req.url.match(/\/ytimage\/*/)) {
+        await wait(Math.floor(Math.random() * 450) + 50)
         const videoId = String(req.url).split("/ytimage/")[1].split("?")[0]
         const { query } = querystring.parse(String(req.url).split("/ytimage/")[1].split("?")[1])
         let type
@@ -310,18 +300,33 @@ app.post("*", async (req, res) => {
 const ytThumbnailGet = async videoId => {
     let thumbnails = dtbs.ytdlRawInfoData[videoId].thumbnails
     if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg")) {
-        if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
-        const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
-        fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary")
-    }
-    if (!fs.existsSync("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg")) {
-        if (thumbnails[thumbnails.length - 2]) {
-            if (!fs.existsSync("cache/YouTubeThumbnailLowQuality")) fs.mkdirSync("cache/YouTubeThumbnailLowQuality")
+        await new Promise(async resolve => {
+            if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
             const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
             fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary")
-            const lowimagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
-            fs.writeFileSync("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg", new Buffer.from(lowimagedata.data), "binary")
-        }
+            resolve()
+        })
+    }
+    if (!fs.existsSync("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg")) {
+        await new Promise(async resolve => {
+            const imagedata = fs.readFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", "binary")
+            const { width, height, type } = await imageSize("cache/YouTubeThumbnail/" + videoId + ".jpg")
+            let tmp1 = width
+            let tmp2 = height
+            for (tmp1; tmp2 != 0;) {
+                let tmp3 = tmp2
+                tmp2 = tmp1 % tmp2
+                tmp1 = tmp3
+            }
+            let aspx = width / tmp1
+            let aspy = height / tmp1
+            let x = 0
+            for (x; (aspx * (x + 1)) < 640;) x += 1
+            if (!fs.existsSync("cache/YouTubeThumbnailLowQuality")) fs.mkdirSync("cache/YouTubeThumbnailLowQuality")
+            const writeStream = fs.createWriteStream("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg")
+            sharp("cache/YouTubeThumbnail/" + videoId + ".jpg").resize(aspx * x, aspy * x).pipe(writeStream)
+            writeStream.on("finish", resolve)
+        })
     }
 }
 const ytVideoGet = videoId => {
