@@ -15,7 +15,7 @@ body {
     align-content: center;
     align-items: center;
     width: 80%;
-    height: 3px;
+    height: 5px;
     position: relative;
 }
 
@@ -30,6 +30,7 @@ body {
     display: flex;
     background-color: rgb(131, 131, 131);
     transform: scaleY(1);
+    overflow: hidden;
     border-radius: 100px;
 }
 

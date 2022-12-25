@@ -4,6 +4,7 @@
 
 body {
     background: rgb(11, 43, 104);
+    margin: 0;
 }
 
 #URLBox {
@@ -304,6 +305,7 @@ div.infoVideoImage {
     height: auto;
     aspect-ratio: 8/7;
     position: relative;
+overflow: hidden;
 }
 
 .VideoWindow {
