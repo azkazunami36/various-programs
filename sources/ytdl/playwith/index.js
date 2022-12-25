@@ -1,47 +1,47 @@
-addEventListener("load", e => {
+const audio = new Audio()
+addEventListener("load", async e => {
     const
         video = document.getElementById("video"),
         seekbarDrag = document.getElementById("seekbar-wrap"),
         seekbarLoad = document.getElementById("seekbar-load"),
         seekpoint = document.getElementById("seek-point"),
-        seekbarIn = document.getElementById("seekbar-in"),
-        audio = new Audio()
+        seekbarIn = document.getElementById("seekbar-in")
     document.body.appendChild(audio)
     addEventListener("focus", e => e.preventDefault())
     addEventListener("focusin", e => e.preventDefault())
     addEventListener("focusout", e => e.preventDefault())
-    video.addEventListener("timeupdate", e => {
+    audio.addEventListener("timeupdate", e => {
         let bufferNo
         console.log(seekbarDrag.clientWidth)
-        seekbarIn.style.transform = "scaleX(" + (video.currentTime / video.duration) + ")";
-        seekpoint.style.left = (video.currentTime / video.duration) * seekbarDrag.clientWidth - (seekpoint.clientWidth / 2)
-        for (let i = (video.buffered.length); bufferNo == undefined && video.buffered.length != 0 && i != 0; i--) {
-            if (video.buffered.start(i - 1) < video.currentTime) {
-                bufferNo = video.buffered.end(i - 1);
+        seekbarIn.style.transform = "scaleX(" + (audio.currentTime / audio.duration) + ")";
+        seekpoint.style.left = (audio.currentTime / audio.duration) * seekbarDrag.clientWidth - (seekpoint.clientWidth / 2)
+        for (let i = (audio.buffered.length); bufferNo == undefined && audio.buffered.length != 0 && i != 0; i--) {
+            if (audio.buffered.start(i - 1) < audio.currentTime) {
+                bufferNo = audio.buffered.end(i - 1);
             }
         }
-        seekbarLoad.style.transform = "scaleX(" + (bufferNo / video.duration) + ")";
+        seekbarLoad.style.transform = "scaleX(" + (bufferNo / audio.duration) + ")";
     })
-    video.addEventListener("play", e => {
+    audio.addEventListener("play", e => {
         audio.currentTime = video.currentTime
-        audio.play()
+        video.play()
     })
-    video.addEventListener("pause", e => {
-        audio.pause()
+    audio.addEventListener("pause", e => {
+        video.pause()
     })
     seekbarDrag.addEventListener("click", e => {
         e.preventDefault()
         console.log(seekbarDrag.getBoundingClientRect().left + window.pageXOffset, seekbarDrag.getBoundingClientRect().left, window.pageXOffset)
-        let percent = (e.pageX - (seekbarDrag.getBoundingClientRect().left + window.pageXOffset)) / seekbarDrag.clientWidth
-        video.currentTime = video.duration * percent
-        audio.currentTime = video.currentTime
+        const percent = (e.pageX - (seekbarDrag.getBoundingClientRect().left + window.pageXOffset)) / seekbarDrag.clientWidth
+        video.currentTime = audio.duration * percent
+        audio.currentTime = audio.duration * percent
     })
     seekpoint.addEventListener("mousemove", e => {
         e.preventDefault()
         if (document.getElementsByClassName("drag")[0]) {
-            let percent = (e.pageX - (seekbarDrag.getBoundingClientRect().left + window.pageXOffset)) / seekbarDrag.clientWidth
-            video.currentTime = video.duration * percent
-            audio.currentTime = video.currentTime
+            const percent = (e.pageX - (seekbarDrag.getBoundingClientRect().left + window.pageXOffset)) / seekbarDrag.clientWidth
+            video.currentTime = audio.duration * percent
+            audio.currentTime = audio.duration * percent
         }
     })
     seekpoint.addEventListener("mousedown", e => seekbarDrag.classList.add("drag"))
