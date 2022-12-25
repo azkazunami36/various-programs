@@ -43,7 +43,6 @@ addEventListener("load", async () => {
      */
     const videoLoad = async g => {
         if (videoloading && !g) return //読み込み中で無視がfalseならリターン
-        if (videoLoaded > videos.length) return //読み込める動画がもう無かったらリターン
         videoloading = true //読み込み中
         let loading = 0 //どれほど読み込むか
         //ブラウザサイズからどれほど動画を並べられるか判断
@@ -53,6 +52,7 @@ addEventListener("load", async () => {
         const target = videoLoaded + loading //どこまで読み込むか指定
         //videosが無かったらサーバーからデータを取得する
         if (!videos) videos = JSON.parse(await httpDataRequest("ytvideo-list"))
+        if (videoLoaded > videos.length) return //読み込める動画がもう無かったらリターン
         //指定した部分まで繰り返し取得する
         for (videoLoaded; videoLoaded != target; videoLoaded++) {
             if (videoLoaded > videos.length) return //読み込める動画が無かったら(ry
@@ -101,7 +101,7 @@ addEventListener("load", async () => {
         else videoloading = false //出なければ読み込み終了
     }
     addEventListener("resize", e => videoNumberReload()) //ブラウザサイズが変わると
-    let videorow = 4
+    let videorow = 0
     /**
      * 動画の列を決める関数
      */
