@@ -14,6 +14,7 @@
             <div class="playerPopup">
                 <div class="playerHeader"></div>
                 <div class="playerFooter">
+                    <div id="playButton">再生</div>
                     <div id="seekbar-wrap">
                         <div id="seek-point"></div>
                         <div id="seekbar-out">
@@ -26,8 +27,6 @@
         </div>
     </div>
     <div class="rightAria">
-        <input type="button" value="再生" onclick="audio.play()">
-        <input type="button" value="一時停止" onclick="audio.pause()">
         <input type="button" value="ミュート" onclick="audio.muted = true">
         <input type="button" value="ミュート解除" onclick="audio.muted = false">
         <input type="button" value="ループ" onclick="audio.loop = true">
