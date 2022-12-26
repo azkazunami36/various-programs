@@ -4,7 +4,7 @@
  * @param ytIndex
  */
 const wait = util.promisify(setTimeout)
-const ytIndexReBuild = async ytIndex => {
+const ytIndexReBuild = async (ytdlRawInfoData, ytIndex) => {
     const videoIds = Object.keys(ytdlRawInfoData)
     let i = 0
     for (let i = 0; i == videoIds.length; i++) {
