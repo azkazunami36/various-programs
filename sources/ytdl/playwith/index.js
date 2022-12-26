@@ -5,7 +5,8 @@ addEventListener("load", async e => {
         seekbarDrag = document.getElementById("seekbar-wrap"), //シーク操作のために使用
         seekbarLoad = document.getElementById("seekbar-load"), //バッファ表示に使用
         seekpoint = document.getElementById("seek-point"), //小さな丸を表示するために使用
-        seekbarIn = document.getElementById("seekbar-in") //再生ケージ表示に使用
+        seekbarIn = document.getElementById("seekbar-in"), //再生ケージ表示に使用
+        playButton = document.getElementById("playButton") //再生ボタン
     const videoRestart = () => { //動画と音声を同期させるために使用する
         if (!audio.paused) { //再生中なら
             audio.pause() //停止
@@ -28,13 +29,20 @@ addEventListener("load", async e => {
         }
         seekbarLoad.style.transform = "scaleX(" + (bufferNo / audio.duration) + ")"; //反(ry
     })
+    //再生停止ボタンがクリックされると
+    playButton.addEventListener("click", () => {
+        if (audio.paused) audio.play() //停止していたら再生
+        else audio.pause() //再生していたら停止
+    })
     addEventListener("resize", seekpointmove) //ウィンドウサイズ変更時に丸の位置を更新
     audio.addEventListener("play", e => { //再生されると
         audio.currentTime = video.currentTime //同期
         video.play() //再生
+        playButton.innerHTML = "一時停止" //文字を変更
     })
     audio.addEventListener("pause", e => { //停止すると
         video.pause() //停止
+        playButton.innerHTML = "再生" //文字を変更
     })
     seekbarDrag.addEventListener("click", e => { //シークバーのクリックで
         e.preventDefault() //軽量化を狙う
@@ -63,11 +71,13 @@ addEventListener("load", async e => {
             videoRestart() //同期
         }
     })
+    addEventListener("keydown", e => {
+
+    })
     //クエリ取得
     const params = new Proxy(new URLSearchParams(window.location.search), { get: (searchParams, prop) => searchParams.get(prop) })
     const videoId = params.v //VideoID
     video.src = "/ytvideo/" + videoId //動画のファイルパス
     video.poster = "/ytimage/" + videoId //動画のサムネ
     audio.src = "/ytaudio/" + videoId //音声のファイルパス
-    try { audio.play() } catch (e) { } //自動再生
 })
