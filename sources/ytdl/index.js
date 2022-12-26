@@ -31,7 +31,7 @@ addEventListener("load", async () => {
     const videoList = document.getElementById("videoList") //スクロールなどで使用する
     const VideoListCenter = document.getElementById("VideoListCenter") //動画を表示するために使用する
     const videoRowReload = () => {
-        if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100) videoLoad()
+        if ((videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100 + document.body.clientHeight)) videoLoad()
     }
     let videoLoaded = 0 //ロード済みの動画をカウント
     let videos //サーバーから取得したVideoIDを保管
@@ -97,7 +97,7 @@ addEventListener("load", async () => {
             wait(20)
         }
         //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
-        if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100) videoLoad(true)
+        if ((videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100 + document.body.clientHeight)) videoLoad(true)
         else videoloading = false //出なければ読み込み終了
     }
     addEventListener("resize", e => videoNumberReload()) //ブラウザサイズが変わると
@@ -199,54 +199,34 @@ const ytdlInfoGet = async videolist => {
     infoTitle.innerHTML = "サーバーの返答を待っています..."
     const infoVideos = document.getElementById("infoVideos")
     infoVideos.innerHTML = ""
-    const xhr = new XMLHttpRequest()
-
-    xhr.open("POST", "http://" + location.hostname + ":" + location.port + "/youtube-info")
-    xhr.setRequestHeader("content-type", "text/plain;charset=UTF-8")
-    xhr.send(JSON.stringify(videolist))
-    xhr.onreadystatechange = async () => {
-        //通信が完了し、成功をマークしていたら
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            const data = JSON.parse(xhr.responseText)
-            let i = 0
-            /**
-             * VLC: Video List Createの略です...w
-             */
-            const VLCLoop = setInterval(async () => {
-                console.log((i + 1) + "回目のループ。")
-                if (i == data.length) {
-                    infoTitle.innerHTML = data.length + "本の動画が取得完了しました！"
-                    clearInterval(VLCLoop)
-                };
-                const videoId = data[i]
-                const title = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                    videoId: videoId,
-                    request: "title"
-                })))
-                const description = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                    videoId: videoId,
-                    request: "description"
-                }))).replace(/\n/g, "<br>")
-                console.log(description)
-                const infoVideo = document.createElement("div")
-                const infoVideoImagediv = document.createElement("div")
-                const infoVideoImageimg = document.createElement("img")
-                const infoVideoInfo = document.createElement("div")
-                const infoVideoTitle = document.createElement("div")
-                infoVideo.classList.add("infoVideo")
-                infoVideoImagediv.classList.add("infoVideoImage")
-                infoVideoImageimg.classList.add("infoVideoImage")
-                infoVideoImageimg.src = "../../ytimage/" + videoId
-                infoVideoInfo.classList.add("infoVideoInfo")
-                infoVideoTitle.classList.add("infoVideoTitle")
-                infoVideoTitle.innerHTML = title
-                infoVideoImagediv.appendChild(infoVideoImageimg)
-                infoVideoInfo.appendChild(infoVideoTitle)
-                infoVideo.appendChild(infoVideoImagediv)
-                infoVideo.appendChild(infoVideoInfo)
-                infoVideos.appendChild(infoVideo)
-                i++;
-            }, 20);
-        };
-    };
+    console.log(videolist)
+    const data = JSON.parse(await httpDataRequest("youtube-info", JSON.stringify(videolist)))
+    console.log(data)
+    for (let i = 0; i != data.length; i++) {
+        if (i == data.length) infoTitle.innerHTML = data.length + "本の動画が取得完了しました！"
+        const videoId = data[i]
+        console.log(videoId)
+        const title = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+            videoId: videoId,
+            request: "title"
+        })))
+        const infoVideo = document.createElement("div")
+        const infoVideoImagediv = document.createElement("div")
+        const infoVideoImageimg = document.createElement("img")
+        const infoVideoInfo = document.createElement("div")
+        const infoVideoTitle = document.createElement("div")
+        infoVideo.classList.add("infoVideo")
+        infoVideoImagediv.classList.add("infoVideoImage")
+        infoVideoImageimg.classList.add("infoVideoImage")
+        infoVideoImageimg.src = "../../ytimage/" + videoId
+        infoVideoInfo.classList.add("infoVideoInfo")
+        infoVideoTitle.classList.add("infoVideoTitle")
+        infoVideoTitle.innerHTML = title
+        infoVideoImagediv.appendChild(infoVideoImageimg)
+        infoVideoInfo.appendChild(infoVideoTitle)
+        infoVideo.appendChild(infoVideoImagediv)
+        infoVideo.appendChild(infoVideoInfo)
+        infoVideos.appendChild(infoVideo)
+        wait(20)
+    }
 };
