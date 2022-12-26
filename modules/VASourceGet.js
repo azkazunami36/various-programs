@@ -6,7 +6,7 @@ const fs = require("fs")
  * @param {string} type Content-Typeに使用します
  * @param {} res response変数を入力します
  */
-const VASourceGet = async (videopath, range, type, res) => {
+module.exports.VASourceGet = async (videopath, range, type, res) => {
     const videoSize = fs.statSync(videopath).size //ファイルサイズ(byte)
     const chunkSize = 1 * 1e6 //チャンクサイズ
 
@@ -23,7 +23,4 @@ const VASourceGet = async (videopath, range, type, res) => {
     res.writeHead(206, headers) //206を使用すると接続を続行することが出来る
     const Stream = fs.createReadStream(videopath, { start, end }) //ストリームにし、範囲のデータを読み込む
     Stream.pipe(res) //送信
-}
-module.exports = {
-    VASourceGet: VASourceGet
 }

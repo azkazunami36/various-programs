@@ -3,13 +3,16 @@
  * @param {string} videoId 
  */
 const fs = require("fs")
-const ytThumbnailGet = async (videoId) => {
+const imageSize = require("image-size")
+const sharp = require("sharp")
+module.exports.ytThumbnailGet = async (videoId) => {
     let thumbnails = JSON.parse(fs.readFileSync("data.json")).ytdlRawInfoData[videoId].thumbnails
     if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg")) {
         await new Promise(async resolve => {
             if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
             const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
             fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary")
+            console.log("高品質サムネイル取得")
             resolve()
         })
     }
@@ -31,10 +34,10 @@ const ytThumbnailGet = async (videoId) => {
             if (!fs.existsSync("cache/YouTubeThumbnailLowQuality")) fs.mkdirSync("cache/YouTubeThumbnailLowQuality")
             const writeStream = fs.createWriteStream("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg")
             sharp("cache/YouTubeThumbnail/" + videoId + ".jpg").resize(aspx * x, aspy * x).pipe(writeStream)
-            writeStream.on("finish", resolve)
+            writeStream.on("finish", () => {
+                console.log("低品質サムネイル作成")
+                resolve()
+            })
         })
     }
-}
-module.exports = {
-    ytThumbnailGet: ytThumbnailGet
 }

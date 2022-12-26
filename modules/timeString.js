@@ -3,7 +3,7 @@
  * @param {Number} sec 秒数を入力します。
  * @returns 文字列を返します。
  */
-const time = (sec) => {
+module.exports.timeString = (sec) => {
     let output = ""
     let minute = 0
     let hour = 0
@@ -13,7 +13,4 @@ const time = (sec) => {
     if (minute != 0) output += minute + "分"
     output += (sec).toFixed() + "秒"
     return output
-}
-module.exports = {
-    timeString: time
 }

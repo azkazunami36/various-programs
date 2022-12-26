@@ -3,7 +3,7 @@
  * @param {string} videoId 
  */
 const fs = require("fs")
-const ytAudioGet = videoId => {
+module.exports.ytAudioGet = videoId => {
     if (!fs.existsSync("cache/YTDl/" + videoId + ".mp3")) {
         let starttime
         if (!fs.existsSync("cache/YouTubeDownloadingAudio")) fs.mkdirSync("cache/YouTubeDownloadingAudio")
@@ -31,7 +31,4 @@ const ytAudioGet = videoId => {
                 .pipe(fs.createWriteStream("cache/YTDl/" + videoId + ".mp3"))
         })
     }
-}
-module.exports = {
-    ytAudioGet: ytAudioGet
 }
