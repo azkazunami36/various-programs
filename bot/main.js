@@ -14,15 +14,13 @@ const wait = async time => {
     })
 }
 (async () => {
-    for (let i = 1; i <= 10000000000000000; i++) {
+    setInterval(() => {
         var dt = new Date();
         var formatted = dt.toFormat("YYYY年MM月DD日HH24時MI分SS秒");
         let sum = 0
 
         console.log(formatted);
-        await wait(1000)
-    }
-
+    }, 1000);
 })()
 
 //権限//
@@ -54,6 +52,11 @@ const loga = 0
 client.on('messageCreate', message => {  //切れてるのか横も
     if (message.author.bot) return;
 
+    for (let i = 0; i != data.data.length; i++) {
+        if (message.content === data.data[i]) {
+            message.reply("不適切な言葉です\n今すぐ消しなさい")
+        }
+    }
     if (message.content === "こんにちは") {
         cmdexec++
         const loga = "J=E1"
@@ -94,30 +97,12 @@ client.on('messageCreate', message => {  //切れてるのか横も
         message.channel.send("English/goodmorning")
         console.log("コマンド名\n" + loga + "\n実行user" + username + "による実行")
     }
-    if (message.content === data.data) {
-        message.reply("不適切な言葉です\n今すぐ消しなさい")
-    }
 
 
 
 })
-client.on('ready', () => {
-    const wait = async time => {
-        await new Promise(resolve => {
-            setTimeout(() => {
-                resolve()
-            }, time)
-        })
-    }
-    (async () => {
-        let sum = 0
-        for (let i = 1; i <= 10000000000000000; i++) {
-            sum += i
-            console.log("実行中\n閉じないで下さい")
-            await wait(60000)
-        }
-
-    })()
+client.on('ready', async () => {
+    setInterval(() => console.log("実行中\n閉じないで下さい"), 60000);
 })
 process.on("exit", exitCode => {
     console.log(cmdexec)
