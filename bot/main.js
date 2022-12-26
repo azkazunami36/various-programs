@@ -54,6 +54,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
 
     for (let i = 0; i != data.data.length; i++) {
         if (message.content.match(data.data[i])) {
+            console.log(data.data[i] + "とマッチしました")
             message.reply("不適切な言葉です\n今すぐ消しなさい")
             message.delete();
         }
