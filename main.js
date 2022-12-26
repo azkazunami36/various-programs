@@ -62,6 +62,9 @@ app.get("*", async (req, res) => {
     } else if (req.url == "/sources/ytdl/" || req.url == "/sources/ytdl/index.html") { //ルートとind (ry
         res.header("Content-Type", "text/html;charset=utf-8")
         res.end(fs.readFileSync("sources/ytdl/index.html"))
+    } else if (req.url == "/sources/ggbot/" || req.url == "/sources/ggbot/index.html") { //ルートt (ry
+        res.header("Content-Type", "text/html;charset=utf-8")
+        res.end(fs.readFileSync("sources/ggbot/index.html"))
     } else if (req.url.match("/sources/ytdl/watch?")) {
         //watchというリンクは少々特殊なため、matchで検出し返答します
         res.header("Content-Type", "text/html;charset=utf-8")
@@ -191,10 +194,7 @@ app.post("*", async (req, res) => {
             })
             break
         }
-        /**
-         * アプリ情報をjsonで送信します。
-         */
-        case "/applcation-info": {
+        case "/applcation-info": { //アプリ情報をjsonで送信
             res.header("Content-Type", "text/plain;charset=utf-8")
             res.end(JSON.stringify(processJson.Apps))
             break
