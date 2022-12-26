@@ -5,3 +5,4 @@
 /package-lock.json
 /bot/.env
 /bot/node_modules/*
+/bot/package-lock.json
