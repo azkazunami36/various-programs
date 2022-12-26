@@ -1,5 +1,7 @@
-node_modules
-.env
-data.json
-cache
-package-lock.json
+/node_modules/*
+/.env
+/data.json
+/cache/*
+/package-lock.json
+/bot/.env
+/bot/node_modules/*
