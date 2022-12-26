@@ -110,7 +110,7 @@ app.get("*", async (req, res) => {
         const info = String(req.url).split("/ytimage/")[1].split("?") //urlから情報を取得
         const videoId = info[0] //urlからVideoIDを取得
         const { query } = querystring.parse(info[1]) //urlから品質要求を取得
-        let type
+        let type = ""
         if (query == "high") type = ""
         if (query == "low") type = "LowQuality" //lowだったらフォルダパスを変更
         const thumbnailpath = "cache/YouTubeThumbnail" + type + "/" + videoId + ".jpg" //パス
@@ -176,9 +176,9 @@ app.post("*", async (req, res) => {
                                 dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
                                 saveingJson() //保存
                                 ytIndexCreate(videoId) //インデックス作成
-                                videoIds.push(videoId) //IDをプッシュ
                             }).catch((e) => console.log(e))
-                            resolve(); //取得完了を意味する
+                            videoIds.push(videoId) //IDをプッシュ
+                            resolve() //取得完了を意味する
                         }).then(async () => {
                             ytThumbnailGet(videoId) //サムネを取得
                             ytVideoGet(videoId) //動画を取得
