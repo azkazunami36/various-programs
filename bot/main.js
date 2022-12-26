@@ -53,7 +53,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
     if (message.author.bot) return;
 
     for (let i = 0; i != data.data.length; i++) {
-        if (message.content === data.data[i]) {
+        if (message.content.match(data.data[i])) {
             message.reply("不適切な言葉です\n今すぐ消しなさい")
             message.delete();
         }
