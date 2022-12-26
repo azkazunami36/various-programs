@@ -115,7 +115,10 @@ addEventListener("load", async () => {
         videoRowReload()
     }
     videoNumberReload() //動画の列を初期化する
-    videoList.addEventListener("scroll", videoRowReload) //スクロールすると動画を読み込むかを検証する
+    videoList.addEventListener("scroll", e => {
+        if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < 1) videoList.scrollTop--
+        videoRowReload() //スクロールすると動画を読み込むかを検証する
+    }) 
     videoLoad() //初回の動画読み込みをする
     let backgroundstatus = false //バックグラウンドが黒く染まっているかどうか
     /**
