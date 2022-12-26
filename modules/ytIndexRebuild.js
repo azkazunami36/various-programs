@@ -3,7 +3,7 @@
  * @param ytdlRawInfoData
  * @param ytIndex
  */
-const wait = util.promisify(setTimeout)
+const wait = require("util").promisify(setTimeout)
 const ytIndexReBuild = async (ytdlRawInfoData, ytIndex) => {
     const videoIds = Object.keys(ytdlRawInfoData)
     let i = 0
