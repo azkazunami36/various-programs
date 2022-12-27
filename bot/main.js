@@ -53,6 +53,7 @@ const loga = 0
 client.on('messageCreate', message => {  //切れてるのか横も
     if (message.author.bot) return;
 
+<<<<<<< Updated upstream
     for (let i = 0; i != data.data.length; i++) { //dataの数だけ
         for (let i = 0; i != data.ok.length; i++) {
             if (message.author.id == data.ok[i]) return //returnの後に実行したいコードを入力すること
@@ -79,6 +80,20 @@ client.on('messageCreate', message => {  //切れてるのか横も
                 .then(() => message.delete());
             return
 
+=======
+    for (let i = 0; i != data.data.length; i++) {
+        if (message.content === data.data[i]) {
+            message.reply("不適切な言葉です\nこのメッセージを削除します")
+            message.delete();
+>>>>>>> Stashed changes
+        }
+    }
+    for (let i = 0; i != data.data2.length; i++) {
+        if (message.content === data.data2[i]) {
+            message.reply("サーバーまたはサーバー管理者への悪口を感知しました\nこの情報は管理者チャットに送られます")
+            message.delete();
+            const banuserneme = message.author.username
+            message.users.get("1033611588999053412").send(banuserneme+"がサーバーまたはサーバー管理者への悪口を言いました\nBANするかはあなた次第です")
         }
     }
     if (message.content === "こんにちは") {
