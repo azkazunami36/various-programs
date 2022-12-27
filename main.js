@@ -36,28 +36,35 @@ const ytVideoGet = require("./modules/ytVideoGet").ytVideoGet
 const ytAudioGet = require("./modules/ytAudioGet").ytAudioGet
 const ytIndexCreate = require("./modules/ytIndexCreate").ytIndexCreate
 const ytIndexRebuild = require("./modules/ytIndexRebuild").ytIndexReBuild
+const ytVASourceCheck = require("./modules/ytVASourceCheck").ytVASourceCheck
 const wait = util.promisify(setTimeout)
-if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
-require("dotenv").config()
-if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
-if (!fs.existsSync("cache/")) fs.mkdirSync("cache")
 /**
  * データを格納しています。
  * このjson内を操作する際は、プログラムを終了してから変更を加えてください。
  */
 const dtbs = require("./data.json")
-const processJson = require("./processJson.json")
-const procData = {}
+if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
 //----ここから初期化ラインです----
 if (!dtbs.ytdlRawInfoData) dtbs.ytdlRawInfoData = {} 
 if (!dtbs.ytIndex) dtbs.ytIndex = {}
+
+if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
+if (!fs.existsSync("cache/")) fs.mkdirSync("cache")
+if (!fs.existsSync("cache/YTDL")) fs.mkdirSync("cache/YTDL")
+if (!fs.existsSync("cache/YouTubeDownloadingVideo")) fs.mkdirSync("cache/YouTubeDownloadingVideo")
+if (!fs.existsSync("cache/YouTubeDownloadingAudio")) fs.mkdirSync("cache/YouTubeDownloadingAudio")
+if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
+if (!fs.existsSync("cache/YouTubeThumbnailLowQuality")) fs.mkdirSync("cache/YouTubeThumbnailLowQuality")
 //-----------ここまで------------
+require("dotenv").config()
+const processJson = require("./processJson.json")
+const procData = {}
 const app = express()
 /**
  * 使用するポート番号を決定します。
  * env内にポートが設定されている場合、それを使用します。
  */
-const port = parseInt(process.env.PORT || "80", 10)
+const port = parseInt(process.env.PORT || "81", 10)
 app.listen(port, async () => {
     let address = "http://localhost"
     if (port != "80") address += ":" + port //Webではポート80がデフォルトなため、省略としてif
@@ -141,19 +148,27 @@ app.get("*", async (req, res) => {
         }
     } else if (req.url.match(/\/ytvideo\/*/)) { //YouTube動画にアクセスする
         const videoId = String(req.url).split("/ytvideo/")[1] //urlから情報を取得
-        const videopath = "cache/YTDl/" + videoId + ".mp4" //パス
+        const videopath = "cache/YTDL/" + videoId + ".mp4" //パス
+        if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
+            if (!fs.existsSync(videopath)) //動画が存在してい無かったら
+                await ytVideoGet(videoId)  //動画を取得する
         if (fs.existsSync(videopath)) //動画が存在したら
             VASourceGet(videopath, req.headers.range, "video/mp4", res) //動画を送信
         else { //存在しない場合400
+            console.log("あれっ...動画は...？")
             res.status(400)
             res.end()
         }
     } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
         const videoId = String(req.url).split("/ytaudio/")[1] //urlから情報を取得
-        const audiopath = "cache/YTDl/" + videoId + ".mp3" //パス
+        const audiopath = "cache/YTDL/" + videoId + ".mp3" //パス
+        if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
+            if (!fs.existsSync(audiopath)) //音声が存在してい無かったら
+                await ytAudioGet(videoId)  //音声を取得する
         if (fs.existsSync(audiopath)) //音声が存在したら
             VASourceGet(audiopath, req.headers.range, "audio/mp3", res) //音声を送信
         else { //存在しない場合400
+            console.log("あれっ...音声は...？")
             res.status(400)
             res.end()
         }
@@ -272,11 +287,12 @@ app.post("*", async (req, res) => {
         res.end()
     }
 })
-ytIndexRebuild(dtbs.ytdlRawInfoData, dtbs.ytIndex, ytIndex => {
+ytIndexRebuild(dtbs.ytdlRawInfoData, dtbs.ytIndex, async ytIndex => {
     dtbs.ytIndex = ytIndex
     saveingJson()
     console.log("再作成完了")
 })
+ytVASourceCheck(dtbs.ytIndex)
 const saveingJson = async () => fs.writeFileSync("data.json", JSON.stringify(dtbs))
 const Discord_JS = async () => {
     const client = new Client({
