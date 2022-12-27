@@ -54,6 +54,9 @@ client.on('messageCreate', message => {  //切れてるのか横も
     if (message.author.bot) return;
 
     for (let i = 0; i != data.data.length; i++) {
+    for (let i = 0; i != data.ok.length; i++){
+        if(message.author.id == data.ok)
+        return 
         if (message.content.match(data.data[i])) {
             counta++
             console.log(data.data[i] + "とマッチしました")
@@ -63,7 +66,12 @@ client.on('messageCreate', message => {  //切れてるのか横も
             return
             
         }
-    }
+        else if(message.content === "なんで"){
+            message.reply("悪口だから")
+            return
+        }
+        
+    }}
     for (let i = 0; i != data.urldata.length; i++) {
         if (message.content.match(data.urldata[i])) {
             counta++
