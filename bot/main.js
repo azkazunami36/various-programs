@@ -3,6 +3,7 @@ const { Client, GatewayIntentBits, Message, EmbedBuilder, MessageActionRow, Mess
 require("dotenv").config();
 require('date-utils');
 let cmdexec = 0;
+let ari = 0;
 const data = require("./data.json") //data.json
 //const//
 let counta = 0;
@@ -155,6 +156,11 @@ client.on('messageCreate', message => {  //切れてるのか横も
         message.reply("はじめまして" + username + "さん")
         message.channel.send("English/Nice to meet you!")
     }
+    if (message.content === "ありがとぉぉぉ") {
+        ari++
+        message.reply(ari)
+        console.log(ari)
+    }
 
 
 
@@ -166,6 +172,7 @@ client.on('ready', async () => {
 process.on("exit", exitCode => {
     console.log(cmdexec)
     console.log("botが実行されているときに起きた暴言等は" + counta + "回です")
+    console.log("ありがとぉぉぉ"+ari)
 });
 process.on("SIGINT", () => process.exit(0));
 client.login(process.env.token)
