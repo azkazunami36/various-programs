@@ -31,23 +31,40 @@ const mbyteString = require("./modules/mbyteString").mbyteString
 const timeString = require("./modules/timeString").timeString
 const arrayRamdom = require("./modules/arrayRamdom").arrayRamdom
 const VASourceGet = require("./modules/VASourceGet").VASourceGet
+const ytThumbnailGet = require("./modules/ytThumbnailGet").ytThumbnailGet
+const ytVideoGet = require("./modules/ytVideoGet").ytVideoGet
+const ytAudioGet = require("./modules/ytAudioGet").ytAudioGet
+const ytIndexCreate = require("./modules/ytIndexCreate").ytIndexCreate
+const ytIndexRebuild = require("./modules/ytIndexRebuild").ytIndexReBuild
+const ytVASourceCheck = require("./modules/ytVASourceCheck").ytVASourceCheck
 const wait = util.promisify(setTimeout)
-if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
-require("dotenv").config()
-if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
-if (!fs.existsSync("cache/")) fs.mkdirSync("cache")
 /**
  * データを格納しています。
  * このjson内を操作する際は、プログラムを終了してから変更を加えてください。
  */
 const dtbs = require("./data.json")
+if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
+//----ここから初期化ラインです----
+if (!dtbs.ytdlRawInfoData) dtbs.ytdlRawInfoData = {} 
+if (!dtbs.ytIndex) dtbs.ytIndex = {}
+
+if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
+if (!fs.existsSync("cache/")) fs.mkdirSync("cache")
+if (!fs.existsSync("cache/YTDL")) fs.mkdirSync("cache/YTDL")
+if (!fs.existsSync("cache/YouTubeDownloadingVideo")) fs.mkdirSync("cache/YouTubeDownloadingVideo")
+if (!fs.existsSync("cache/YouTubeDownloadingAudio")) fs.mkdirSync("cache/YouTubeDownloadingAudio")
+if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
+if (!fs.existsSync("cache/YouTubeThumbnailLowQuality")) fs.mkdirSync("cache/YouTubeThumbnailLowQuality")
+//-----------ここまで------------
+require("dotenv").config()
 const processJson = require("./processJson.json")
+const procData = {}
 const app = express()
 /**
  * 使用するポート番号を決定します。
  * env内にポートが設定されている場合、それを使用します。
  */
-const port = parseInt(process.env.PORT || "80", 10)
+const port = parseInt(process.env.PORT || "81", 10)
 app.listen(port, async () => {
     let address = "http://localhost"
     if (port != "80") address += ":" + port //Webではポート80がデフォルトなため、省略としてif
@@ -62,6 +79,9 @@ app.get("*", async (req, res) => {
     } else if (req.url == "/sources/ytdl/" || req.url == "/sources/ytdl/index.html") { //ルートとind (ry
         res.header("Content-Type", "text/html;charset=utf-8")
         res.end(fs.readFileSync("sources/ytdl/index.html"))
+    } else if (req.url == "/sources/ggbot/" || req.url == "/sources/ggbot/index.html") { //ルートt (ry
+        res.header("Content-Type", "text/html;charset=utf-8")
+        res.end(fs.readFileSync("sources/ggbot/index.html"))
     } else if (req.url.match("/sources/ytdl/watch?")) {
         //watchというリンクは少々特殊なため、matchで検出し返答します
         res.header("Content-Type", "text/html;charset=utf-8")
@@ -128,19 +148,27 @@ app.get("*", async (req, res) => {
         }
     } else if (req.url.match(/\/ytvideo\/*/)) { //YouTube動画にアクセスする
         const videoId = String(req.url).split("/ytvideo/")[1] //urlから情報を取得
-        const videopath = "cache/YTDl/" + videoId + ".mp4" //パス
+        const videopath = "cache/YTDL/" + videoId + ".mp4" //パス
+        if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
+            if (!fs.existsSync(videopath)) //動画が存在してい無かったら
+                await ytVideoGet(videoId)  //動画を取得する
         if (fs.existsSync(videopath)) //動画が存在したら
             VASourceGet(videopath, req.headers.range, "video/mp4", res) //動画を送信
         else { //存在しない場合400
+            console.log("あれっ...動画は...？")
             res.status(400)
             res.end()
         }
     } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
         const videoId = String(req.url).split("/ytaudio/")[1] //urlから情報を取得
-        const audiopath = "cache/YTDl/" + videoId + ".mp3" //パス
+        const audiopath = "cache/YTDL/" + videoId + ".mp3" //パス
+        if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
+            if (!fs.existsSync(audiopath)) //音声が存在してい無かったら
+                await ytAudioGet(videoId)  //音声を取得する
         if (fs.existsSync(audiopath)) //音声が存在したら
             VASourceGet(audiopath, req.headers.range, "audio/mp3", res) //音声を送信
         else { //存在しない場合400
+            console.log("あれっ...音声は...？")
             res.status(400)
             res.end()
         }
@@ -158,177 +186,113 @@ app.get("*", async (req, res) => {
 })
 app.post("*", async (req, res) => {
     console.log("Post:", req.url)
-    switch (req.url) {
-        case "/youtube-info": { //YouTube動画の情報を保存します。
-            let data = ""
-            req.on("data", async chunk => data += chunk)
-            req.on("end", async () => {
-                const videolist = JSON.parse(data) //VideoIDかURLの入った配列を取得
-                const videoIds = [] //VideoIDの配列をクライアントに返すため
-                for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
-                    let videoId = videolist[i] //VideoIDとなるもの
-                    if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) { //YouTubeに存在するかどうか
-                        if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
-                        if (!dtbs.ytdlRawInfoData) { dtbs.ytdlRawInfoData = {} } //jsonにキーがなかった場合
-                        await new Promise(async (resolve, reject) => { //情報取得をPromiseで待機させる
-                            //VideoIDから情報を取得
-                            if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
-                                dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
-                                saveingJson() //保存
-                                ytIndexCreate(videoId) //インデックス作成
-                            }).catch((e) => console.log(e))
-                            videoIds.push(videoId) //IDをプッシュ
-                            resolve() //取得完了を意味する
-                        }).then(async () => {
-                            ytThumbnailGet(videoId) //サムネを取得
-                            ytVideoGet(videoId) //動画を取得
-                            ytAudioGet(videoId) //音声を取得
-                        })
-                    } else videoIds.push("ないわこんなもん") //存在しない旨をプッシュ
-                }
-                res.header("Content-Type", "text/plaincharset=utf-8")
-                res.end(JSON.stringify(videoIds))
-            })
-            break
-        }
-        /**
-         * アプリ情報をjsonで送信します。
-         */
-        case "/applcation-info": {
-            res.header("Content-Type", "text/plain;charset=utf-8")
-            res.end(JSON.stringify(processJson.Apps))
-            break
-        }
-        case "/ytvideo-list": {
-            res.header("Content-Type", "text/plain;charset=utf-8")
-            const videoIds = arrayRamdom(Object.keys(dtbs.youtubedata))
+    if (req.url == "/youtube-info") { //YouTube動画の情報を保存します。
+        let data = ""
+        req.on("data", async chunk => data += chunk)
+        req.on("end", async () => {
+            const videolist = JSON.parse(data) //VideoIDかURLの入った配列を取得
+            const videoIds = [] //VideoIDの配列をクライアントに返すため
+            for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
+                let videoId = videolist[i] //VideoIDとなるもの
+                if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) { //YouTubeに存在するかどうか
+                    if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
+                    await new Promise(async (resolve, reject) => { //情報取得をPromiseで待機させる
+                        //VideoIDから情報を取得
+                        if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
+                            dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
+                            saveingJson() //保存
+                            dtbs.ytIndex = ytIndexCreate(videoId, dtbs.ytIndex) //インデックス作成
+                        }).catch((e) => console.log(e))
+                        videoIds.push(videoId) //IDをプッシュ
+                        resolve() //取得完了を意味する
+                    }).then(async () => {
+                        ytThumbnailGet(videoId) //サムネを取得
+                        ytVideoGet(videoId) //動画を取得
+                        ytAudioGet(videoId) //音声を取得
+                    })
+                } else videoIds.push("ないわこんなもん") //存在しない旨をプッシュ
+            }
+            res.header("Content-Type", "text/plaincharset=utf-8")
             res.end(JSON.stringify(videoIds))
-            break
-        }
-        case "/ytdlRawInfoData": {
-            let data = ""
-            req.on("data", chunk => data += chunk)
-            req.on("end", () => {
-                const { videoId, request } = JSON.parse(data)
-                res.header("Content-Type", "text/plain;charset=utf-8")
-                const details = dtbs.ytdlRawInfoData[videoId]
-                if (!details) return res.end("不明")
-                const text = JSON.stringify(details[request])
-                res.end(text || "不明")
-            })
-            break
-        }
+        })
+    } else if (req.url == "/applcation-info") { //アプリ情報をjsonで送信
+        res.header("Content-Type", "text/plain;charset=utf-8")
+        res.end(JSON.stringify(processJson.Apps))
+
+    } else if (req.url == "/ytvideo-list") {
+        res.header("Content-Type", "text/plain;charset=utf-8")
+        const videoIds = arrayRamdom(Object.keys(dtbs.ytIndex.videoIds))
+        res.end(JSON.stringify(videoIds))
+
+    } else if (req.url == "/ytdlRawInfoData") {
+        let data = ""
+        req.on("data", chunk => data += chunk)
+        req.on("end", () => {
+            const { videoId, request } = JSON.parse(data)
+            res.header("Content-Type", "text/plain;charset=utf-8")
+            const details = dtbs.ytdlRawInfoData[videoId]
+            if (!details) return res.end("不明")
+            const text = JSON.stringify(details[request])
+            res.end(text || "不明")
+        })
+    } else if (req.url.match("/discord-seting")) {
+        let data = ""
+        req.on("data", chunk => data += chunk)
+        req.on("end", () => {
+            const request = JSON.parse(data)
+            if (request.token) {
+                procData.discordBot[request.token] = {}
+                const proc = procData.discordBot[request.token]
+                if (request.init) proc.client = new Client({
+                    partials: [
+                        Partials.Channel,
+                        Partials.GuildMember,
+                        Partials.GuildScheduledEvent,
+                        Partials.Message,
+                        Partials.Reaction,
+                        Partials.ThreadMember,
+                        Partials.User
+                    ],
+                    intents: [
+                        GatewayIntentBits.DirectMessageReactions,
+                        GatewayIntentBits.DirectMessageTyping,
+                        GatewayIntentBits.DirectMessages,
+                        GatewayIntentBits.GuildBans,
+                        GatewayIntentBits.GuildEmojisAndStickers,
+                        GatewayIntentBits.GuildIntegrations,
+                        GatewayIntentBits.GuildInvites,
+                        GatewayIntentBits.GuildMembers,
+                        GatewayIntentBits.GuildMessageReactions,
+                        GatewayIntentBits.GuildMessageTyping,
+                        GatewayIntentBits.GuildMessages,
+                        GatewayIntentBits.GuildPresences,
+                        GatewayIntentBits.GuildScheduledEvents,
+                        GatewayIntentBits.GuildVoiceStates,
+                        GatewayIntentBits.GuildWebhooks,
+                        GatewayIntentBits.Guilds,
+                        GatewayIntentBits.MessageContent
+                    ]
+                })
+                /**
+                 * @type {Client}
+                 */
+                const client = proc.client
+                if (request.login) client.login(request.token)
+            }
+        })
+    } else if (req.url.match("/discord-statusGet")) {
+    } else if (false) {
+    } else {
+        res.status(404)
+        res.end()
     }
 })
-const ytThumbnailGet = async videoId => {
-    let thumbnails = dtbs.ytdlRawInfoData[videoId].thumbnails
-    if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg")) {
-        await new Promise(async resolve => {
-            if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
-            const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
-            fs.writeFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary")
-            resolve()
-        })
-    }
-    if (!fs.existsSync("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg")) {
-        await new Promise(async resolve => {
-            const imagedata = fs.readFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", "binary")
-            const { width, height, type } = await imageSize("cache/YouTubeThumbnail/" + videoId + ".jpg")
-            let tmp1 = width
-            let tmp2 = height
-            for (tmp1; tmp2 != 0;) {
-                let tmp3 = tmp2
-                tmp2 = tmp1 % tmp2
-                tmp1 = tmp3
-            }
-            let aspx = width / tmp1
-            let aspy = height / tmp1
-            let x = 0
-            for (x; (aspx * (x + 1)) < 640;) x += 1
-            if (!fs.existsSync("cache/YouTubeThumbnailLowQuality")) fs.mkdirSync("cache/YouTubeThumbnailLowQuality")
-            const writeStream = fs.createWriteStream("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg")
-            sharp("cache/YouTubeThumbnail/" + videoId + ".jpg").resize(aspx * x, aspy * x).pipe(writeStream)
-            writeStream.on("finish", resolve)
-        })
-    }
-}
-const ytVideoGet = videoId => {
-    if (!fs.existsSync("cache/YTDl/" + videoId + ".mp4")) {
-        let starttime
-        if (!fs.existsSync("cache/YouTubeDownloadingVideo")) fs.mkdirSync("cache/YouTubeDownloadingVideo")
-        const videoDownload = ytdl(videoId, { filter: "videoonly", quality: "highest" })
-        videoDownload.once("response", () => starttime = Date.now())
-        videoDownload.on("progress", (chunkLength, downloaded, total) => {
-            const floatDownloaded = downloaded / total
-            const downloadedSeconds = (Date.now() - starttime) / 1000
-            //推定残り時間
-            const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds
-            //パーセント
-            const percent = (floatDownloaded * 100).toFixed()
-            //ダウンロード済みサイズ
-            const mbyte = mbyteString(downloaded)
-            //最大ダウンロード量
-            const totalMbyte = mbyteString(total)
-            //推定残り時間
-            const elapsedTime = timeString(downloadedSeconds)
-        })
-        videoDownload.on("error", async err => { console.log("Video Get Error " + videoId) })
-        videoDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingVideo/" + videoId + ".mp4"))
-        videoDownload.on("end", () => {
-            if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl")
-            fs.createReadStream("cache/YouTubeDownloadingVideo/" + videoId + ".mp4")
-                .pipe(fs.createWriteStream("cache/YTDl/" + videoId + ".mp4"))
-        })
-    }
-}
-const ytAudioGet = videoId => {
-    if (!fs.existsSync("cache/YTDl/" + videoId + ".mp3")) {
-        let starttime
-        if (!fs.existsSync("cache/YouTubeDownloadingAudio")) fs.mkdirSync("cache/YouTubeDownloadingAudio")
-        const audioDownload = ytdl(videoId, { filter: "audioonly", quality: "highest" })
-        audioDownload.once("response", () => starttime = Date.now())
-        audioDownload.on("progress", (chunkLength, downloaded, total) => {
-            const floatDownloaded = downloaded / total
-            const downloadedSeconds = (Date.now() - starttime) / 1000
-            //推定残り時間
-            const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds
-            //パーセント
-            const percent = (floatDownloaded * 100).toFixed()
-            //ダウンロード済みサイズ
-            const mbyte = mbyteString(downloaded)
-            //最大ダウンロード量
-            const totalMbyte = mbyteString(total)
-            //推定残り時間
-            const elapsedTime = timeString(downloadedSeconds)
-        })
-        audioDownload.on("error", async err => { console.log("Audio Get Error " + videoId) })
-        audioDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingAudio/" + videoId + ".mp3"))
-        audioDownload.on("end", () => {
-            if (!fs.existsSync("cache/YTDl")) fs.mkdirSync("cache/YTDl")
-            fs.createReadStream("cache/YouTubeDownloadingAudio/" + videoId + ".mp3")
-                .pipe(fs.createWriteStream("cache/YTDl/" + videoId + ".mp3"))
-        })
-    }
-}
-const ytIndexCreate = async videoId => {
-    if (!dtbs.youtubedata) dtbs.youtubedata = {}
-    if (!dtbs.youtubedata[videoId]) console.log("YouTubeInfoIndex Created: " + videoId)
-    else console.log("YouTubeInfoIndex Rebuilded: " + videoId)
-    dtbs.youtubedata[videoId] = ""
-}
-const ytIndexReBuild = async () => {
-    const videoIds = Object.keys(dtbs.ytdlRawInfoData)
-    let i = 0
-    const timefor = setInterval(() => {
-        i++
-        if (i == videoIds.length) {
-            clearInterval(timefor)
-            saveingJson()
-            return
-        }
-        ytIndexCreate(videoIds[i])
-    }, 10);
-}
+ytIndexRebuild(dtbs.ytdlRawInfoData, dtbs.ytIndex, async ytIndex => {
+    dtbs.ytIndex = ytIndex
+    saveingJson()
+    console.log("再作成完了")
+})
+ytVASourceCheck(dtbs.ytIndex)
 const saveingJson = async () => fs.writeFileSync("data.json", JSON.stringify(dtbs))
 const Discord_JS = async () => {
     const client = new Client({

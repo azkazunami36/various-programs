@@ -44,17 +44,12 @@ addEventListener("load", async () => {
     const videoLoad = async g => {
         if (videoloading && !g) return //読み込み中で無視がfalseならリターン
         videoloading = true //読み込み中
-        let loading = 0 //どれほど読み込むか
         //ブラウザサイズからどれほど動画を並べられるか判断
         const row = (document.body.clientWidth / 300).toFixed()
-        if (videoLoaded == 0) loading = row * 3 //初めての読み込みなら動画のよこ列×3を読み込む
-        else loading = row * 2 //出なければよこ列x2を読み込む
-        const target = videoLoaded + loading //どこまで読み込むか指定
         //videosが無かったらサーバーからデータを取得する
         if (!videos) videos = JSON.parse(await httpDataRequest("ytvideo-list"))
         if (videoLoaded > videos.length) return //読み込める動画がもう無かったらリターン
-        //指定した部分まで繰り返し取得する
-        for (videoLoaded; videoLoaded != target; videoLoaded++) {
+        for (let i = 0; i != row; i++) {
             if (videoLoaded > videos.length) return //読み込める動画が無かったら(ry
 
             const videoId = videos[videoLoaded] //VideoID
@@ -94,6 +89,7 @@ addEventListener("load", async () => {
             thumbnailImage.appendChild(thumbnailimg)
             titleAria.appendChild(videoTitle)
             titleAria.appendChild(videoAuthor)
+            videoLoaded++
             wait(20)
         }
         //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
@@ -115,7 +111,10 @@ addEventListener("load", async () => {
         videoRowReload()
     }
     videoNumberReload() //動画の列を初期化する
-    videoList.addEventListener("scroll", videoRowReload) //スクロールすると動画を読み込むかを検証する
+    videoList.addEventListener("scroll", e => {
+        if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < 1) videoList.scrollTop--
+        videoRowReload() //スクロールすると動画を読み込むかを検証する
+    })
     videoLoad() //初回の動画読み込みをする
     let backgroundstatus = false //バックグラウンドが黒く染まっているかどうか
     /**
@@ -139,10 +138,12 @@ addEventListener("load", async () => {
     const ytURLSend = document.getElementById("URLSend")
     //ポップアップウィンドウを取得
     const infoPopup = document.getElementById("infoPopup")
+    //テキストボックスの取得
+    const ytURLBox = document.getElementById("URLBox")
+    //テキストボックスの取得
+    const msDataBox = document.getElementById("msDataBox")
     //クリックされたら
     ytURLSend.addEventListener("click", e => {
-        //テキストボックスの取得
-        const ytURLBox = document.getElementById("URLBox")
         //クラス「ポップアップ有効化用」を追加
         infoPopup.classList.add("Popuped")
         BlackBackground(true)
@@ -177,8 +178,6 @@ addEventListener("load", async () => {
     });
     const MultiURLSend = document.getElementById("MultiURLSend")
     MultiURLSend.addEventListener("click", e => {
-        //テキストボックスの取得
-        const msDataBox = document.getElementById("msDataBox")
         const text = msDataBox.value
         try {
             ytdlInfoGet(JSON.parse(text))
