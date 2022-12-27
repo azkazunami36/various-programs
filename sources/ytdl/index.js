@@ -48,9 +48,9 @@ addEventListener("load", async () => {
         const row = (document.body.clientWidth / 300).toFixed()
         //videosが無かったらサーバーからデータを取得する
         if (!videos) videos = JSON.parse(await httpDataRequest("ytvideo-list"))
-        if (videoLoaded > videos.length) return //読み込める動画がもう無かったらリターン
+        if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
         for (let i = 0; i != row; i++) {
-            if (videoLoaded > videos.length) return //読み込める動画が無かったら(ry
+            if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
 
             const videoId = videos[videoLoaded] //VideoID
             const title = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
@@ -61,6 +61,7 @@ addEventListener("load", async () => {
                 videoId: videoId,
                 request: "author"
             }))).name
+            const ratio = (window.devicePixelRatio || 1).toFixed(2)
             const videoLink = document.createElement("div")
             const videoWindow = document.createElement("div")
             const thumbnailImage = document.createElement("div")
@@ -77,7 +78,7 @@ addEventListener("load", async () => {
             videoTitle.classList.add("VideoTitle")
             videoAuthor.classList.add("VideoAuthor")
             clickme.classList.add("clickme")
-            thumbnailimg.src = "../../ytimage/" + videoId + "?query=low"
+            thumbnailimg.src = "../../ytimage/" + videoId + "?size=360&ratio=" + ratio
             clickme.href = "./watch?v=" + videoId
             videoTitle.innerHTML = title
             videoAuthor.innerHTML = author
@@ -90,7 +91,6 @@ addEventListener("load", async () => {
             titleAria.appendChild(videoTitle)
             titleAria.appendChild(videoAuthor)
             videoLoaded++
-            wait(20)
         }
         //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
         if ((videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100 + document.body.clientHeight)) videoLoad(true)

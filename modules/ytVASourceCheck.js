@@ -4,6 +4,7 @@
  * @param {any} ytdlRawInfoData 
  */
 const fs = require("fs")
+const wait = require("util").promisify(setTimeout)
 module.exports.ytVASourceCheck = async ytIndex => {
     const videoIds = Object.keys(ytIndex.videoIds)
     for (let i = 0; i != videoIds.length; i++) {
@@ -14,6 +15,7 @@ module.exports.ytVASourceCheck = async ytIndex => {
             await require("./ytAudioGet").ytAudioGet(videoId)
         if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg") || !fs.existsSync("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg"))
             await require("./ytThumbnailGet").ytThumbnailGet(videoId)
+        await wait(10)
     }
     console.log("ソースの有無のチェックが完了しました。")
 }
