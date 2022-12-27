@@ -1,10 +1,11 @@
 const { count } = require('console');
-const { Client, GatewayIntentBits, Message } = require('discord.js');
+const { Client, GatewayIntentBits, Message,EmbedBuilder,MessageActionRow, MessageButton } = require('discord.js');
 require("dotenv").config();
 require('date-utils');
 let cmdexec = 0;
 const data = require("./data.json") //data.json
-
+//const//
+let counta = 0;
 //時計//
 const wait = async time => {
     await new Promise(resolve => {
@@ -54,10 +55,24 @@ client.on('messageCreate', message => {  //切れてるのか横も
 
     for (let i = 0; i != data.data.length; i++) {
         if (message.content.match(data.data[i])) {
+            counta++
             console.log(data.data[i] + "とマッチしました")
-            message.reply("不適切な言葉です\n今すぐ消しなさい")
-            message.delete();
+
+            message.reply("不適切な言葉です\n消しました")
+            .then(() => message.delete());
             return
+            
+        }
+    }
+    for (let i = 0; i != data.urldata.length; i++) {
+        if (message.content.match(data.urldata[i])) {
+            counta++
+            console.log(data.urldata[i] + "とマッチしました")
+
+            message.reply("不適切な動画URLを消しました")
+            .then(() => message.delete());
+            return
+            
         }
     }
     if (message.content === "こんにちは") {
@@ -72,10 +87,18 @@ client.on('messageCreate', message => {  //切れてるのか横も
         cmdexec++
         const username = message.author.username
         const loga = "help(J+E)"
-        message.reply("自分で考えようぜ")
-        message.reply("Let's figure it out for ourselves")
+        message.reply("このbotは不適切なメッセージを消したりします")
         console.log("コマンド名\n" + loga + "\n実行user" + username + "による実行")
 
+    }
+    if (message.content === "/GUI"){
+		const row = new MessageActionRow()
+			.addComponents(
+				new MessageButton()
+					.setCustomId('primary')
+					.setLabel('Primary')
+					.setStyle('PRIMARY'),
+			);
     }
     if (message.content === "Hello") {
         cmdexec++
@@ -100,6 +123,12 @@ client.on('messageCreate', message => {  //切れてるのか横も
         message.channel.send("English/goodmorning")
         console.log("コマンド名\n" + loga + "\n実行user" + username + "による実行")
     }
+    if (message.content === "はじめまして"){
+        const username = message.author.username
+        message.reply("はじめまして"+username+"さん")
+        message.channel.send("English/Nice to meet you!")
+    }
+    
 
 
 
@@ -109,6 +138,7 @@ client.on('ready', async () => {
 })
 process.on("exit", exitCode => {
     console.log(cmdexec)
+    console.log("botが実行されているときに起きた暴言等は"+counta+"回です")
 });
 process.on("SIGINT", () => process.exit(0));
 client.login(process.env.token)
