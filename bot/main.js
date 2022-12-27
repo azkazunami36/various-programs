@@ -55,6 +55,8 @@ client.on('messageCreate', message => {  //切れてるのか横も
 
     let idiotis = false //不適切発言をしたかどうか
     let mediaidiotis = false //不適切動画メディアのURLを入力したかどうか
+    let admintoidiotis = false //管理人に不適切(ry
+    let engidiotis = false //英語で不適s(ry
     for (let i = 0; i != data.ok.length; i++) { //ホワイトリストの数だけ
         if (message.author.id != data.ok[i]) { //ホワイトリストに入っていないと
             /**
@@ -70,8 +72,18 @@ client.on('messageCreate', message => {  //切れてるのか横も
             for (let i = 0; i != data.urldata.length; i++) {
                 if (message.content.match(data.urldata[i])) {
                     console.log(data.urldata[i] + "とマッチしました")
-                    mediaidiotis
-
+                    mediaidiotis = true
+                }
+            }
+            for (let i = 0; i != data.data2.length; i++) {
+                if (message.content === data.data2[i]) {
+                    admintoidiotis = true
+                }
+            }
+            for (let i = 0; i != data.Englishdata.length; i++) {
+                if (message.content === data.Englishdata[i]) {
+                    console.log(data.Englishdata[i] + "とマッチしました")
+                    engidiotis = true
                 }
             }
         }
@@ -79,36 +91,30 @@ client.on('messageCreate', message => {  //切れてるのか横も
     if (idiotis) {
         message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
             .then(() => message.delete()); //ちなみにthenはbotが送信したほうのmessageが取得できる
-            
-            
         counta++
     }
     if (mediaidiotis) {
         message.reply("不適切な動画URLを消しました")
             .then(() => message.delete());
-        counta
+        counta++
+    }
+    if (admintoidiotis) {
+        message.users.get("1033611588999053412").send(message.author.username + "がサーバーまたはサーバー管理者への悪口を言いました\nBANするかはあなた次第です")
+        message.reply("サーバーまたはサーバー管理者への悪口を感知しました\nこの情報は管理者チャットに送られます")
+            .then(() => message.delete());
+        counta++
+    }
+    if (engidiotis) {
+        message.reply("Don't swear Erase")
+            .then(() => message.delete());
+        counta++
     }
     if (message.content === "なんで") message.reply("悪口だから")
-    for (let i = 0; i != data.data2.length; i++) {
-        if (message.content === data.data2[i]) {
-            message.reply("サーバーまたはサーバー管理者への悪口を感知しました\nこの情報は管理者チャットに送られます")
-            message.delete();
-            const banuserneme = message.author.username
-            message.users.get("1033611588999053412").send(banuserneme + "がサーバーまたはサーバー管理者への悪口を言いました\nBANするかはあなた次第です")
-        }
-    }
-    for (let i = 0; i != data.Englishdata.length; i++) {
-        if (message.content === data.Englishdata[i]){
-            message.reply("Don't swear Erase")
-            console.log(data.Englishdata[i] + "とマッチしました")
-            idiotis = true
-        }
-    }
     if (idiotis) {
         message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
             .then(() => message.delete()); //ちなみにthenはbotが送信したほうのmessageが取得できる
-            
-            
+
+
         counta++
     }
     if (message.content === "こんにちは") {
