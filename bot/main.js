@@ -59,7 +59,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
             if (message.content.match(data.data[i])) {
                 counta++
                 console.log(data.data[i] + "とマッチしました")
-                message.reply("不適切な言葉です\n消しました")
+                message.reply("不適切な言葉です\n消しました\n"+"ご協力"+data.data3)
                     .then(() => message.delete());
                 return
             }
