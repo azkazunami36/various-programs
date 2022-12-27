@@ -65,17 +65,17 @@ client.on('messageCreate', message => {  //切れてるのか横も
             }
             else if (message.content === "なんで") {
                 message.reply("悪口だから")
-                return
+                return    //これつけないと無限ループ
             }
 
         }
     }
-    for (let i = 0; i != data.urldata.length; i++) {
+    for (let i = 0; i != data.urldata.length; i++) {     //jsonの個数だけ繰り返す
         if (message.content.match(data.urldata[i])) {
             counta++
             console.log(data.urldata[i] + "とマッチしました")
 
-            message.reply("不適切な動画URLを消しました")
+            message.reply("不適切な動画URLを消しました")     //なぜか実行できない
                 .then(() => message.delete());
             return
 
@@ -107,7 +107,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
     }
     if (message.content === "/GUI") {
         const row = new MessageActionRow()
-            .addComponents(
+            .addComponents(                       //実行禁止
                 new MessageButton()
                     .setCustomId('primary')
                     .setLabel('Primary')
