@@ -105,15 +105,6 @@ client.on('messageCreate', message => {  //切れてるのか横も
         console.log("コマンド名\n" + loga + "\n実行user" + username + "による実行")
 
     }
-    if (message.content === "/GUI") {
-        const row = new MessageActionRow()
-            .addComponents(                       //実行禁止
-                new MessageButton()
-                    .setCustomId('primary')
-                    .setLabel('Primary')
-                    .setStyle('PRIMARY'),
-            );
-    }
     if (message.content === "Hello") {
         cmdexec++
         const loga = "E=J2"
