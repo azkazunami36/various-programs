@@ -5,7 +5,8 @@
 const fs = require("fs")
 const imageSize = require("image-size")
 const sharp = require("sharp")
-module.exports.ytThumbnailGet = async (videoId) => {
+const axios = require("axios")
+module.exports.ytThumbnailGet = async videoId => {
     let thumbnails = JSON.parse(fs.readFileSync("data.json")).ytdlRawInfoData[videoId].thumbnails
     if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg")) {
         await new Promise(async resolve => {
