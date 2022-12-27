@@ -70,8 +70,10 @@ client.on('messageCreate', message => {  //切れてるのか横も
         }
     }
     if (idiotis) {
-        message.reply("不適切な言葉です\n消しました\n" + "ご協力" + data.data3)
+        message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
             .then(() => message.delete()); //ちなみにthenはbotが送信したほうのmessageが取得できる
+            setInterval(() =>message.edit("消しました"),1000);
+            
         counta++
     }
     if (message.content === "なんで") message.reply("悪口だから")
