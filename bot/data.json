@@ -31,7 +31,6 @@
         "馬鹿",
         "ばか",
         "バカ",
-        "fuck you",
         "ふぁっきゅ",
         "ふぁっきゅー",
         "ファッキュー",
@@ -79,7 +78,7 @@
         "キモイ",
         "キモ",
         "キモい",
-        "fuck",
+        
         "fuck u",
         "shit",
         "shit up",
@@ -120,12 +119,30 @@
         "我喜",
         "ふｃｋ",
         "不ｃｋ",
-        "消えろ～"
+        "消えろ～",
+        "お前スペック低い",
+        "とくていするよ",
+        "とくていするで"
+        
 
 
 
 
 
+
+    ],
+    "Englishdata" :[
+        "say bad things about",
+        "fuck",
+        "fuck you",
+        "speak ill of",
+        "very funny.",
+        "Too bad.",
+        "Whatever",
+        "Who cares?",
+        "So what?",
+        "Mind your own business.",
+        "Enough of excuses."
     ],
     "data2" :[
 
@@ -138,7 +155,7 @@
         "https://youtu.be/hrt26UfL13I?t=331"
     ],
     "ok":[
-        "1033611588999053412",
+        
         "1046234948727746580"
     ],
     "data3" :[

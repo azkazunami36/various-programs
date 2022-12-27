@@ -72,7 +72,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
     if (idiotis) {
         message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
             .then(() => message.delete()); //ちなみにthenはbotが送信したほうのmessageが取得できる
-            setInterval(() =>message.edit("消しました"),1000);
+            
             
         counta++
     }
@@ -95,6 +95,20 @@ client.on('messageCreate', message => {  //切れてるのか横も
             const banuserneme = message.author.username
             message.users.get("1033611588999053412").send(banuserneme + "がサーバーまたはサーバー管理者への悪口を言いました\nBANするかはあなた次第です")
         }
+    }
+    for (let i = 0; i != data.Englishdata.length; i++) {
+        if (message.content === data.Englishdata[i]){
+            message.reply("Don't swear Erase")
+            console.log(data.Englishdata[i] + "とマッチしました")
+            idiotis = true
+        }
+    }
+    if (idiotis) {
+        message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
+            .then(() => message.delete()); //ちなみにthenはbotが送信したほうのmessageが取得できる
+            
+            
+        counta++
     }
     if (message.content === "こんにちは") {
         cmdexec++
