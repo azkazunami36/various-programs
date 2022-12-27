@@ -53,23 +53,28 @@ const loga = 0
 client.on('messageCreate', message => {  //切れてるのか横も
     if (message.author.bot) return;
 
-    for (let i = 0; i != data.data.length; i++) { //dataの数だけ
-        for (let i = 0; i != data.ok.length; i++) {
-            if (message.author.id == data.ok[i]) return //returnの後に実行したいコードを入力すること
-            if (message.content.match(data.data[i])) {
-                counta++
-                console.log(data.data[i] + "とマッチしました")
-                message.reply("不適切な言葉です\n消しました\n"+"ご協力"+data.data3)
-                    .then(() => message.delete());
-                return
-            }
-            else if (message.content === "なんで") {
-                message.reply("悪口だから")
-                return    //これつけないと無限ループ
+    let idiotis = false //不適切発言をしたかどうか
+    for (let i = 0; i != data.ok.length; i++) { //ホワイトリストの数だけ
+        if (message.author.id != data.ok[i]) { //ホワイトリストに入っていないと
+            /**
+             * ちなみにletで重複したi変数を宣言しても、ブロックないで処理されるから  
+             * 下のforと上のforではiの内容は異なる
+             */
+            for (let i = 0; i != data.data.length; i++) { //dataの数だけ
+                if (message.content.match(data.data[i])) { //マッチする言葉を探して
+                    console.log(data.data[i] + "とマッチしました")
+                    idiotis = true
+                }
             }
 
         }
     }
+    if (idiotis) {
+        message.reply("不適切な言葉です\n消しました\n" + "ご協力" + data.data3)
+            .then(() => message.delete()); //ちなみにthenはbotが送信したほうのmessageが取得できる
+        counta++
+    }
+    if (message.content === "なんで") message.reply("悪口だから")
     for (let i = 0; i != data.urldata.length; i++) {     //jsonの個数だけ繰り返す
         if (message.content.match(data.urldata[i])) {
             counta++
@@ -86,7 +91,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
             message.reply("サーバーまたはサーバー管理者への悪口を感知しました\nこの情報は管理者チャットに送られます")
             message.delete();
             const banuserneme = message.author.username
-            message.users.get("1033611588999053412").send(banuserneme+"がサーバーまたはサーバー管理者への悪口を言いました\nBANするかはあなた次第です")
+            message.users.get("1033611588999053412").send(banuserneme + "がサーバーまたはサーバー管理者への悪口を言いました\nBANするかはあなた次第です")
         }
     }
     if (message.content === "こんにちは") {
