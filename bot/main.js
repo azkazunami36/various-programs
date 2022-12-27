@@ -54,6 +54,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
     if (message.author.bot) return;
 
     let idiotis = false //不適切発言をしたかどうか
+    let mediaidiotis = false //不適切動画メディアのURLを入力したかどうか
     for (let i = 0; i != data.ok.length; i++) { //ホワイトリストの数だけ
         if (message.author.id != data.ok[i]) { //ホワイトリストに入っていないと
             /**
@@ -66,7 +67,13 @@ client.on('messageCreate', message => {  //切れてるのか横も
                     idiotis = true
                 }
             }
+            for (let i = 0; i != data.urldata.length; i++) {
+                if (message.content.match(data.urldata[i])) {
+                    console.log(data.urldata[i] + "とマッチしました")
+                    mediaidiotis
 
+                }
+            }
         }
     }
     if (idiotis) {
@@ -76,18 +83,12 @@ client.on('messageCreate', message => {  //切れてるのか横も
             
         counta++
     }
-    if (message.content === "なんで") message.reply("悪口だから")
-    for (let i = 0; i != data.urldata.length; i++) {     //jsonの個数だけ繰り返す
-        if (message.content.match(data.urldata[i])) {
-            counta++
-            console.log(data.urldata[i] + "とマッチしました")
-
-            message.reply("不適切な動画URLを消しました")     //なぜか実行できない
-                .then(() => message.delete());
-            return
-
-        }
+    if (mediaidiotis) {
+        message.reply("不適切な動画URLを消しました")
+            .then(() => message.delete());
+        counta
     }
+    if (message.content === "なんで") message.reply("悪口だから")
     for (let i = 0; i != data.data2.length; i++) {
         if (message.content === data.data2[i]) {
             message.reply("サーバーまたはサーバー管理者への悪口を感知しました\nこの情報は管理者チャットに送られます")
