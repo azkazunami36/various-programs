@@ -30,8 +30,9 @@ const wait = async time => {
 addEventListener("load", async () => {
     const videoList = document.getElementById("videoList") //スクロールなどで使用する
     const VideoListCenter = document.getElementById("VideoListCenter") //動画を表示するために使用する
+    const thumbnailWidth = 600 //サムネイルの表示大きさ
     const videoRowReload = () => {
-        if ((videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100 + document.body.clientHeight)) videoLoad()
+        if ((videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / thumbnailWidth).toFixed() * 100 + document.body.clientHeight)) videoLoad()
     }
     let videoLoaded = 0 //ロード済みの動画をカウント
     let videos //サーバーから取得したVideoIDを保管
@@ -45,7 +46,7 @@ addEventListener("load", async () => {
         if (videoloading && !g) return //読み込み中で無視がfalseならリターン
         videoloading = true //読み込み中
         //ブラウザサイズからどれほど動画を並べられるか判断
-        const row = (document.body.clientWidth / 300).toFixed()
+        const row = (document.body.clientWidth / thumbnailWidth).toFixed()
         //videosが無かったらサーバーからデータを取得する
         if (!videos) videos = JSON.parse(await httpDataRequest("ytvideo-list"))
         if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
@@ -93,10 +94,26 @@ addEventListener("load", async () => {
             videoLoaded++
         }
         //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
-        if ((videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / 300).toFixed() * 100 + document.body.clientHeight)) videoLoad(true)
+        if ((videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / thumbnailWidth).toFixed() * 100 + document.body.clientHeight)) videoLoad(true)
         else videoloading = false //出なければ読み込み終了
     }
-    addEventListener("resize", e => videoNumberReload()) //ブラウザサイズが変わると
+    let ratio = (window.devicePixelRatio || 1).toFixed(2)
+    addEventListener("resize", e => {
+        videoNumberReload()
+        if (ratio != (window.devicePixelRatio || 1).toFixed(2)) {
+            imgratio = (window.devicePixelRatio || 1).toFixed(2)
+            const Thumbnailimgs = document.getElementsByClassName("Thumbnailimg")
+            if (Thumbnailimgs[0]) for (let i = 0; i != Thumbnailimgs.length; i++) {
+                /**
+                 * @type {string}
+                 */
+                const src = Thumbnailimgs[i].src
+                const videoId = src.split("ytimage/")[1].split("?")[0]
+                Thumbnailimgs[i].src = "../../ytimage/" + videoId + "?size=360&ratio=" + imgratio
+            } 
+            console.log(imgratio)
+        }
+    }) //ブラウザサイズが変わると
     let videorow = 0
     /**
      * 動画の列を決める関数
