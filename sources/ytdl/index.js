@@ -61,6 +61,9 @@ addEventListener("load", async () => {
             const thumbnailImage = document.createElement("div")
             const thumbnailimg = document.createElement("img")
             const titleAria = document.createElement("div")
+            const iconAria = document.createElement("div")
+            const infoAria = document.createElement("div")
+            const authorIcon = document.createElement("img")
             const videoTitle = document.createElement("p")
             const videoAuthor = document.createElement("p")
             const clickme = document.createElement("a")
@@ -69,27 +72,35 @@ addEventListener("load", async () => {
             thumbnailImage.classList.add("ThumbnailImage")
             thumbnailimg.classList.add("Thumbnailimg")
             titleAria.classList.add("TitleAria")
+            iconAria.classList.add("IconAria")
+            infoAria.classList.add("InfoAria")
+            authorIcon.classList.add("AuthorIcon")
             videoTitle.classList.add("VideoTitle")
             videoAuthor.classList.add("VideoAuthor")
             clickme.classList.add("clickme")
-            thumbnailimg.src = "../../ytimage/" + videoId + "?size=360&ratio=" + ratio
+            thumbnailimg.src = "/ytimage/" + videoId + "?size=360&ratio=" + ratio
             clickme.href = "./watch?v=" + videoId
             videoLink.appendChild(videoWindow)
             videoWindow.appendChild(thumbnailImage)
             videoWindow.appendChild(titleAria)
             videoWindow.appendChild(clickme)
             thumbnailImage.appendChild(thumbnailimg)
-            titleAria.appendChild(videoTitle)
-            titleAria.appendChild(videoAuthor)
+            infoAria.appendChild(videoTitle)
+            infoAria.appendChild(videoAuthor)
+            iconAria.appendChild(authorIcon)
+            titleAria.appendChild(iconAria)
+            titleAria.appendChild(infoAria)
             new Promise(async resolve => {
                 videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
                     videoId: videoId,
                     request: "title"
                 })))
-                videoAuthor.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
                     videoId: videoId,
                     request: "author"
-                }))).name
+                })))
+                videoAuthor.innerHTML = author.name
+                authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
                 resolve()
             })
             videoLoaded++

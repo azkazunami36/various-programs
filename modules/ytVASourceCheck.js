@@ -9,14 +9,16 @@ module.exports.ytVASourceCheck = async ytIndex => {
     const videoIds = Object.keys(ytIndex.videoIds)
     for (let i = 0; i != videoIds.length; i++) {
         const videoId = videoIds[i]
-        if (!fs.existsSync("cache/YTDl/" + videoId + ".mp4"))
+        if (!fs.existsSync("C:/cache/YTDl/" + videoId + ".mp4"))
             await require("./ytVideoGet").ytVideoGet(videoId)
-        if (!fs.existsSync("cache/YTDl/" + videoId + ".mp3"))
+        if (!fs.existsSync("C:/cache/YTDl/" + videoId + ".mp3"))
             await require("./ytAudioGet").ytAudioGet(videoId)
-        if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg"))
+        if (!fs.existsSync("C:/cache/YouTubeThumbnail/" + videoId + ".jpg"))
             await require("./ytThumbnailGet").ytThumbnailGet(videoId)
-            if (!fs.existsSync("./"))
-        await wait(10)
+        if (!fs.existsSync("C:/cache/ytAuthorIcon" + ytIndex.videoIds[videoId].authorId + ".jpg"))
+            await require("./ytAuthorIconGet").ytAuthorIconGet(ytIndex.videoIds[videoId].authorId)
+            await wait(10)
     }
+
     console.log("ソースの有無のチェックが完了しました。")
 }
