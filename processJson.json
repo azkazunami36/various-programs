@@ -39,6 +39,16 @@
                 "loaded": false,
                 "viewed": false
             }
+        },
+        {
+            "name": "File Lister",
+            "id": "filelister",
+            "compact": "flst",
+            "iconURL": "",
+            "status": {
+                "loaded": false,
+                "viewed": false
+            }
         }
     ]
 }
