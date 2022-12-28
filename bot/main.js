@@ -93,23 +93,21 @@ client.on('messageCreate', message => {  //切れてるのか横も
         message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
             .then(() => message.delete()); //ちなみにthenはbotが送信したほうのmessageが取得できる
         counta++
-    }
-    if (mediaidiotis) {
+    } else if (mediaidiotis) {
         message.reply("不適切な動画URLを消しました")
             .then(() => message.delete());
         counta++
-    }
-    if (admintoidiotis) {
+    } else if (admintoidiotis) {
         message.users.get("1033611588999053412").send(message.author.username + "がサーバーまたはサーバー管理者への悪口を言いました\nBANするかはあなた次第です")
         message.reply("サーバーまたはサーバー管理者への悪口を感知しました\nこの情報は管理者チャットに送られます")
             .then(() => message.delete());
         counta++
-    }
-    if (engidiotis) {
+    } else if (engidiotis) {
         message.reply("Don't swear Erase")
-            .then(() => message.delete());
-        counta++
+            .
+            counta++
     }
+    if (idiotis || mediaidiotis || admintoidiotis || engidiotis) returnthen(() => message.delete());
     if (message.content === "なんで") message.reply("悪口だから")
     if (idiotis) {
         message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
