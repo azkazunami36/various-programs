@@ -30,7 +30,7 @@ module.exports.ytVideoGet = async videoId => {
                 //推定残り時間
                 const elapsedTime = timeString(downloadedSeconds)
             })
-            videoDownload.on("error", async err => { console.log("Video Get Error " + videoId) })
+            videoDownload.on("error", async err => { console.log("Video Get Error " + videoId, err) })
             videoDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingVideo/" + videoId + ".mp4"))
             videoDownload.on("end", async () => {
                 if (!fs.existsSync("cache/YTDL")) fs.mkdirSync("cache/YTDL")
