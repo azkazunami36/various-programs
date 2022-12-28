@@ -231,13 +231,13 @@
     })
     app.post("*", async (req, res) => {
         console.log("Post:", req.url)
-        if (req.url == "/youtube-info") { //YouTube動画の情報を保存します。
+        if (req.url == "/youtube-info") {
+            //YouTube動画の情報を保存します。
             let data = ""
             req.on("data", async chunk => data += chunk)
             req.on("end", async () => {
                 const videolist = JSON.parse(data) //VideoIDかURLの入った配列を取得
                 const videoIds = [] //VideoIDの配列をクライアントに返すため
-                console.log(videolist)
                 for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
                     let videoId = videolist[i] //VideoIDとなるもの
                     if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) {
@@ -250,7 +250,6 @@
                         videoId = video.videoId
                     }
                     const data = await yts({ query: videolist[i] })
-                    let video
                     if (data.videos[0]) videoId = data.videos[0].videoId
                     else return videoIds.push("こんなやつなかったな")
                     console.log(videoId)
@@ -271,16 +270,19 @@
                     ytAudioGet(videoIds[i]) //音声を取得
                 }
             })
-        } else if (req.url == "/applcation-info") { //アプリ情報をjsonで送信
+        } else if (req.url == "/applcation-info") {
+            //アプリ情報をjsonで送信
             res.header("Content-Type", "text/plain;charset=utf-8")
             res.end(JSON.stringify(processJson.Apps))
 
         } else if (req.url == "/ytvideo-list") {
+            //indexから高速でデータを取得するときに使用する
             res.header("Content-Type", "text/plain;charset=utf-8")
             const videoIds = arrayRamdom(Object.keys(dtbs.ytIndex.videoIds))
             res.end(JSON.stringify(videoIds))
 
         } else if (req.url == "/ytdlRawInfoData") {
+            //そのままのデータを指定して取得するときに使用する
             let data = ""
             req.on("data", chunk => data += chunk)
             req.on("end", () => {
@@ -291,6 +293,16 @@
                 const text = JSON.stringify(details[request])
                 res.end(text || "不明")
             })
+
+        } else if (req.url == "/ytdlRawInfoArray") {
+            /**
+             * 動画リストのそのままの配列を渡す
+             * 最後に取得した動画などを見るときに使います。
+             * ただデータを取得したいだけの場合、パフォーマンス低下を防ぐため使わないように
+             */
+            res.header("Content-Type", "text/plain;charset=utf-8")
+            res.end(JSON.stringify(Object.keys(dtbs.ytdlRawInfoData)))
+
         } else if (req.url.match("/discord-seting")) {
             let data = ""
             req.on("data", chunk => data += chunk)
