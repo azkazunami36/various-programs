@@ -43,6 +43,7 @@
     const ytAuthorIconGet = require("./modules/ytAuthorIconGet").ytAuthorIconGet
     const ytVideoInfoGet = require("./modules/ytVideoInfoGet").ytVideoInfoGet
     const ytAuthorInfoGet = require("./modules/ytAuthorInfoGet").ytAuthorInfoGet
+    const ytVideoIdToAuthorInfoGet = require("./modules/ytVideoIdToAuthorInfoGet").ytVideoIdToAuthorInfoGet
     const wait = util.promisify(setTimeout)
     /**
      * データを格納しています。
@@ -56,14 +57,14 @@
     if (!dtbs.ytIndex) dtbs.ytIndex = {}
 
     if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
-    if (!fs.existsSync("cache/")) fs.mkdirSync("cache")
-    if (!fs.existsSync("cache/YTDL")) fs.mkdirSync("cache/YTDL")
-    if (!fs.existsSync("cache/YouTubeDownloadingVideo")) fs.mkdirSync("cache/YouTubeDownloadingVideo")
-    if (!fs.existsSync("cache/YouTubeDownloadingAudio")) fs.mkdirSync("cache/YouTubeDownloadingAudio")
-    if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
-    if (!fs.existsSync("cache/YouTubeThumbnailRatioResize")) fs.mkdirSync("cache/YouTubeThumbnailRatioResize")
-    if (!fs.existsSync("cache/YouTubeAuthorIcon")) fs.mkdirSync("cache/YouTubeAuthorIcon")
-    if (!fs.existsSync("cache/YouTubeAuthorIconRatioResize")) fs.mkdirSync("cache/YouTubeAuthorIconRatioResize")
+    if (!fs.existsSync("C:/cache/")) fs.mkdirSync("cache")
+    if (!fs.existsSync("C:/cache/YTDL")) fs.mkdirSync("cache/YTDL")
+    if (!fs.existsSync("C:/cache/YouTubeDownloadingVideo")) fs.mkdirSync("C:/cache/YouTubeDownloadingVideo")
+    if (!fs.existsSync("C:/cache/YouTubeDownloadingAudio")) fs.mkdirSync("C:/cache/YouTubeDownloadingAudio")
+    if (!fs.existsSync("C:/cache/YouTubeThumbnail")) fs.mkdirSync("C:/cache/YouTubeThumbnail")
+    if (!fs.existsSync("C:/cache/YouTubeThumbnailRatioResize")) fs.mkdirSync("C:/cache/YouTubeThumbnailRatioResize")
+    if (!fs.existsSync("C:/cache/YouTubeAuthorIcon")) fs.mkdirSync("C:/cache/YouTubeAuthorIcon")
+    if (!fs.existsSync("C:/cache/YouTubeAuthorIconRatioResize")) fs.mkdirSync("C:/cache/YouTubeAuthorIconRatioResize")
     //-----------ここまで------------
     require("dotenv").config()
     const processJson = require("./processJson.json")
@@ -149,9 +150,9 @@
             try {
                 param = querystring.parse(info[1]) //パラメータを取得
             } catch (e) { }
-            let thumbnailpath = "cache/YouTubeThumbnail/" + videoId + ".jpg"
+            let thumbnailpath = "C:/cache/YouTubeThumbnail/" + videoId + ".jpg"
             if (param.ratio && param.size)
-                thumbnailpath = "cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
+                thumbnailpath = "C:/cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
 
             //これはVideoIDが有効かつ画像がうまく取得出来なかった際に使用するif文です
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
@@ -173,9 +174,9 @@
             try {
                 param = querystring.parse(info[1]) //パラメータを取得
             } catch (e) { }
-            let thumbnailpath = "cache/YouTubeAuthorIcon/" + channelId + ".jpg"
+            let thumbnailpath = "C:/cache/YouTubeAuthorIcon/" + channelId + ".jpg"
             if (param.ratio && param.size)
-                thumbnailpath = "cache/YouTubeAuthorIconRatioResize/" + channelId + "-r" + param.ratio + "-" + param.size + ".jpg"
+                thumbnailpath = "C:/cache/YouTubeAuthorIconRatioResize/" + channelId + "-r" + param.ratio + "-" + param.size + ".jpg"
 
             //これはVideoIDが有効かつ画像がうまく取得出来なかった際に使用するif文です
             if (dtbs.ytchRawInfoData[channelId]) //データが存在したら
@@ -191,7 +192,7 @@
 
         } else if (req.url.match(/\/ytvideo\/*/)) { //YouTube動画にアクセスする
             const videoId = String(req.url).split("/ytvideo/")[1] //urlから情報を取得
-            const videopath = "cache/YTDL/" + videoId + ".mp4" //パス
+            const videopath = "C:/cache/YTDL/" + videoId + ".mp4" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(videopath)) //動画が存在してい無かったら
                     await ytVideoGet(videoId)  //動画を取得する
@@ -205,7 +206,7 @@
 
         } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
             const videoId = String(req.url).split("/ytaudio/")[1] //urlから情報を取得
-            const audiopath = "cache/YTDL/" + videoId + ".mp3" //パス
+            const audiopath = "C:/cache/YTDL/" + videoId + ".mp3" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(audiopath)) //音声が存在してい無かったら
                     await ytAudioGet(videoId)  //音声を取得する
@@ -257,7 +258,7 @@
                     const authorId = dtbs.ytdlRawInfoData[videoId].author.id
                     dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData)
                     saveingJson() //保存
-                    dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex) //インデックス作成
+                    dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex, dtbs.ytdlRawInfoData[videoId]) //インデックス作成
                     videoIds.push(videoId) //IDをプッシュ
                     await ytThumbnailGet(videoId) //サムネを取得
                     await ytAuthorIconGet(authorId)
@@ -349,9 +350,11 @@
             saveingJson()
             console.log("再作成完了")
         })
+        dtbs.ytchRawInfoData = await ytVideoIdToAuthorInfoGet(dtbs.ytdlRawInfoData, dtbs.ytchRawInfoData)
+        saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(false)
+    startToInfomation(true)
     const saveingJson = async () => fs.writeFileSync("data.json", JSON.stringify(dtbs))
     const Discord_JS = async () => {
         const client = new Client({

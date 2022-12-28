@@ -10,7 +10,7 @@ module.exports.ytAudioGet = async videoId => {
     if (!fs.existsSync("cache/YTDl/" + videoId + ".mp3")) {
         await new Promise(resolve => {
             let starttime
-            if (!fs.existsSync("cache/YouTubeDownloadingAudio")) fs.mkdirSync("cache/YouTubeDownloadingAudio")
+            if (!fs.existsSync("C:/cache/YouTubeDownloadingAudio")) fs.mkdirSync("C:/cache/YouTubeDownloadingAudio")
             const audioDownload = ytdl(videoId, { filter: "audioonly", quality: "highest" })
             audioDownload.once("response", () => {
                 starttime = Date.now()
@@ -31,11 +31,11 @@ module.exports.ytAudioGet = async videoId => {
                 const elapsedTime = timeString(downloadedSeconds)
             })
             audioDownload.on("error", async err => { console.log("Audio Get Error " + videoId, err) })
-            audioDownload.pipe(fs.createWriteStream("cache/YouTubeDownloadingAudio/" + videoId + ".mp3"))
+            audioDownload.pipe(fs.createWriteStream("C:/cache/YouTubeDownloadingAudio/" + videoId + ".mp3"))
             audioDownload.on("end", async () => {
-                if (!fs.existsSync("cache/YTDL")) fs.mkdirSync("cache/YTDL")
-                const Stream = fs.createReadStream("cache/YouTubeDownloadingAudio/" + videoId + ".mp3")
-                Stream.pipe(fs.createWriteStream("cache/YTDL/" + videoId + ".mp3"))
+                if (!fs.existsSync("C:/cache/YTDL")) fs.mkdirSync("cache/YTDL")
+                const Stream = fs.createReadStream("C:/cache/YouTubeDownloadingAudio/" + videoId + ".mp3")
+                Stream.pipe(fs.createWriteStream("C:/cache/YTDL/" + videoId + ".mp3"))
                 Stream.on("end", () => {
                     console.log("音声取得完了: " + videoId)
                     resolve()
