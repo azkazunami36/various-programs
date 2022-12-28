@@ -5,6 +5,7 @@
     const ffmpeg = require("fluent-ffmpeg")
     const cors = require("cors")
     const ytdl = require("ytdl-core")
+    const yts = require("yt-search")
     const querystring = require("querystring")
     const axios = require("axios")
     const uuid = require("uuid")
@@ -138,6 +139,18 @@
             if (param.ratio && param.size)
                 thumbnailpath = "cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
 
+        } else if (req.url.match(/\/ytauthorimage\/*/)) { //YouTubeサムネイルにアクセスする
+            await wait(Math.floor(Math.random() * 450) + 50) //安定のため応答にラグを作る
+            const info = String(req.url).split("/ytauthorimage/")[1].split("?") //urlから情報を取得
+            const videoId = info[0] //urlからVideoIDを取得
+            let param = {}
+            try {
+                param = querystring.parse(info[1]) //パラメータを取得
+            } catch (e) { }
+            let thumbnailpath = "cache/YouTubeThumbnail/" + videoId + ".jpg"
+            if (param.ratio && param.size)
+                thumbnailpath = "cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
+
             //これはVideoIDが有効かつ画像がうまく取得出来なかった際に使用するif文です
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(thumbnailpath)) //画像が存在してい無かったら
@@ -198,25 +211,51 @@
                 for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
                     let videoId = videolist[i] //VideoIDとなるもの
                     if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) { //YouTubeに存在するかどうか
-                        if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
-                        await new Promise(async (resolve, reject) => { //情報取得をPromiseで待機させる
-                            //VideoIDから情報を取得
-                            if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
-                                dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
-                                saveingJson() //保存
-                                dtbs.ytIndex = ytIndexCreate(videoId, dtbs.ytIndex) //インデックス作成
-                            }).catch((e) => console.log(e))
-                            videoIds.push(videoId) //IDをプッシュ
-                            resolve() //取得完了を意味する
-                        }).then(async () => {
-                            ytThumbnailGet(videoId) //サムネを取得
-                            ytVideoGet(videoId) //動画を取得
-                            ytAudioGet(videoId) //音声を取得
+                        await new Promise(async resolve => {
+                            if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
+                            await new Promise(async (resolve, reject) => { //情報取得をPromiseで待機させる
+                                //VideoIDから情報を取得
+                                if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
+                                    dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
+                                    saveingJson() //保存
+                                    dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex) //インデックス作成
+                                }).catch((e) => console.log(e))
+                                videoIds.push(videoId) //IDをプッシュ
+                                resolve() //取得完了を意味する
+                            }).then(async () => {
+                                await ytThumbnailGet(videoId) //サムネを取得
+                                resolve()
+                            })
                         })
-                    } else videoIds.push("ないわこんなもん") //存在しない旨をプッシュ
+                    } else {
+                        await new Promise(async resolve => {
+                            const data = await yts({ query: videolist[i] })
+                            let video
+                            if (data.videos[0]) video = data.videos[0]
+                            else return videoIds.push("こんなやつなかったな")
+                            const videoId = video.videoId
+                            await new Promise(async (resolve, reject) => { //情報取得をPromiseで待機させる
+                                //VideoIDから情報を取得
+                                if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
+                                    dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
+                                    saveingJson() //保存
+                                    dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex) //インデックス作成
+                                }).catch((e) => console.log(e))
+                                videoIds.push(videoId) //IDをプッシュ
+                                resolve() //取得完了を意味する
+                            }).then(async () => {
+                                await ytThumbnailGet(videoId) //サムネを取得
+                                resolve()
+                            })
+                        })
+                    }
                 }
                 res.header("Content-Type", "text/plaincharset=utf-8")
                 res.end(JSON.stringify(videoIds))
+                for (let i = 0; i != videoIds.length; i++) {
+                    ytVideoGet(videoIds[i]) //動画を取得
+                    ytAudioGet(videoIds[i]) //音声を取得
+                }
             })
         } else if (req.url == "/applcation-info") { //アプリ情報をjsonで送信
             res.header("Content-Type", "text/plain;charset=utf-8")
@@ -290,12 +329,15 @@
             res.end()
         }
     })
-    ytIndexRebuild(dtbs.ytdlRawInfoData, dtbs.ytIndex, async ytIndex => {
-        dtbs.ytIndex = ytIndex
-        saveingJson()
-        console.log("再作成完了")
-    })
-    ytVASourceCheck(dtbs.ytIndex)
+    const startToInfomation = async () => {
+        ytIndexRebuild(dtbs.ytdlRawInfoData, dtbs.ytIndex, async ytIndex => {
+            dtbs.ytIndex = ytIndex
+            saveingJson()
+            console.log("再作成完了")
+        })
+        ytVASourceCheck(dtbs.ytIndex)
+    }
+    startToInfomation()
     const saveingJson = async () => fs.writeFileSync("data.json", JSON.stringify(dtbs))
     const Discord_JS = async () => {
         const client = new Client({
