@@ -107,7 +107,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
             .
             counta++
     }
-    if (idiotis || mediaidiotis || admintoidiotis || engidiotis) returnthen(() => message.delete());
+    
     if (message.content === "なんで") message.reply("悪口だから")
     if (idiotis) {
         message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
@@ -160,6 +160,11 @@ client.on('messageCreate', message => {  //切れてるのか横も
         message.reply("はじめまして" + username + "さん")
         message.channel.send("English/Nice to meet you!")
     }
+    if (message.content === "voice!add"){
+        if (message.content === "aaa"){
+
+        }
+    }
 
 
 
@@ -167,6 +172,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
 })
 client.on('ready', async () => {
     setInterval(() => console.log("実行中\n閉じないで下さい"), 60000);
+
 })
 process.on("exit", exitCode => {
     console.log(cmdexec)
