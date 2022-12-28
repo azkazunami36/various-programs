@@ -4,6 +4,7 @@ require("dotenv").config();
 require('date-utils');
 let cmdexec = 0;
 let ari = 0;
+let countb = 0;
 const data = require("./data.json") //data.json
 //const//
 let counta = 0;
@@ -22,8 +23,17 @@ const wait = async time => {
         let sum = 0
 
         console.log(formatted);
+        console.log(countb)
     }, 1000);
 })()
+//json計測器//
+for (let i = 0; i != data.data.length; i++) {
+     countb++
+}
+for (let i = 0; i != data.Englishdata.length; i++) {
+     countb++
+}
+
 
 //権限//
 
@@ -68,6 +78,15 @@ client.on('messageCreate', message => {  //切れてるのか横も
                 if (message.content.match(data.data[i])) { //マッチする言葉を探して
                     console.log(data.data[i] + "とマッチしました")
                     idiotis = true
+                    const username =message.author.username
+                    if (data.data[i] === "それってあなたの感想ですよね"){
+                        message.channel.send("僕の感想で何か悪いですか？")
+                    if (data.data[i] === "伊吹chゴミ"){
+                        message.channelId='1057461118676779068'.send("悪口を言われました")
+                    }
+                    if (data.data[i] === "まんこ"){
+                        message.channel.send("やめよう...")
+                    }
                 }
             }
             for (let i = 0; i != data.urldata.length; i++) {
@@ -85,6 +104,8 @@ client.on('messageCreate', message => {  //切れてるのか横も
                 if (message.content === data.Englishdata[i]) {
                     console.log(data.Englishdata[i] + "とマッチしました")
                     engidiotis = true
+
+                }
                 }
             }
         }
@@ -92,6 +113,8 @@ client.on('messageCreate', message => {  //切れてるのか横も
     if (idiotis) {
         message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
             .then(() => message.delete()); //ちなみにthenはbotが送信したほうのmessageが取得できる
+        message.channel.send("なんかやなことでもあった？ https://www.youtube.com/watch?v=O1gB_aoVJQY&list=PLJKqOK4B8ZrXTgkYZdPYZcYT3vG7ARJls&index=24")
+    
         counta++
     } else if (mediaidiotis) {
         message.reply("不適切な動画URLを消しました")
@@ -108,7 +131,6 @@ client.on('messageCreate', message => {  //切れてるのか横も
             counta++
     }
     if (idiotis || mediaidiotis || admintoidiotis || engidiotis) return
-    then(() => message.delete());
     if (message.content === "なんで") message.reply("悪口だから")
     if (idiotis) {
         message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
@@ -129,7 +151,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
         cmdexec++
         const username = message.author.username
         const loga = "help(J+E)"
-        message.reply("このbotは不適切なメッセージを消したりします")
+        message.reply("このbotは不適切なメッセージを消したりします"+"\n 今現在137の単語を記録しています\n"+"お問い合わせは開発担当の伊吹ch/YUKKEまで")
         console.log("コマンド名\n" + loga + "\n実行user" + username + "による実行")
 
     }
@@ -161,6 +183,12 @@ client.on('messageCreate', message => {  //切れてるのか横も
         message.reply("はじめまして" + username + "さん")
         message.channel.send("English/Nice to meet you!")
     }
+    if (message.content === "Nice to meet you") {
+        const username = message.author.username
+        message.reply("Nice to meet you"+username)
+        message.channel.send("はじめまして")
+    }
+    
 
 
 
