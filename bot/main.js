@@ -188,6 +188,19 @@ client.on('messageCreate', message => {  //切れてるのか横も
         message.reply("Nice to meet you"+username)
         message.channel.send("はじめまして")
     }
+    if (message.content === "voice!add https://www.youtube.com/watch?v=iAa_X95ypSE"){
+        if (message.content === "voice!play"){
+            sleep(13500, function() {
+              message.channel.send("熱を奪ってゆく\n路地裏の香りが")
+            });
+            sleep(500, function() {
+              message.channel.send('昨日までの僕\n忘れさせたんだ');
+            });
+        
+
+            
+        }
+    }
     
 
 
