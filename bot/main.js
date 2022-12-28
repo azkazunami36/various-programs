@@ -107,7 +107,8 @@ client.on('messageCreate', message => {  //切れてるのか横も
             .
             counta++
     }
-    
+    if (idiotis || mediaidiotis || admintoidiotis || engidiotis) return
+    then(() => message.delete());
     if (message.content === "なんで") message.reply("悪口だから")
     if (idiotis) {
         message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
