@@ -236,6 +236,7 @@
             req.on("end", async () => {
                 const videolist = JSON.parse(data) //VideoIDかURLの入った配列を取得
                 const videoIds = [] //VideoIDの配列をクライアントに返すため
+                console.log(videolist)
                 for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
                     let videoId = videolist[i] //VideoIDとなるもの
                     if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) {
@@ -249,7 +250,7 @@
                     }
                     const data = await yts({ query: videolist[i] })
                     let video
-                    if (data.videos[0]) video = data.videos[0]
+                    if (data.videos[0]) videoId = data.videos[0].videoId
                     else return videoIds.push("こんなやつなかったな")
                     console.log(videoId)
                     dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData)
@@ -261,6 +262,7 @@
                     await ytThumbnailGet(videoId) //サムネを取得
                     await ytAuthorIconGet(authorId)
                 }
+                console.log(videoIds)
                 res.header("Content-Type", "text/plaincharset=utf-8")
                 res.end(JSON.stringify(videoIds))
                 for (let i = 0; i != videoIds.length; i++) {
