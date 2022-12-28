@@ -160,11 +160,6 @@ client.on('messageCreate', message => {  //切れてるのか横も
         message.reply("はじめまして" + username + "さん")
         message.channel.send("English/Nice to meet you!")
     }
-    if (message.content === "voice!add"){
-        if (message.content === "aaa"){
-
-        }
-    }
 
 
 
