@@ -1,7 +1,7 @@
 /**
  * 音声や動画が取得されているかを全て確認します。
  * ただ、インデックスからの処理。
- * @param {any} ytdlRawInfoData 
+ * @param {any} ytIndex 
  */
 const fs = require("fs")
 const wait = require("util").promisify(setTimeout)
@@ -13,7 +13,7 @@ module.exports.ytVASourceCheck = async ytIndex => {
             await require("./ytVideoGet").ytVideoGet(videoId)
         if (!fs.existsSync("cache/YTDl/" + videoId + ".mp3"))
             await require("./ytAudioGet").ytAudioGet(videoId)
-        if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg") || !fs.existsSync("cache/YouTubeThumbnailLowQuality/" + videoId + ".jpg"))
+        if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg"))
             await require("./ytThumbnailGet").ytThumbnailGet(videoId)
         await wait(10)
     }
