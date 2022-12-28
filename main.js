@@ -41,6 +41,8 @@
     const ytIndexRebuild = require("./modules/ytIndexRebuild").ytIndexReBuild
     const ytVASourceCheck = require("./modules/ytVASourceCheck").ytVASourceCheck
     const ytAuthorIconGet = require("./modules/ytAuthorIconGet").ytAuthorIconGet
+    const ytVideoInfoGet = require("./modules/ytVideoInfoGet").ytVideoInfoGet
+    const ytAuthorInfoGet = require("./modules/ytAuthorInfoGet").ytAuthorInfoGet
     const wait = util.promisify(setTimeout)
     /**
      * データを格納しています。
@@ -83,19 +85,24 @@
         if (req.url == "/" || req.url == "/sources/index.html") { //ルートとindex.htmlが取得できる
             res.header("Content-Type", "text/html;charset=utf-8")
             res.end(fs.readFileSync("sources/index.html"))
+
         } else if (req.url == "/sources/ytdl/" || req.url == "/sources/ytdl/index.html") { //ルートとind (ry
             res.header("Content-Type", "text/html;charset=utf-8")
             res.end(fs.readFileSync("sources/ytdl/index.html"))
+
         } else if (req.url == "/sources/ggbot/" || req.url == "/sources/ggbot/index.html") { //ルートt (ry
             res.header("Content-Type", "text/html;charset=utf-8")
             res.end(fs.readFileSync("sources/ggbot/index.html"))
+
         } else if (req.url.match("/sources/ytdl/watch?")) {
             //watchというリンクは少々特殊なため、matchで検出し返答します
             res.header("Content-Type", "text/html;charset=utf-8")
             res.end(fs.readFileSync("sources/ytdl/playwith/index.html"))
+
         } else if (req.url == "/favicon.ico") { //faviconまだ準備してないので204
             res.status(204)
             res.end()
+
         } else if (req.url.match(/\/sources\/*/)) { //ソースフォルダへ直接アクセス
             //sourcesパスとクエリを切り取ってファイルパスを取得
             const filelink = "sources/" + String(req.url).split("/sources/")[1].split("?")[0]
@@ -114,6 +121,7 @@
                 res.status(400)
                 res.end()
             }
+
         } else if (req.url.match(/\/modules\/*/)) { //モジュールへ直接アクセス
             //modules/パスとクエリを切り取ってファイルパスを取得
             const filelink = "modules/" + (String(req.url).split("/modules/")[1])
@@ -132,6 +140,7 @@
                 res.status(400)
                 res.end()
             }
+
         } else if (req.url.match(/\/ytimage\/*/)) { //YouTubeサムネイルにアクセスする
             await wait(Math.floor(Math.random() * 450) + 50) //安定のため応答にラグを作る
             const info = String(req.url).split("/ytimage/")[1].split("?") //urlから情報を取得
@@ -159,19 +168,19 @@
         } else if (req.url.match(/\/ytauthorimage\/*/)) { //YouTubeサムネイルにアクセスする
             await wait(Math.floor(Math.random() * 450) + 50) //安定のため応答にラグを作る
             const info = String(req.url).split("/ytauthorimage/")[1].split("?") //urlから情報を取得
-            const videoId = info[0] //urlからVideoIDを取得
+            const channelId = info[0] //urlからVideoIDを取得
             let param = {}
             try {
                 param = querystring.parse(info[1]) //パラメータを取得
             } catch (e) { }
-            let thumbnailpath = "cache/YouTubeAuthorIcon/" + videoId + ".jpg"
+            let thumbnailpath = "cache/YouTubeAuthorIcon/" + channelId + ".jpg"
             if (param.ratio && param.size)
-                thumbnailpath = "cache/YouTubeAuthorIconRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
+                thumbnailpath = "cache/YouTubeAuthorIconRatioResize/" + channelId + "-r" + param.ratio + "-" + param.size + ".jpg"
 
             //これはVideoIDが有効かつ画像がうまく取得出来なかった際に使用するif文です
-            if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
+            if (dtbs.ytchRawInfoData[channelId]) //データが存在したら
                 if (!fs.existsSync(thumbnailpath)) //画像が存在してい無かったら
-                    await ytThumbnailGet(videoId, { ratio: param.ratio, size: param.size })  //画像を取得する
+                    await ytAuthorIconGet(channelId, { ratio: param.ratio, size: param.size })  //画像を取得する
             if (fs.existsSync(thumbnailpath)) { //上のifを遠し、画像が存在したら
                 res.header("Content-Type", "image/jpeg")
                 res.end(fs.readFileSync(thumbnailpath)) //返答
@@ -179,6 +188,7 @@
                 res.status(400)
                 res.end()
             }
+
         } else if (req.url.match(/\/ytvideo\/*/)) { //YouTube動画にアクセスする
             const videoId = String(req.url).split("/ytvideo/")[1] //urlから情報を取得
             const videopath = "cache/YTDL/" + videoId + ".mp4" //パス
@@ -192,6 +202,7 @@
                 res.status(400)
                 res.end()
             }
+
         } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
             const videoId = String(req.url).split("/ytaudio/")[1] //urlから情報を取得
             const audiopath = "cache/YTDL/" + videoId + ".mp3" //パス
@@ -225,58 +236,33 @@
             req.on("end", async () => {
                 const videolist = JSON.parse(data) //VideoIDかURLの入った配列を取得
                 const videoIds = [] //VideoIDの配列をクライアントに返すため
+                console.log(videolist)
                 for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
                     let videoId = videolist[i] //VideoIDとなるもの
-                    if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) { //YouTubeに存在するかどうか
-                        await new Promise(async resolve => {
-                            if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
-                            await new Promise(async (resolve, reject) => { //情報取得をPromiseで待機させる
-                                //VideoIDから情報を取得
-                                if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
-                                    dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
-                                    ytch.getChannelInfo(info.videoDetails.author.id).then(cinfo => {
-                                        dtbs.ytchRawInfoData[info.authorId] = cinfo
-                                        console.log(info.videoDetails.author.id, cinfo)
-                                        ytAuthorIconGet(videoIds[i]) //ユーザー画像を取得
-                                    })
-                                    saveingJson() //保存
-                                    dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex) //インデックス作成
-                                }).catch((e) => console.log(e))
-                                videoIds.push(videoId) //IDをプッシュ
-                                resolve() //取得完了を意味する
-                            }).then(async () => {
-                                await ytThumbnailGet(videoId) //サムネを取得
-                                resolve()
-                            })
-                        })
+                    if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) {
+                        if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
                     } else {
-                        await new Promise(async resolve => {
-                            const data = await yts({ query: videolist[i] })
-                            let video
-                            if (data.videos[0]) video = data.videos[0]
-                            else return videoIds.push("こんなやつなかったな")
-                            const videoId = video.videoId
-                            await new Promise(async (resolve, reject) => { //情報取得をPromiseで待機させる
-                                //VideoIDから情報を取得
-                                if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
-                                    dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
-                                    ytch.getChannelInfo(info.videoDetails.author.id).then(cinfo => {
-                                        dtbs.ytchRawInfoData[info.authorId] = cinfo
-                                        console.log(info.videoDetails.author.id, cinfo)
-                                        ytAuthorIconGet(videoIds[i]) //ユーザー画像を取得
-                                    })
-                                    saveingJson() //保存
-                                    dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex) //インデックス作成
-                                }).catch((e) => console.log(e))
-                                videoIds.push(videoId) //IDをプッシュ
-                                resolve() //取得完了を意味する
-                            }).then(async () => {
-                                await ytThumbnailGet(videoId) //サムネを取得
-                                resolve()
-                            })
-                        })
+                        const data = await yts({ query: videolist[i] })
+                        let video
+                        if (data.videos[0]) video = data.videos[0]
+                        else return videoIds.push("こんなやつなかったな")
+                        videoId = video.videoId
                     }
+                    const data = await yts({ query: videolist[i] })
+                    let video
+                    if (data.videos[0]) videoId = data.videos[0].videoId
+                    else return videoIds.push("こんなやつなかったな")
+                    console.log(videoId)
+                    dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData)
+                    const authorId = dtbs.ytdlRawInfoData[videoId].author.id
+                    dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData)
+                    saveingJson() //保存
+                    dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex) //インデックス作成
+                    videoIds.push(videoId) //IDをプッシュ
+                    await ytThumbnailGet(videoId) //サムネを取得
+                    await ytAuthorIconGet(authorId)
                 }
+                console.log(videoIds)
                 res.header("Content-Type", "text/plaincharset=utf-8")
                 res.end(JSON.stringify(videoIds))
                 for (let i = 0; i != videoIds.length; i++) {
@@ -356,7 +342,8 @@
             res.end()
         }
     })
-    const startToInfomation = async () => {
+    const startToInfomation = async start => {
+        if (!start) return
         ytIndexRebuild(dtbs.ytdlRawInfoData, dtbs.ytIndex, async ytIndex => {
             dtbs.ytIndex = ytIndex
             saveingJson()
@@ -364,7 +351,7 @@
         })
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation()
+    startToInfomation(false)
     const saveingJson = async () => fs.writeFileSync("data.json", JSON.stringify(dtbs))
     const Discord_JS = async () => {
         const client = new Client({
