@@ -342,6 +342,9 @@
  }
 
  .TitleAria {
+     display: flex;
+     flex-direction: row;
+     align-items: flex-start;
      overflow: hidden;
  }
 
@@ -362,4 +365,11 @@
      font-size: 9px;
      font-weight: 600;
      color: white;
+ }
+
+ .AuthorIcon {
+     width: 32px;
+     border-radius: 100%;
+     margin: 7.5px;
+     margin-left: 0px;
  }
