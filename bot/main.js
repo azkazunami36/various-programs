@@ -103,7 +103,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
             .then(() => message.delete());
         counta++
     } else if (engidiotis) {
-        message.reply("Don't swear Erase")
+        message.reply("Don't swear Erase")      //English
             .
             counta++
     }
