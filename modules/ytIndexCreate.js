@@ -5,9 +5,16 @@
  * @returns ytIndexを返します。
  */
 module.exports.ytIndexCreate = async (videoId, ytIndex) => {
-    if (!ytIndex.videoIds) ytIndex.videoIds = {} //初期化
-    if (!ytIndex.videoIds[videoId]) console.log("YouTubeInfoIndex Created: " + videoId)
+    if (!ytIndex) return console.log("ytIndexがうまく受け取れません。: " + ytIndex)
+    const videoDetails = JSON.parse(fs.readFileSync("data.json")).ytdlRawInfoData[videoId]
+    if (!ytIndex.videoIds) ytIndex.videoIds = {}
+    if (!ytIndex.Author) ytIndex.Author = {}
+    let videoIdIndex = 0
+    let authorIdIndex
+    if (!ytIndex.videoIds[videoId]) videoIdIndex++
+    if (!ytIndex.authorId[videoId]) authorIdIndex++
     else console.log("YouTubeInfoIndex Rebuilded: " + videoId)
     ytIndex.videoIds[videoId] = ""
+    ytIndex.authorId[videoDetails.author.id] = {}
     return ytIndex
 }
