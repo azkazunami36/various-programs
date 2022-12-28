@@ -54,16 +54,9 @@ addEventListener("load", async () => {
             if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
 
             const videoId = videos[videoLoaded] //VideoID
-            const title = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                videoId: videoId,
-                request: "title"
-            })))
-            const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                videoId: videoId,
-                request: "author"
-            }))).name
             const ratio = (window.devicePixelRatio || 1).toFixed(2)
             const videoLink = document.createElement("div")
+            VideoListCenter.appendChild(videoLink)
             const videoWindow = document.createElement("div")
             const thumbnailImage = document.createElement("div")
             const thumbnailimg = document.createElement("img")
@@ -81,9 +74,6 @@ addEventListener("load", async () => {
             clickme.classList.add("clickme")
             thumbnailimg.src = "../../ytimage/" + videoId + "?size=360&ratio=" + ratio
             clickme.href = "./watch?v=" + videoId
-            videoTitle.innerHTML = title
-            videoAuthor.innerHTML = author
-            VideoListCenter.appendChild(videoLink)
             videoLink.appendChild(videoWindow)
             videoWindow.appendChild(thumbnailImage)
             videoWindow.appendChild(titleAria)
@@ -91,6 +81,17 @@ addEventListener("load", async () => {
             thumbnailImage.appendChild(thumbnailimg)
             titleAria.appendChild(videoTitle)
             titleAria.appendChild(videoAuthor)
+            new Promise(async resolve => {
+                videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                    videoId: videoId,
+                    request: "title"
+                })))
+                videoAuthor.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                    videoId: videoId,
+                    request: "author"
+                }))).name
+                resolve()
+            })
             videoLoaded++
         }
         //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
@@ -110,7 +111,7 @@ addEventListener("load", async () => {
                 const src = Thumbnailimgs[i].src
                 const videoId = src.split("ytimage/")[1].split("?")[0]
                 Thumbnailimgs[i].src = "../../ytimage/" + videoId + "?size=360&ratio=" + imgratio
-            } 
+            }
             console.log(imgratio)
         }
     }) //ブラウザサイズが変わると
