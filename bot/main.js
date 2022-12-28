@@ -2,12 +2,15 @@ const { count } = require('console');
 const { Client, GatewayIntentBits, Message, EmbedBuilder, MessageActionRow, MessageButton } = require('discord.js');
 require("dotenv").config();
 require('date-utils');
+const sharp =require('sharp')
 let cmdexec = 0;
 let ari = 0;
 let countb = 0;
 const data = require("./data.json") //data.json
 //const//
 let counta = 0;
+const random = Math.random()
+const Num = Math.floor(random * 4)
 //時計//
 const wait = async time => {
     await new Promise(resolve => {
@@ -33,7 +36,52 @@ for (let i = 0; i != data.data.length; i++) {
 for (let i = 0; i != data.Englishdata.length; i++) {
      countb++
 }
+sharp('1.jpg')
+  .resize(512)
+  .toFile('1_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
+sharp('2.jpg')
+  .resize(512)
+  .toFile('2_0.jpg', (info)=>{     //こんな感じでok?  めんどくさかった
+    console.log(info)
+  })
+sharp('3.jpg')
+  .resize(512)
+  .toFile('3_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
+sharp('4.jpg')
+  .resize(512)
+  .toFile('4_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
+sharp('5.jpg')
+  .resize(512)
+  .toFile('5_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
 
+  })
+sharp('6.jpg')
+  .resize(512)
+  .toFile('6_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
+sharp('7.jpg')
+  .resize(512)
+  .toFile('7_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
+  sharp('8.jpg')
+  .resize(512)
+  .toFile('8_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
+sharp('0.jpg')
+  .resize(512)
+  .toFile('0_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
 
 //権限//
 
@@ -201,7 +249,14 @@ client.on('messageCreate', message => {  //切れてるのか横も
             
         }
     }
-    
+    if (message.content === "画像"){
+        const random = Math.random()
+        const Num = Math.floor(random * 9)
+
+            message.channel.send({ files: [Num+'_0.jpg'] })
+
+        
+    }
 
 
 
