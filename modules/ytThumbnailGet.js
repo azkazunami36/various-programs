@@ -8,7 +8,7 @@ const sharp = require("sharp")
 const axios = require("axios")
 /**
  * VideoIDからサムネイルを取得します。
- * @param {string} videoId 
+ * @param {string} videoId
  * @param {resize} resize
  */
 module.exports.ytThumbnailGet = async (videoId, resize) => {
@@ -25,7 +25,6 @@ module.exports.ytThumbnailGet = async (videoId, resize) => {
     }
     if (resize && !fs.existsSync("cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + resize.ratio + "-" + resize.size + ".jpg")) {
         await new Promise(async resolve => {
-            const imagedata = fs.readFileSync("cache/YouTubeThumbnail/" + videoId + ".jpg", "binary")
             //大きさなどを取得
             const { width, height, type } = await imageSize("cache/YouTubeThumbnail/" + videoId + ".jpg")
             let tmp1 = width //計算のために

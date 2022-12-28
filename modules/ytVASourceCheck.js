@@ -15,6 +15,7 @@ module.exports.ytVASourceCheck = async ytIndex => {
             await require("./ytAudioGet").ytAudioGet(videoId)
         if (!fs.existsSync("cache/YouTubeThumbnail/" + videoId + ".jpg"))
             await require("./ytThumbnailGet").ytThumbnailGet(videoId)
+            if (!fs.existsSync("./"))
         await wait(10)
     }
     console.log("ソースの有無のチェックが完了しました。")

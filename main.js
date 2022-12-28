@@ -6,6 +6,7 @@
     const cors = require("cors")
     const ytdl = require("ytdl-core")
     const yts = require("yt-search")
+    const ytch = require("yt-channel-info")
     const querystring = require("querystring")
     const axios = require("axios")
     const uuid = require("uuid")
@@ -39,6 +40,7 @@
     const ytIndexCreate = require("./modules/ytIndexCreate").ytIndexCreate
     const ytIndexRebuild = require("./modules/ytIndexRebuild").ytIndexReBuild
     const ytVASourceCheck = require("./modules/ytVASourceCheck").ytVASourceCheck
+    const ytAuthorIconGet = require("./modules/ytAuthorIconGet").ytAuthorIconGet
     const wait = util.promisify(setTimeout)
     /**
      * データを格納しています。
@@ -48,6 +50,7 @@
     if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
     //----ここから初期化ラインです----
     if (!dtbs.ytdlRawInfoData) dtbs.ytdlRawInfoData = {}
+    if (!dtbs.ytchRawInfoData) dtbs.ytchRawInfoData = {}
     if (!dtbs.ytIndex) dtbs.ytIndex = {}
 
     if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
@@ -57,6 +60,8 @@
     if (!fs.existsSync("cache/YouTubeDownloadingAudio")) fs.mkdirSync("cache/YouTubeDownloadingAudio")
     if (!fs.existsSync("cache/YouTubeThumbnail")) fs.mkdirSync("cache/YouTubeThumbnail")
     if (!fs.existsSync("cache/YouTubeThumbnailRatioResize")) fs.mkdirSync("cache/YouTubeThumbnailRatioResize")
+    if (!fs.existsSync("cache/YouTubeAuthorIcon")) fs.mkdirSync("cache/YouTubeAuthorIcon")
+    if (!fs.existsSync("cache/YouTubeAuthorIconRatioResize")) fs.mkdirSync("cache/YouTubeAuthorIconRatioResize")
     //-----------ここまで------------
     require("dotenv").config()
     const processJson = require("./processJson.json")
@@ -139,6 +144,18 @@
             if (param.ratio && param.size)
                 thumbnailpath = "cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
 
+            //これはVideoIDが有効かつ画像がうまく取得出来なかった際に使用するif文です
+            if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
+                if (!fs.existsSync(thumbnailpath)) //画像が存在してい無かったら
+                    await ytThumbnailGet(videoId, { ratio: param.ratio, size: param.size })  //画像を取得する
+            if (fs.existsSync(thumbnailpath)) { //上のifを遠し、画像が存在したら
+                res.header("Content-Type", "image/jpeg")
+                res.end(fs.readFileSync(thumbnailpath)) //返答
+            } else { //上のifを通しても存在しない場合は400
+                res.status(400)
+                res.end()
+            }
+
         } else if (req.url.match(/\/ytauthorimage\/*/)) { //YouTubeサムネイルにアクセスする
             await wait(Math.floor(Math.random() * 450) + 50) //安定のため応答にラグを作る
             const info = String(req.url).split("/ytauthorimage/")[1].split("?") //urlから情報を取得
@@ -147,9 +164,9 @@
             try {
                 param = querystring.parse(info[1]) //パラメータを取得
             } catch (e) { }
-            let thumbnailpath = "cache/YouTubeThumbnail/" + videoId + ".jpg"
+            let thumbnailpath = "cache/YouTubeAuthorIcon/" + videoId + ".jpg"
             if (param.ratio && param.size)
-                thumbnailpath = "cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
+                thumbnailpath = "cache/YouTubeAuthorIconRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
 
             //これはVideoIDが有効かつ画像がうまく取得出来なかった際に使用するif文です
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
@@ -217,6 +234,11 @@
                                 //VideoIDから情報を取得
                                 if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
                                     dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
+                                    ytch.getChannelInfo(info.videoDetails.author.id).then(cinfo => {
+                                        dtbs.ytchRawInfoData[info.authorId] = cinfo
+                                        console.log(info.videoDetails.author.id, cinfo)
+                                        ytAuthorIconGet(videoIds[i]) //ユーザー画像を取得
+                                    })
                                     saveingJson() //保存
                                     dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex) //インデックス作成
                                 }).catch((e) => console.log(e))
@@ -238,6 +260,11 @@
                                 //VideoIDから情報を取得
                                 if (!dtbs.ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
                                     dtbs.ytdlRawInfoData[videoId] = info.videoDetails //そのままのデータをjsonに入れる
+                                    ytch.getChannelInfo(info.videoDetails.author.id).then(cinfo => {
+                                        dtbs.ytchRawInfoData[info.authorId] = cinfo
+                                        console.log(info.videoDetails.author.id, cinfo)
+                                        ytAuthorIconGet(videoIds[i]) //ユーザー画像を取得
+                                    })
                                     saveingJson() //保存
                                     dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex) //インデックス作成
                                 }).catch((e) => console.log(e))
