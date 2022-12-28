@@ -72,7 +72,34 @@ addEventListener("load", async e => {
         }
     })
     addEventListener("keydown", e => {
-
+        switch (e.key) {
+            case " ": {
+                e.preventDefault()
+                if (audio.paused) audio.play() //停止していたら再生
+                else audio.pause() //再生していたら停止
+                break
+            }
+            case "ArrowLeft": {
+                audio.currentTime = audio.currentTime - 5 //反映
+                videoRestart() //同期
+                break
+            }
+            case "ArrowRight": {
+                audio.currentTime = audio.currentTime + 5 //反映
+                videoRestart() //同期
+                break
+            }
+            case "ArrowUp": {
+                const volume = (audio.volume * 100) + 5
+                audio.volume = (volume > 100 ? 100 : volume).toFixed() / 100
+                break
+            }
+            case "ArrowDown": {
+                const volume = (audio.volume * 100) - 5
+                audio.volume = (volume < 0 ? 0 : volume).toFixed() / 100
+                break
+            }
+        }
     })
     //クエリ取得
     const params = new Proxy(new URLSearchParams(window.location.search), { get: (searchParams, prop) => searchParams.get(prop) })
