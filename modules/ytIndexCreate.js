@@ -5,7 +5,6 @@
  * @param videoDetails 動画に関連した情報を取得するためにrawデータからvideoid指定し内容を入力
  * @returns ytIndexを返します。
  */
-const fs = require("fs")
 module.exports.ytIndexCreate = async (videoId, ytIndex, videoDetails) => {
     if (!ytIndex) return console.log("ytIndexがうまく受け取れません。: " + ytIndex)
     if (!ytIndex.videoIds) ytIndex.videoIds = {}
