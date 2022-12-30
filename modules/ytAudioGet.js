@@ -7,7 +7,7 @@ const ytdl = require("ytdl-core")
 const mbyteString = require("./mbyteString").mbyteString
 const timeString = require("./timeString").timeString
 module.exports.ytAudioGet = async videoId => {
-    if (!fs.existsSync("cache/YTDl/" + videoId + ".mp3")) {
+    if (!fs.existsSync("C:/cache/YTDl/" + videoId + ".mp3")) {
         await new Promise(resolve => {
             let starttime
             if (!fs.existsSync("C:/cache/YouTubeDownloadingAudio")) fs.mkdirSync("C:/cache/YouTubeDownloadingAudio")
