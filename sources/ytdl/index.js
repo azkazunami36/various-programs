@@ -30,7 +30,8 @@ const wait = async time => {
 addEventListener("load", async () => {
     const videoList = document.getElementById("videoList") //スクロールなどで使用する
     const VideoListCenter = document.getElementById("VideoListCenter") //動画を表示するために使用する
-    const thumbnailWidth = 275 //最大のサムネイルの表示大きさ
+    const infoVideos = document.getElementById("infoVideos") //追加の動画を入手したとき表示するために使用する
+    const thumbnailWidth = 320 //最大のサムネイルの表示大きさ。320でYouTube
     const videoRowReload = () => {
         const sHeight = videoList.scrollHeight //要素の高さ
         const cWidth = videoList.clientWidth //クライアントの横幅
@@ -111,6 +112,7 @@ addEventListener("load", async () => {
                     authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
                     resolve()
                 })
+                resolve()
             })
             videoLoaded++
         }
@@ -134,19 +136,44 @@ addEventListener("load", async () => {
             }
             console.log(imgratio)
         }
-    }) //ブラウザサイズが変わると
+    })
+    //ブラウザサイズが変わると
     let videorow = 0
+    let popupvideorow = 0
     /**
      * 動画の列を決める関数
      */
     const videoNumberReload = () => {
-        const videonum = (document.body.clientWidth / thumbnailWidth).toFixed()
-        if (videonum == videorow) return //数値を買える必要が無かったらリターン
-        videorow = videonum
-        //スタイルに反映
-        document.documentElement.style.setProperty("--video-layout", String(videonum))
+        const videonum = (videoList.clientWidth / thumbnailWidth).toFixed()
+        const popupvideonum = (infoVideos.clientWidth / 250).toFixed()
+        const videoLinkStyle = getRuleBySelector(".VideoLink")
+        const popupvideoLinkStyle = getRuleBySelector(".popupVideoLink")
+        if (videonum != videorow) {
+            videorow = videonum
+            //スタイルに反映
+            videoLinkStyle.style.width = "calc(100% / " + String(videonum) + ")"
+        }
+        if (popupvideonum != popupvideorow) {
+            popupvideorow = popupvideonum
+            //スタイルに反映
+            popupvideoLinkStyle.style.width = "calc(100% / " + String(videonum) + ")"
+        }
         //サイズ変更時に一番下まで移動してしまったら読み込む
         videoRowReload()
+    }
+    //ネットから見つけたやぁつぅ
+    const getRuleBySelector = sele => {
+        const styleSheets = document.styleSheets; //全てのcssを取得する
+
+        for (let i = 0; i < styleSheets.length; i++) { //cssの数だけ
+            const cssRules = styleSheets[i].cssRules //ルールを取得
+            for (let i = 0; i < cssRules.length; i++) { //ルールの数だけ
+                if (sele == cssRules[i].selectorText) { //ルール名と一致するか
+                    return cssRules[i] //見つけたら返す
+                }
+            }
+        }
+        return null //見つからなかったらnull
     }
     videoNumberReload() //動画の列を初期化する
     videoList.addEventListener("scroll", e => {
@@ -226,44 +253,83 @@ addEventListener("load", async () => {
         //クラス「ポップアップ有効化用」を追加
         infoPopup.classList.add("Popuped")
     })
+    /**
+     * 動画を取得する関数
+     * @param {[]} videolist 
+     */
+    const ytdlInfoGet = async videolist => {
+        const infoTitle = document.getElementById("infoTitle")
+        infoTitle.innerHTML = "サーバーの返答を待っています..."
+        infoVideos.innerHTML = ""
+        console.log(videolist)
+        const data = JSON.parse(await httpDataRequest("youtube-info", JSON.stringify(videolist)))
+        console.log(data)
+        if (data.length === 1 && data[0] == "") {
+            infoTitle.innerHTML = "取得が出来ませんでした..."
+            console.log("ん？")
+            return
+        }
+        let thumbnailWidth = 250 //ちいさなウィンドウの中で表示するため
+        for (let i = 0; i != data.length; i++) {
+            const videoId = data[i]
+            new Promise(resolve => {
+                const popupVideoLink = document.createElement("div")
+                infoVideos.appendChild(popupVideoLink)
+                const ratio = (window.devicePixelRatio || 1).toFixed(2)
+                const videoWindow = document.createElement("div")
+                const thumbnailImage = document.createElement("div")
+                const thumbnailimg = document.createElement("img")
+                const titleAria = document.createElement("div")
+                const iconAria = document.createElement("div")
+                const infoAria = document.createElement("div")
+                const authorIcon = document.createElement("img")
+                const videoTitle = document.createElement("p")
+                const videoAuthor = document.createElement("p")
+                const clickme = document.createElement("a")
+                popupVideoLink.classList.add("popupVideoLink")
+                videoWindow.classList.add("VideoWindow")
+                thumbnailImage.classList.add("ThumbnailImage")
+                thumbnailimg.classList.add("Thumbnailimg")
+                titleAria.classList.add("TitleAria")
+                iconAria.classList.add("IconAria")
+                infoAria.classList.add("InfoAria")
+                authorIcon.classList.add("AuthorIcon")
+                authorIcon.style.width = "24px"
+                videoTitle.classList.add("VideoTitle")
+                videoTitle.style.color = "black"
+                videoTitle.style.fontSize = "10px"
+                videoAuthor.classList.add("VideoAuthor")
+                videoAuthor.style.color = "black"
+                videoAuthor.style.fontSize = "4px"
+                clickme.classList.add("clickme")
+                thumbnailimg.src = "/ytimage/" + videoId + "?size=" + thumbnailWidth + "&ratio=" + ratio
+                clickme.href = "./watch?v=" + videoId
+                popupVideoLink.appendChild(videoWindow)
+                videoWindow.appendChild(thumbnailImage)
+                videoWindow.appendChild(titleAria)
+                videoWindow.appendChild(clickme)
+                thumbnailImage.appendChild(thumbnailimg)
+                infoAria.appendChild(videoTitle)
+                infoAria.appendChild(videoAuthor)
+                iconAria.appendChild(authorIcon)
+                titleAria.appendChild(iconAria)
+                titleAria.appendChild(infoAria)
+                new Promise(async resolve => {
+                    videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                        videoId: videoId,
+                        request: "title"
+                    })))
+                    const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                        videoId: videoId,
+                        request: "author"
+                    })))
+                    videoAuthor.innerHTML = author.name
+                    authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
+                    resolve()
+                })
+                resolve()
+            })
+        }
+        infoTitle.innerHTML = data.length + "本の動画が取得完了しました！"
+    };
 });
-/**
- * 動画を取得する関数
- * @param {[]} videolist 
- */
-const ytdlInfoGet = async videolist => {
-    const infoTitle = document.getElementById("infoTitle")
-    infoTitle.innerHTML = "サーバーの返答を待っています..."
-    const infoVideos = document.getElementById("infoVideos")
-    infoVideos.innerHTML = ""
-    console.log(videolist)
-    const data = JSON.parse(await httpDataRequest("youtube-info", JSON.stringify(videolist)))
-    console.log(data)
-    for (let i = 0; i != data.length; i++) {
-        if (i == data.length) infoTitle.innerHTML = data.length + "本の動画が取得完了しました！"
-        const videoId = data[i]
-        console.log(videoId)
-        const title = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-            videoId: videoId,
-            request: "title"
-        })))
-        const infoVideo = document.createElement("div")
-        const infoVideoImagediv = document.createElement("div")
-        const infoVideoImageimg = document.createElement("img")
-        const infoVideoInfo = document.createElement("div")
-        const infoVideoTitle = document.createElement("div")
-        infoVideo.classList.add("infoVideo")
-        infoVideoImagediv.classList.add("infoVideoImage")
-        infoVideoImageimg.classList.add("infoVideoImage")
-        infoVideoImageimg.src = "../../ytimage/" + videoId
-        infoVideoInfo.classList.add("infoVideoInfo")
-        infoVideoTitle.classList.add("infoVideoTitle")
-        infoVideoTitle.innerHTML = title
-        infoVideoImagediv.appendChild(infoVideoImageimg)
-        infoVideoInfo.appendChild(infoVideoTitle)
-        infoVideo.appendChild(infoVideoImagediv)
-        infoVideo.appendChild(infoVideoInfo)
-        infoVideos.appendChild(infoVideo)
-        wait(20)
-    }
-};
