@@ -1,5 +1,5 @@
 const { count } = require('console');
-const { Client, GatewayIntentBits, Message, EmbedBuilder, MessageActionRow, MessageButton } = require('discord.js');
+const { Client, GatewayIntentBits, Message, EmbedBuilder, MessageActionRow, MessageButton, DataResolver } = require('discord.js');
 require("dotenv").config();
 require('date-utils');
 const sharp =require('sharp')
@@ -36,52 +36,77 @@ for (let i = 0; i != data.data.length; i++) {
 for (let i = 0; i != data.Englishdata.length; i++) {
      countb++
 }
-sharp('1.jpg')
+//画像処理中心核//
+sharp('data/1.jpg')
   .resize(512)
-  .toFile('1_0.jpg', (info)=>{     //こんな感じでok?
+  .toFile('data/1_0.jpg', (info)=>{     //こんな感じでok?
     console.log(info)
   })
-sharp('2.jpg')
+sharp('data/2.jpg')
   .resize(512)
-  .toFile('2_0.jpg', (info)=>{     //こんな感じでok?  めんどくさかった
+  .toFile('data/2_0.jpg', (info)=>{     //こんな感じでok?  めんどくさかった
     console.log(info)
   })
-sharp('3.jpg')
+sharp('data/3.jpg')
   .resize(512)
-  .toFile('3_0.jpg', (info)=>{     //こんな感じでok?
+  .toFile('data/3_0.jpg', (info)=>{     //こんな感じでok?
     console.log(info)
   })
-sharp('4.jpg')
+sharp('data/4.jpg')
   .resize(512)
-  .toFile('4_0.jpg', (info)=>{     //こんな感じでok?
+  .toFile('data/4_0.jpg', (info)=>{     //こんな感じでok?
     console.log(info)
   })
-sharp('5.jpg')
+sharp('data/5.jpg')
   .resize(512)
-  .toFile('5_0.jpg', (info)=>{     //こんな感じでok?
+  .toFile('data/5_0.jpg', (info)=>{     //こんな感じでok?
     console.log(info)
 
   })
-sharp('6.jpg')
+sharp('data/6.jpg')
   .resize(512)
-  .toFile('6_0.jpg', (info)=>{     //こんな感じでok?
+  .toFile('data/6_0.jpg', (info)=>{     //こんな感じでok?
     console.log(info)
   })
-sharp('7.jpg')
+sharp('data/7.jpg')
   .resize(512)
-  .toFile('7_0.jpg', (info)=>{     //こんな感じでok?
+  .toFile('data/7_0.jpg', (info)=>{     //こんな感じでok?
     console.log(info)
   })
-  sharp('8.jpg')
+sharp('data/8.jpg')
   .resize(512)
-  .toFile('8_0.jpg', (info)=>{     //こんな感じでok?
+  .toFile('data/8_0.jpg', (info)=>{     //こんな感じでok?
     console.log(info)
   })
-sharp('0.jpg')
+sharp('data/9.jpg')
   .resize(512)
-  .toFile('0_0.jpg', (info)=>{     //こんな感じでok?
+  .toFile('data/9_0.jpg', (info)=>{     //こんな感じでok?
     console.log(info)
   })
+sharp('data/10.jpg')
+  .resize(512)
+  .toFile('data/10_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
+sharp('data/11.jpg')
+  .resize(512)
+  .toFile('data/11_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
+sharp('data/12.jpg')
+  .resize(512)
+  .toFile('data/12_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
+
+
+
+sharp('data/0.jpg')
+  .resize(512)
+  .toFile('data/0_0.jpg', (info)=>{     //こんな感じでok?
+    console.log(info)
+  })
+
 
 //権限//
 
@@ -134,6 +159,11 @@ client.on('messageCreate', message => {  //切れてるのか横も
                     }
                     if (data.data[i] === "まんこ"){
                         message.channel.send("やめよう...")
+                    }
+                    if (data.data[i] === "ゴミ"){
+                        if (message.content === "ゴミ箱"){
+                            message.channel.send("すいませんゴミ箱も消えてしまうんですw")
+                        }
                     }
                 }
             }
@@ -199,7 +229,8 @@ client.on('messageCreate', message => {  //切れてるのか横も
         cmdexec++
         const username = message.author.username
         const loga = "help(J+E)"
-        message.reply("このbotは不適切なメッセージを消したりします"+"\n 今現在137の単語を記録しています\n"+"お問い合わせは開発担当の伊吹ch/YUKKEまで")
+        message.reply("このbotは不適切なメッセージを消したりします"+"\n 今現在"+countb+"の単語を記録しています\n"+"お問い合わせは開発担当の伊吹ch/YUKKEまで")
+        message.channel.send("でも**結局は誰の需要もないんだ**")
         console.log("コマンド名\n" + loga + "\n実行user" + username + "による実行")
 
     }
@@ -251,15 +282,10 @@ client.on('messageCreate', message => {  //切れてるのか横も
     }
     if (message.content === "画像"){
         const random = Math.random()
-        const Num = Math.floor(random * 9)
+        const Num = Math.floor(random * 13)
 
-            message.channel.send({ files: [Num+'_0.jpg'] })
-
-        
+            message.channel.send({ files: ['./'+Num+'_0.jpg'] })
     }
-
-
-
 
 })
 client.on('ready', async () => {

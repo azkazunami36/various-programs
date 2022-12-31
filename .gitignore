@@ -6,3 +6,4 @@
 /bot/.env
 /bot/node_modules/*
 /bot/package-lock.json
+/bot/data/*
