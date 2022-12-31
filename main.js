@@ -3,6 +3,8 @@
     const readline = require("readline")
     const fs = require("fs")
     const ffmpeg = require("fluent-ffmpeg")
+    const http = require("http")
+    const request = require("request")
     const cors = require("cors")
     const ytdl = require("ytdl-core")
     const yts = require("yt-search")
@@ -94,6 +96,10 @@
         } else if (req.url == "/sources/ggbot/" || req.url == "/sources/ggbot/index.html") { //ルートt (ry
             res.header("Content-Type", "text/html;charset=utf-8")
             res.end(fs.readFileSync("sources/ggbot/index.html"))
+
+        } else if (req.url == "/sources/flmv/" || req.url == "/sources/flmv/index.html") { //ルートt (ry
+            res.header("Content-Type", "text/html;charset=utf-8")
+            res.end(fs.readFileSync("sources/flmv/index.html"))
 
         } else if (req.url.match("/sources/ytdl/watch?")) {
             //watchというリンクは少々特殊なため、matchで検出し返答します
@@ -239,21 +245,39 @@
                 const videolist = JSON.parse(data) //VideoIDかURLの入った配列を取得
                 const videoIds = [] //VideoIDの配列をクライアントに返すため
                 const trueVideoIds = [] //存在するVideoIDのみをここに保存
-                if (!videolist[0]) videoIds.push("なんか指定しなされ")
-                else {
-                    for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
-                        let videoId = videolist[i] //VideoIDとなるもの
+                console.log(videolist)
+                for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
+                    let videoId = videolist[i] //VideoIDとなるもの
+                    console.log(videoId)
+                    if (videoId) {
                         const ytdlURL = ytdl.validateURL(videoId)
                         const ytdlID = ytdl.validateID(videoId)
-                        if (ytdlID || ytdlURL)
+                        if (ytdlID || ytdlURL) {
                             if (ytdlID) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
-                            else {
-                                const data = await yts({ query: videolist[i] })
-                                let video
-                                if (data.videos[0]) video = data.videos[0]
-                                else videoIds.push("こんなやつなかったな")
-                                videoId = video.videoId
-                            }
+                        } else {
+                            console.log("リンクデータ無し:" + videoId)
+                            const data = await yts({ query: videoId })
+                            let video
+                            if (data.videos[0]) video = data.videos[0]
+                            else videoIds.push("こんなやつなかったな")
+                            videoId = video.videoId
+                        }
+                        if (!ytdlID && !ytdlURL) {
+                        }
+                        if (await new Promise(resolve => {
+                            request.get({
+                                url: videoId,
+                                headers: {
+                                    "content-type": "text/plain"
+                                }
+                            }, async (error, res, body) => {
+                                if (error) {
+                                    console.log(error)
+                                    resolve(false)
+                                } else resolve(true)
+                            })
+                        })) {}
+
                         console.log(videoId)
                         const exisytdl = dtbs.ytdlRawInfoData[videoId] //ただ存在を確認するためだけなので、ね？
                         if (!exisytdl)
@@ -270,16 +294,19 @@
                         trueVideoIds.push(videoId)
                         await ytThumbnailGet(videoId) //サムネを取得
                         await ytAuthorIconGet(authorId)
+                    } else {
+                        videoIds.push("なにこれ...")
+                        console.log("存在しない:" + videoId)
                     }
-                    console.log(videoIds)
-                    res.header("Content-Type", "text/plaincharset=utf-8")
-                    res.end(JSON.stringify(videoIds))
-                    for (let i = 0; i != trueVideoIds.length; i++) {
-                        console.log("ダウンロード処理for: " + i)
-                        await ytVideoGet(trueVideoIds[i]) //動画を取得
-                        await ytAudioGet(trueVideoIds[i]) //音声を取得
-                        await wait(100)
-                    }
+                }
+                console.log(videoIds)
+                res.header("Content-Type", "text/plaincharset=utf-8")
+                res.end(JSON.stringify(videoIds))
+                for (let i = 0; i != trueVideoIds.length; i++) {
+                    console.log("ダウンロード処理for: " + i)
+                    await ytVideoGet(trueVideoIds[i]) //動画を取得
+                    await ytAudioGet(trueVideoIds[i]) //音声を取得
+                    await wait(100)
                 }
             })
         } else if (req.url == "/applcation-info") {
@@ -378,7 +405,7 @@
         saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(true)
+    startToInfomation(false)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")
