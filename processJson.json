@@ -41,9 +41,19 @@
             }
         },
         {
-            "name": "File Lister",
+            "name": "File",
             "id": "filelister",
             "compact": "flst",
+            "iconURL": "",
+            "status": {
+                "loaded": false,
+                "viewed": false
+            }
+        },
+        {
+            "name": "Remote File Move",
+            "id": "remotefilemove",
+            "compact": "flmv",
             "iconURL": "",
             "status": {
                 "loaded": false,
