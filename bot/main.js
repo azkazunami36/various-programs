@@ -1,8 +1,9 @@
 const { count } = require('console');
-const { Client, GatewayIntentBits, Message, EmbedBuilder, MessageActionRow, MessageButton, DataResolver } = require('discord.js');
+const { Client, GatewayIntentBits, Message, EmbedBuilder, MessageActionRow, MessageButton, DataResolver,ActionRowBuilder,ButtonBuilder,ButtonStyle } = require('discord.js');
 require("dotenv").config();
 require('date-utils');
 const sharp =require('sharp')
+var async = require('async');
 let cmdexec = 0;
 let ari = 0;
 let countb = 0;
@@ -148,7 +149,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
              * 下のforと上のforではiの内容は異なる
              */
             for (let i = 0; i != data.data.length; i++) { //dataの数だけ
-                if (message.content.match(data.data[i])) { //マッチする言葉を探して
+                if (message.content === (data.data[i])) { //マッチする言葉を探して
                     console.log(data.data[i] + "とマッチしました")
                     idiotis = true
                     const username =message.author.username
@@ -191,7 +192,7 @@ client.on('messageCreate', message => {  //切れてるのか横も
     if (idiotis) {
         message.reply("不適切な言葉です\n消しましました\n" + "ご協力" + data.data3)
             .then(() => message.delete()); //ちなみにthenはbotが送信したほうのmessageが取得できる
-        message.channel.send("なんかやなことでもあった？ https://www.youtube.com/watch?v=O1gB_aoVJQY&list=PLJKqOK4B8ZrXTgkYZdPYZcYT3vG7ARJls&index=24")
+        
     
         counta++
     } else if (mediaidiotis) {
@@ -285,6 +286,33 @@ client.on('messageCreate', message => {  //切れてるのか横も
         const Num = Math.floor(random * 13)
 
             message.channel.send({ files: ['./'+Num+'_0.jpg'] })
+    }
+    if (message.content === "/2ch"){
+      const wait = async time => {
+      const thread =  await message.channel.threads.create({
+        name: 'food-talk',
+        autoArchiveDuration: 60,
+        reason: 'Needed a separate thread for food',
+      });
+      
+      console.log(`Created thread: ${thread.name}`);
+    }
+    }
+    if (message.channel.id === "1057461166869319710"){
+        if (message.content = "ああ"){
+          message.channel.send("スタッフが駆け付けるまで少々お待ちください")
+          const wait = async time => {
+          const row = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('primary')
+              .setLabel('Click me!')
+              .setStyle(ButtonStyle.Primary),
+          );
+          await interaction.reply({ content: 'I think you should,', components: [row] });
+          
+          
+        }}
     }
 
 })

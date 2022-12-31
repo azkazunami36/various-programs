@@ -9,6 +9,7 @@
   "author": "ibuki",
   "license": "ISC",
   "dependencies": {
+    "async": "^3.2.4",
     "date-utils": "^1.2.21",
     "discord.js": "^14.7.1",
     "dotenv": "^16.0.3",
