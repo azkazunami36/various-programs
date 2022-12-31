@@ -59,61 +59,56 @@ addEventListener("load", async () => {
         if (!videos) videos = JSON.parse(await httpDataRequest("ytvideo-list"))
         if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
         for (let i = 0; i != row; i++) {
+            if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
             const videoLink = document.createElement("div")
             VideoListCenter.appendChild(videoLink)
-            new Promise(resolve => {
-                if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
 
-                const videoId = videos[videoLoaded] //VideoID
-                const ratio = (window.devicePixelRatio || 1).toFixed(2)
-                const videoWindow = document.createElement("div")
-                const thumbnailImage = document.createElement("div")
-                const thumbnailimg = document.createElement("img")
-                const titleAria = document.createElement("div")
-                const iconAria = document.createElement("div")
-                const infoAria = document.createElement("div")
-                const authorIcon = document.createElement("img")
-                const videoTitle = document.createElement("p")
-                const videoAuthor = document.createElement("p")
-                const clickme = document.createElement("a")
-                videoLink.classList.add("VideoLink")
-                videoWindow.classList.add("VideoWindow")
-                thumbnailImage.classList.add("ThumbnailImage")
-                thumbnailimg.classList.add("Thumbnailimg")
-                titleAria.classList.add("TitleAria")
-                iconAria.classList.add("IconAria")
-                infoAria.classList.add("InfoAria")
-                authorIcon.classList.add("AuthorIcon")
-                videoTitle.classList.add("VideoTitle")
-                videoAuthor.classList.add("VideoAuthor")
-                clickme.classList.add("clickme")
-                thumbnailimg.src = "/ytimage/" + videoId + "?size=" + thumbnailWidth + "&ratio=" + ratio
-                clickme.href = "./watch?v=" + videoId
-                videoLink.appendChild(videoWindow)
-                videoWindow.appendChild(thumbnailImage)
-                videoWindow.appendChild(titleAria)
-                videoWindow.appendChild(clickme)
-                thumbnailImage.appendChild(thumbnailimg)
-                infoAria.appendChild(videoTitle)
-                infoAria.appendChild(videoAuthor)
-                iconAria.appendChild(authorIcon)
-                titleAria.appendChild(iconAria)
-                titleAria.appendChild(infoAria)
-                new Promise(async resolve => {
-                    videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                        videoId: videoId,
-                        request: "title"
-                    })))
-                    const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                        videoId: videoId,
-                        request: "author"
-                    })))
-                    videoAuthor.innerHTML = author.name
-                    authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
-                    resolve()
-                })
-                resolve()
-            })
+            const videoId = videos[videoLoaded] //VideoID
+            const ratio = (window.devicePixelRatio || 1).toFixed(2)
+            const videoWindow = document.createElement("div")
+            const thumbnailImage = document.createElement("div")
+            const thumbnailimg = document.createElement("img")
+            const titleAria = document.createElement("div")
+            const iconAria = document.createElement("div")
+            const infoAria = document.createElement("div")
+            const authorIcon = document.createElement("img")
+            const videoTitle = document.createElement("p")
+            const videoAuthor = document.createElement("p")
+            const clickme = document.createElement("a")
+            videoLink.classList.add("VideoLink")
+            videoWindow.classList.add("VideoWindow")
+            thumbnailImage.classList.add("ThumbnailImage")
+            thumbnailimg.classList.add("Thumbnailimg")
+            titleAria.classList.add("TitleAria")
+            iconAria.classList.add("IconAria")
+            infoAria.classList.add("InfoAria")
+            authorIcon.classList.add("AuthorIcon")
+            videoTitle.classList.add("VideoTitle")
+            videoAuthor.classList.add("VideoAuthor")
+            clickme.classList.add("clickme")
+            thumbnailimg.src = "/ytimage/" + videoId + "?size=" + thumbnailWidth + "&ratio=" + ratio
+            clickme.href = "./watch?v=" + videoId
+            videoLink.appendChild(videoWindow)
+            videoWindow.appendChild(thumbnailImage)
+            videoWindow.appendChild(titleAria)
+            videoWindow.appendChild(clickme)
+            thumbnailImage.appendChild(thumbnailimg)
+            infoAria.appendChild(videoTitle)
+            infoAria.appendChild(videoAuthor)
+            iconAria.appendChild(authorIcon)
+            titleAria.appendChild(iconAria)
+            titleAria.appendChild(infoAria)
+            videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                videoId: videoId,
+                request: "title"
+            })))
+            const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                videoId: videoId,
+                request: "author"
+            })))
+            videoAuthor.innerHTML = author.name
+            authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
+            wait(1)
             videoLoaded++
         }
         //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
@@ -247,6 +242,7 @@ addEventListener("load", async () => {
         try {
             ytdlInfoGet(JSON.parse(text))
         } catch (e) {
+            console.log(e)
             ytdlInfoGet(text.split("\n"))
         };
         multichoicePopup.classList.remove("Popuped")
