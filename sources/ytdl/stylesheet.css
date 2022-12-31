@@ -1,375 +1,349 @@
- :root {
-     --video-layout: 3
- }
+body {
+    background: rgb(11, 43, 104);
+    margin: 0;
+}
 
- body {
-     background: rgb(11, 43, 104);
-     margin: 0;
- }
+#URLBox {
+    width: 100%;
+    height: 100%;
+    padding: 5px;
+    font-size: 20px;
+    font-weight: 600;
+    border: 0;
+}
 
- #URLBox {
-     width: 100%;
-     height: 100%;
-     padding: 5px;
-     font-size: 20px;
-     font-weight: 600;
-     border: 0;
- }
+.URL {
+    margin: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    width: calc(100% - 20px);
+    z-index: 3;
+}
 
- .URL {
-     margin: 10px;
-     display: flex;
-     justify-content: center;
-     align-items: center;
-     position: absolute;
-     width: calc(100% - 20px);
-     z-index: 3;
- }
+.URLBar {
+    display: flex;
+    overflow: hidden;
+    width: 85%;
+    height: 41px;
+    border-radius: 10px;
+}
 
- .URLBar {
-     display: flex;
-     overflow: hidden;
-     width: 85%;
-     height: 41px;
-     border-radius: 10px;
- }
+.URLBox {
+    width: 100%;
+    min-width: 65px;
+    height: 100%;
+}
 
- .URLBox {
-     width: 100%;
-     min-width: 65px;
-     height: 100%;
- }
+.BoxEnterButton {
+    width: 65px;
+    min-width: 65px;
+    height: 100%;
+    display: flex;
+    position: relative;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
+    font-size: 20px;
+    background: rgb(255, 255, 255);
+    font-weight: 600;
+    border-left: 1px solid black;
+}
 
- .BoxEnterButton {
-     width: 65px;
-     min-width: 65px;
-     height: 100%;
-     display: flex;
-     position: relative;
-     justify-content: space-around;
-     align-items: center;
-     padding: 0;
-     font-size: 20px;
-     background: rgb(255, 255, 255);
-     font-weight: 600;
-     border-left: 1px solid black;
- }
+.multiChoiceButton {
+    width: 90px;
+    min-width: 90px;
+    height: 100%;
+    display: flex;
+    position: relative;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
+    font-size: 20px;
+    background: rgb(255, 255, 255);
+    font-weight: 600;
+    border-left: 1px solid black;
+}
 
- .multiChoiceButton {
-     width: 90px;
-     min-width: 90px;
-     height: 100%;
-     display: flex;
-     position: relative;
-     justify-content: space-around;
-     align-items: center;
-     padding: 0;
-     font-size: 20px;
-     background: rgb(255, 255, 255);
-     font-weight: 600;
-     border-left: 1px solid black;
- }
+.BlackBack {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 20;
+    opacity: 0;
+    transform: scale(0);
+    animation: Out-Fade .25s;
+}
 
- .BlackBack {
-     width: 100%;
-     height: 100%;
-     position: absolute;
-     top: 0;
-     left: 0;
-     background: rgba(0, 0, 0, 0.5);
-     z-index: 20;
-     opacity: 0;
-     transform: scale(0);
-     animation: Out-Fade .25s;
- }
+@keyframes In-Fade {
+    0% {
+        opacity: 0;
+    }
 
- @keyframes In-Fade {
-     0% {
-         opacity: 0;
-     }
+    100% {
+        opacity: 1;
+    }
+}
 
-     100% {
-         opacity: 1;
-     }
- }
+@keyframes Out-Fade {
+    0% {
+        opacity: 1;
+    }
 
- @keyframes Out-Fade {
-     0% {
-         opacity: 1;
-     }
+    100% {
+        opacity: 0;
+    }
+}
 
-     100% {
-         opacity: 0;
-     }
- }
+.Blacked {
+    transform: scale(1);
+    opacity: 1;
+    animation: In-Fade .25s;
+}
 
- .Blacked {
-     transform: scale(1);
-     opacity: 1;
-     animation: In-Fade .25s;
- }
+@keyframes In-Popup {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
 
- @keyframes In-Popup {
-     0% {
-         opacity: 0;
-         transform: scale(0.9);
-     }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
 
-     100% {
-         opacity: 1;
-         transform: scale(1);
-     }
- }
+@keyframes Out-Popup {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
 
- @keyframes Out-Popup {
-     0% {
-         opacity: 1;
-         transform: scale(1);
-     }
+    100% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
 
-     100% {
-         opacity: 0;
-         transform: scale(0.9);
-     }
- }
+.Popup {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: scale(0);
+    opacity: 0;
+    z-index: 25;
+    animation: Out-Popup .35s;
+}
 
- .Popup {
-     width: 100%;
-     height: 100%;
-     position: absolute;
-     top: 0;
-     left: 0;
-     display: flex;
-     align-items: center;
-     justify-content: center;
-     transform: scale(0);
-     opacity: 0;
-     z-index: 25;
-     animation: Out-Popup .35s;
- }
+.Popuped {
+    transform: scale(1);
+    opacity: 1;
+    animation: In-Popup .35s;
+}
 
- .Popuped {
-     transform: scale(1);
-     opacity: 1;
-     animation: In-Popup .35s;
- }
+.PopupWindow {
+    width: 75%;
+    height: 80%;
+    background: white;
+    border-radius: 15px;
+    position: relative;
+    overflow: hidden;
+}
 
- .PopupWindow {
-     width: 75%;
-     height: 75%;
-     background: white;
-     border-radius: 15px;
- }
+#infoTitle {
+    height: 45px;
+    font-size: 30px;
+    color: black;
+    font-weight: 700;
+    margin: 5px;
+}
 
- #infoTitle {
-     font-size: 30px;
-     color: black;
-     font-weight: 700;
-     margin-top: -10%;
- }
+.infoVideoList {
+    width: 100%;
+    height: calc(100% - 55px);
+}
 
- .infoVideoList {
-     width: 75%;
-     height: 75%;
-     border: 1px solid black;
- }
+#infoVideos {
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    min-height: 100%;
+    overflow-y: scroll;
+}
 
- .infoVideo {
-     width: 100%;
-     height: 90px;
-     display: flex;
-     align-items: center;
-     overflow: hidden;
- }
+.PopupClose {
+    width: 100%;
+    height: 50px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    position: absolute;
+}
 
- img.infoVideoImage {
-     width: calc(100% - 10px);
-     height: calc(100% - 10px);
-     background-color: black;
- }
+.PopupCloseButton {
+    width: 50px;
+    height: 100%;
+    font-size: 35px;
+    font-weight: 700;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
- div.infoVideoImage {
-     height: 100%;
-     aspect-ratio: 16/9;
-     display: flex;
-     align-items: center;
-     justify-content: center;
- }
+.infoPopupBody {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
 
- .infoVideoInfo {
-     width: calc(100% - 16 / 9 * 79px);
-     height: 100%;
-     object-fit: contain;
-     display: flex;
-     align-items: center;
-     justify-content: center;
- }
+.msPopupBody {
+    width: 100%;
+    height: calc(100% - 40px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
 
- .infoVideoTitle {
-     height: 90%;
-     font-weight: 700;
- }
+.msTitle {
+    font-size: 30px;
+    color: black;
+    font-weight: 700;
+    margin-top: -10%;
+}
 
- #infoVideos {
-     max-height: 100%;
-     min-height: 100%;
-     overflow-y: scroll;
- }
+.msTextBox {
+    min-width: 75%;
+    height: 60%;
+    border: 1px solid black;
+}
 
- .PopupClose {
-     width: 100%;
-     height: 50px;
-     display: flex;
-     justify-content: flex-end;
-     align-items: center;
- }
+.msEnterButton {
+    width: 65px;
+    min-width: 65px;
+    height: 50px;
+    display: flex;
+    position: relative;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
+    font-size: 20px;
+    background: rgb(255, 255, 255);
+    font-weight: 600;
+    border-left: 1px solid black;
+}
 
- .PopupCloseButton {
-     width: 50px;
-     height: 100%;
-     font-size: 35px;
-     font-weight: 700;
-     position: relative;
-     display: flex;
-     justify-content: center;
-     align-items: center;
- }
+.VideoList {
+    overflow-y: scroll;
+    overflow-x: hidden;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+}
 
- .infoPopupBody {
-     width: 100%;
-     height: calc(100% - 40px);
-     display: flex;
-     justify-content: center;
-     align-items: center;
-     flex-direction: column;
- }
+#VideoListCenter {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    position: relative;
+}
 
- .msPopupBody {
-     width: 100%;
-     height: calc(100% - 40px);
-     display: flex;
-     justify-content: center;
-     align-items: center;
-     flex-direction: column;
- }
+.VideoListTop {
+    width: 100%;
+    height: 61px;
+}
 
- .msTitle {
-     font-size: 30px;
-     color: black;
-     font-weight: 700;
-     margin-top: -10%;
- }
+.VideoListBottom {
+    width: 100%;
+    height: 100%;
+}
 
- .msTextBox {
-     min-width: 75%;
-     height: 60%;
-     border: 1px solid black;
- }
+.VideoLink {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: calc(100% / 4);
+    height: auto;
+    aspect-ratio: 8/7;
+}
 
- .msEnterButton {
-     width: 65px;
-     min-width: 65px;
-     height: 50px;
-     display: flex;
-     position: relative;
-     justify-content: space-around;
-     align-items: center;
-     padding: 0;
-     font-size: 20px;
-     background: rgb(255, 255, 255);
-     font-weight: 600;
-     border-left: 1px solid black;
- }
+.popupVideoLink {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: calc(100% / 4);
+    height: auto;
+    aspect-ratio: 8/7;
+}
 
- .VideoList {
-     overflow-y: scroll;
-     overflow-x: hidden;
-     width: 100%;
-     height: 100%;
-     top: 0;
-     left: 0;
- }
+.VideoWindow {
+    width: 95%;
+    height: 95%;
+    position: relative;
+    overflow: hidden;
+    border-radius: 15px;
+    padding: 5px;
+}
 
- #VideoListCenter {
-     display: flex;
-     flex-direction: row;
-     flex-wrap: wrap;
-     align-content: flex-start;
-     position: relative;
- }
+.ThumbnailImage {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    aspect-ratio: 16/9;
+}
 
- .VideoListTop {
-     width: 100%;
-     height: 61px;
- }
+.Thumbnailimg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 15px;
+}
 
- .VideoListBottom {
-     width: 100%;
-     height: 100%;
- }
+.TitleAria {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    overflow: hidden;
+}
 
- .VideoLink {
-     display: flex;
-     justify-content: center;
-     align-items: center;
-     width: calc(100% / var(--video-layout));
-     height: auto;
-     aspect-ratio: 8/7;
- }
+.VideoTitle {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    margin: 0;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    margin-top: 5px;
+}
 
- .VideoWindow {
-     width: 95%;
-     height: 95%;
-     position: relative;
-     overflow: hidden;
-     border-radius: 15px;
-     padding: 5px;
- }
+.VideoAuthor {
+    margin: 0;
+    font-size: 9px;
+    font-weight: 600;
+    color: white;
+}
 
- .ThumbnailImage {
-     display: flex;
-     justify-content: center;
-     align-items: center;
-     width: 100%;
-     aspect-ratio: 16/9;
- }
-
- .Thumbnailimg {
-     width: 100%;
-     height: 100%;
-     object-fit: contain;
-     border-radius: 15px;
- }
-
- .TitleAria {
-     display: flex;
-     flex-direction: row;
-     align-items: flex-start;
-     overflow: hidden;
- }
-
- .VideoTitle {
-     display: -webkit-box;
-     -webkit-box-orient: vertical;
-     -webkit-line-clamp: 2;
-     margin: 0;
-     overflow: hidden;
-     font-size: 14px;
-     font-weight: 700;
-     color: white;
-     margin-top: 5px;
- }
-
- .VideoAuthor {
-     margin: 0;
-     font-size: 9px;
-     font-weight: 600;
-     color: white;
- }
-
- .AuthorIcon {
-     width: 32px;
-     border-radius: 100%;
-     margin: 7.5px;
-     margin-left: 0px;
- }
+.AuthorIcon {
+    width: 32px;
+    border-radius: 100%;
+    margin: 7.5px;
+    margin-left: 0px;
+}

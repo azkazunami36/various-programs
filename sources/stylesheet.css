@@ -21,11 +21,9 @@ body {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    border: black solid 1.5px;
-    width: 90%;
+    width: 100%;
+    min-width: 200px;
     min-height: 100px;
-    border-radius: 15px;
-    background: rgb(245 244 255);
 }
 
 .Apps {
@@ -33,14 +31,13 @@ body {
     justify-content: center;
     flex-direction: column;
     align-items: center;
-    border: black solid 1.5px;
     padding: 5px;
     border-radius: 15px;
     margin: 5px;
-    width: 300px;
+    width: 400px;
     overflow: hidden;
-    min-height: 150px;
-    background: rgb(255, 234, 172);
+    min-height: 200px;
+    background: rgba(255, 255, 255, 0.1);
     position: relative;
 }
 

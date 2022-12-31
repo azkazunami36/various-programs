@@ -231,59 +231,73 @@
     })
     app.post("*", async (req, res) => {
         console.log("Post:", req.url)
-        if (req.url == "/youtube-info") { //YouTube動画の情報を保存します。
+        if (req.url == "/youtube-info") {
+            //YouTube動画の情報を保存します。
             let data = ""
             req.on("data", async chunk => data += chunk)
             req.on("end", async () => {
                 const videolist = JSON.parse(data) //VideoIDかURLの入った配列を取得
                 const videoIds = [] //VideoIDの配列をクライアントに返すため
-                console.log(videolist)
-                for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
-                    let videoId = videolist[i] //VideoIDとなるもの
-                    if (ytdl.validateURL(videoId) || ytdl.validateID(videoId)) {
-                        if (ytdl.validateURL(videoId)) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
-                    } else {
-                        const data = await yts({ query: videolist[i] })
-                        let video
-                        if (data.videos[0]) video = data.videos[0]
-                        else return videoIds.push("こんなやつなかったな")
-                        videoId = video.videoId
+                const trueVideoIds = [] //存在するVideoIDのみをここに保存
+                if (!videolist[0]) videoIds.push("なんか指定しなされ")
+                else {
+                    for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
+                        let videoId = videolist[i] //VideoIDとなるもの
+                        const ytdlURL = ytdl.validateURL(videoId)
+                        const ytdlID = ytdl.validateID(videoId)
+                        if (ytdlID || ytdlURL)
+                            if (ytdlID) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
+                            else {
+                                const data = await yts({ query: videolist[i] })
+                                let video
+                                if (data.videos[0]) video = data.videos[0]
+                                else videoIds.push("こんなやつなかったな")
+                                videoId = video.videoId
+                            }
+                        console.log(videoId)
+                        const exisytdl = dtbs.ytdlRawInfoData[videoId] //ただ存在を確認するためだけなので、ね？
+                        if (!exisytdl)
+                            dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData)
+                        const authorId = dtbs.ytdlRawInfoData[videoId].author.id
+                        const exisytch = dtbs.ytchRawInfoData[authorId]
+                        if (!exisytch)
+                            dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData)
+                        if (!exisytdl || !exisytch) {
+                            await saveingJson() //保存
+                            dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex, dtbs.ytdlRawInfoData[videoId]) //インデックス作成
+                        }
+                        videoIds.push(videoId) //IDをプッシュ
+                        trueVideoIds.push(videoId)
+                        await ytThumbnailGet(videoId) //サムネを取得
+                        await ytAuthorIconGet(authorId)
                     }
-                    const data = await yts({ query: videolist[i] })
-                    let video
-                    if (data.videos[0]) videoId = data.videos[0].videoId
-                    else return videoIds.push("こんなやつなかったな")
-                    console.log(videoId)
-                    dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData)
-                    const authorId = dtbs.ytdlRawInfoData[videoId].author.id
-                    dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData)
-                    saveingJson() //保存
-                    dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex, dtbs.ytdlRawInfoData[videoId]) //インデックス作成
-                    videoIds.push(videoId) //IDをプッシュ
-                    await ytThumbnailGet(videoId) //サムネを取得
-                    await ytAuthorIconGet(authorId)
-                }
-                console.log(videoIds)
-                res.header("Content-Type", "text/plaincharset=utf-8")
-                res.end(JSON.stringify(videoIds))
-                for (let i = 0; i != videoIds.length; i++) {
-                    ytVideoGet(videoIds[i]) //動画を取得
-                    ytAudioGet(videoIds[i]) //音声を取得
+                    console.log(videoIds)
+                    res.header("Content-Type", "text/plaincharset=utf-8")
+                    res.end(JSON.stringify(videoIds))
+                    for (let i = 0; i != trueVideoIds.length; i++) {
+                        console.log("ダウンロード処理for: " + i)
+                        await ytVideoGet(trueVideoIds[i]) //動画を取得
+                        await ytAudioGet(trueVideoIds[i]) //音声を取得
+                        await wait(100)
+                    }
                 }
             })
-        } else if (req.url == "/applcation-info") { //アプリ情報をjsonで送信
+        } else if (req.url == "/applcation-info") {
+            //アプリ情報をjsonで送信
             res.header("Content-Type", "text/plain;charset=utf-8")
             res.end(JSON.stringify(processJson.Apps))
 
         } else if (req.url == "/ytvideo-list") {
+            //indexから高速でデータを取得するときに使用する
             res.header("Content-Type", "text/plain;charset=utf-8")
             const videoIds = arrayRamdom(Object.keys(dtbs.ytIndex.videoIds))
             res.end(JSON.stringify(videoIds))
 
         } else if (req.url == "/ytdlRawInfoData") {
+            //そのままのデータを指定して取得するときに使用する
             let data = ""
-            req.on("data", chunk => data += chunk)
-            req.on("end", () => {
+            req.on("data", async chunk => data += chunk)
+            req.on("end", async () => {
                 const { videoId, request } = JSON.parse(data)
                 res.header("Content-Type", "text/plain;charset=utf-8")
                 const details = dtbs.ytdlRawInfoData[videoId]
@@ -291,10 +305,20 @@
                 const text = JSON.stringify(details[request])
                 res.end(text || "不明")
             })
+
+        } else if (req.url == "/ytdlRawInfoArray") {
+            /**
+             * 動画リストのそのままの配列を渡す
+             * 最後に取得した動画などを見るときに使います。
+             * ただデータを取得したいだけの場合、パフォーマンス低下を防ぐため使わないように
+             */
+            res.header("Content-Type", "text/plain;charset=utf-8")
+            res.end(JSON.stringify(Object.keys(dtbs.ytdlRawInfoData)))
+
         } else if (req.url.match("/discord-seting")) {
             let data = ""
-            req.on("data", chunk => data += chunk)
-            req.on("end", () => {
+            req.on("data", async chunk => data += chunk)
+            req.on("end", async () => {
                 const request = JSON.parse(data)
                 if (request.token) {
                     procData.discordBot[request.token] = {}
@@ -355,7 +379,10 @@
         ytVASourceCheck(dtbs.ytIndex)
     }
     startToInfomation(true)
-    const saveingJson = async () => fs.writeFileSync("data.json", JSON.stringify(dtbs))
+    const saveingJson = async () => {
+        fs.writeFileSync("data.json", JSON.stringify(dtbs))
+        console.log("JSON保存済み")
+    }
     const Discord_JS = async () => {
         const client = new Client({
             partials: [
