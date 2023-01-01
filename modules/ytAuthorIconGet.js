@@ -44,7 +44,10 @@ module.exports.ytAuthorIconGet = async (authorId, resize) => {
             for (y; (aspy * y) < target; y++) { } //受け取った指定画質にリサイズするために
             //キャッシュから画像を取得する
             const Stream = fs.createWriteStream("C:/cache/YouTubeAuthorIconRatioResize/" + authorId + "-r" + resize.ratio + "-" + resize.size + ".jpg")
-            sharp("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg").resize(aspx * y, aspy * y).pipe(Stream)
+            sharp("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg").resize(aspx * y, aspy * y).pipe(Stream).on("error", e => {
+                console.log("最適化アイコン作成時にエラー: ", e)
+                resolve() //エラーが発生しようともmain.jsでは存在しないことに出来るため、そのまま終了
+            })
             Stream.on("finish", () => {
                 console.log("最適化アイコン作成")
                 resolve()
