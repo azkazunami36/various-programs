@@ -101,6 +101,10 @@
             res.header("Content-Type", "text/html;charset=utf-8")
             res.end(fs.readFileSync("sources/flmv/index.html"))
 
+        } else if (req.url == "/sources/vd/" || req.url == "/sources/vd/index.html") { //ルートt (ry
+            res.header("Content-Type", "text/html;charset=utf-8")
+            res.end(fs.readFileSync("sources/vd/index.html"))
+
         } else if (req.url.match("/sources/ytdl/watch?")) {
             //watchというリンクは少々特殊なため、matchで検出し返答します
             res.header("Content-Type", "text/html;charset=utf-8")
@@ -405,7 +409,7 @@
         saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(false)
+    startToInfomation(true)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")

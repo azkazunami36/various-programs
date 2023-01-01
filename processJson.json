@@ -1,6 +1,16 @@
 {
     "Apps": [
         {
+            "name": "Virtual Desktop",
+            "id": "virtualdesktop",
+            "compact": "vd",
+            "iconURL": "",
+            "status": {
+                "loaded": false,
+                "viewed": false
+            }
+        },
+        {
             "name": "YouTube Downloader",
             "id": "youtubedownloader",
             "compact": "ytdl",
