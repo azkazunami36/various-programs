@@ -59,8 +59,8 @@
     if (!dtbs.ytIndex) dtbs.ytIndex = {}
 
     if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
-    if (!fs.existsSync("C:/cache/")) fs.mkdirSync("cache")
-    if (!fs.existsSync("C:/cache/YTDL")) fs.mkdirSync("cache/YTDL")
+    if (!fs.existsSync("C:/cache/")) fs.mkdirSync("C:/cache")
+    if (!fs.existsSync("C:/cache/YTDL")) fs.mkdirSync("C:/cache/YTDL")
     if (!fs.existsSync("C:/cache/YouTubeDownloadingVideo")) fs.mkdirSync("C:/cache/YouTubeDownloadingVideo")
     if (!fs.existsSync("C:/cache/YouTubeDownloadingAudio")) fs.mkdirSync("C:/cache/YouTubeDownloadingAudio")
     if (!fs.existsSync("C:/cache/YouTubeThumbnail")) fs.mkdirSync("C:/cache/YouTubeThumbnail")
