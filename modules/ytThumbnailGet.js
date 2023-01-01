@@ -20,16 +20,17 @@ module.exports.ytThumbnailGet = async (videoId, resize) => {
             axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
                 .then(res => {
                     fs.writeFileSync("C:/cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(res.data), "binary") //保存
-                    console.log("高品質サムネイル取得")
+                    console.log(videoId, "の高品質サムネイル取得")
                     resolve()
                 })
                 .catch(err => {
-                    console.log("高品質サムネイル取得時にエラー: ", err)
+                    console.log(videoId, "の高品質サムネイル取得時にエラー: ", err)
                     resolve()
                 })
         })
     }
     if (resize && !fs.existsSync("C:/cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + resize.ratio + "-" + resize.size + ".jpg")) {
+        if (!fs.existsSync("C:/cache/YouTubeThumbnail/" + videoId + ".jpg")) return
         await new Promise(async resolve => {
             //大きさなどを取得
             const { width, height, type } = await imageSize("C:/cache/YouTubeThumbnail/" + videoId + ".jpg")
@@ -50,11 +51,11 @@ module.exports.ytThumbnailGet = async (videoId, resize) => {
             //キャッシュから画像を取得する
             const Stream = fs.createWriteStream("C:/cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + resize.ratio + "-" + resize.size + ".jpg")
             sharp("C:/cache/YouTubeThumbnail/" + videoId + ".jpg").resize(aspx * y, aspy * y).pipe(Stream).on("error", e => {
-                console.log("最適化アイコン作成時にエラー: ", e)
+                console.log(videoId, "の最適化アイコン作成時にエラー: ", e)
                 resolve() //エラーが発生しようともmain.jsでは存在しないことに出来るため、そのまま終了
             })
             Stream.on("finish", () => {
-                console.log("最適化サムネイル作成")
+                console.log(videoId, "の最適化サムネイル作成")
                 resolve()
             })
         })

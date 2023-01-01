@@ -20,16 +20,17 @@ module.exports.ytAuthorIconGet = async (authorId, resize) => {
             axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
                 .then(res => {
                     fs.writeFileSync("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg", new Buffer.from(res.data), "binary") //保存
-                    console.log("高品質アイコン取得")
+                    console.log(authorId, "の高品質アイコン取得")
                     resolve()
                 })
                 .catch(err => {
-                    console.log("高品質アイコン取得時にエラー: ", err)
+                    console.log(authorId, "の高品質アイコン取得時にエラー: ", err, thumbnails[thumbnails.length - 1].url)
                     resolve()
                 })
         })
     }
     if (resize && !fs.existsSync("C:/cache/YouTubeAuthorIconRatioResize/" + authorId + "-r" + resize.ratio + "-" + resize.size + ".jpg")) {
+        if (!fs.existsSync("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg")) return
         await new Promise(async resolve => {
             //大きさなどを取得
             const { width, height, type } = await imageSize("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg")
@@ -50,11 +51,11 @@ module.exports.ytAuthorIconGet = async (authorId, resize) => {
             //キャッシュから画像を取得する
             const Stream = fs.createWriteStream("C:/cache/YouTubeAuthorIconRatioResize/" + authorId + "-r" + resize.ratio + "-" + resize.size + ".jpg")
             sharp("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg").resize(aspx * y, aspy * y).pipe(Stream).on("error", e => {
-                console.log("最適化アイコン作成時にエラー: ", e)
+                console.log(authorId, "の最適化アイコン作成時にエラー: ", e)
                 resolve() //エラーが発生しようともmain.jsでは存在しないことに出来るため、そのまま終了
             })
             Stream.on("finish", () => {
-                console.log("最適化アイコン作成")
+                console.log(authorId, "の最適化アイコン作成")
                 resolve()
             })
         })
