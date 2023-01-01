@@ -17,15 +17,20 @@ module.exports.ytAuthorIconGet = async (authorId, resize) => {
     if (!fs.existsSync("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg")) { //画像が無かったら
         await new Promise(async resolve => {
             //axiosでデータリクエスト、サムネリストの一番最後が高画質なため、それを取得する
-            const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
-            fs.writeFileSync("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg", new Buffer.from(imagedata.data), "binary") //保存
-            console.log("高品質アイコン取得")
-            resolve()
+            axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
+                .then(res => {
+                    fs.writeFileSync("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg", new Buffer.from(res.data), "binary") //保存
+                    console.log("高品質アイコン取得")
+                    resolve()
+                })
+                .catch(err => {
+                    console.log("高品質アイコン取得時にエラー: ", err)
+                    resolve()
+                })
         })
     }
     if (resize && !fs.existsSync("C:/cache/YouTubeAuthorIconRatioResize/" + authorId + "-r" + resize.ratio + "-" + resize.size + ".jpg")) {
         await new Promise(async resolve => {
-            const imagedata = fs.readFileSync("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg", "binary")
             //大きさなどを取得
             const { width, height, type } = await imageSize("C:/cache/YouTubeAuthorIcon/" + authorId + ".jpg")
             let tmp1 = width //計算のために

@@ -17,10 +17,16 @@ module.exports.ytThumbnailGet = async (videoId, resize) => {
     if (!fs.existsSync("C:/cache/YouTubeThumbnail/" + videoId + ".jpg")) { //画像が無かったら
         await new Promise(async resolve => {
             //axiosでデータリクエスト、サムネリストの一番最後が高画質なため、それを取得する
-            const imagedata = await axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
-            fs.writeFileSync("C:/cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(imagedata.data), "binary") //保存
-            console.log("高品質サムネイル取得")
-            resolve()
+            axios.get(thumbnails[thumbnails.length - 1].url, { responseType: "arraybuffer" })
+                .then(res => {
+                    fs.writeFileSync("C:/cache/YouTubeThumbnail/" + videoId + ".jpg", new Buffer.from(res.data), "binary") //保存
+                    console.log("高品質サムネイル取得")
+                    resolve()
+                })
+                .catch(err => {
+                    console.log("高品質サムネイル取得時にエラー: ", err)
+                    resolve()
+                })
         })
     }
     if (resize && !fs.existsSync("C:/cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + resize.ratio + "-" + resize.size + ".jpg")) {
