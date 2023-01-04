@@ -1,6 +1,6 @@
 /**
  * VideoIDからインデックスを作成します
- * @param videoId VideoID
+ * @param {string} videoId VideoID
  * @param ytIndex 変更を加えるためにインデックスに使用する変数を入力
  * @param videoDetails 動画に関連した情報を取得するためにrawデータからvideoid指定し内容を入力
  * @returns ytIndexを返します。

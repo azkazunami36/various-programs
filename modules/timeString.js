@@ -3,14 +3,11 @@
  * @param {Number} sec 秒数を入力します。
  * @returns 文字列を返します。
  */
-module.exports.timeString = (sec) => {
-    let output = ""
-    let minute = 0
-    let hour = 0
-    for (minute; sec > 59; minute++) sec -= 60
-    for (hour; minute > 59; hour++) minute -= 60
-    if (hour != 0) output += hour + "時間"
-    if (minute != 0) output += minute + "分"
-    output += (sec).toFixed() + "秒"
-    return output
+module.exports.timeString = sec => {
+    let minute = 0, hour = 0
+    while (sec > 59) { sec -= 60; minute++ }
+    while (minute > 59) { minute -= 60; hour++ }
+    return ((hour != 0) ? hour + "時間" : "") +
+        ((minute != 0) ? minute + "分" : "") +
+        sec.toFixed() + "秒"
 }

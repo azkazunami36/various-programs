@@ -4,11 +4,11 @@
  * @returns 配列が出力されます。
  */
 module.exports.arrayRamdom = array => {
-    for (let i = (array.length - 1); i != 0; i--) {
-        const random = Math.floor(Math.random() * i)
+    for (let i = 0; array.length != i; i++) {
+        const rm = Math.floor(Math.random() * i)
         let tmp = array[i]
-        array[i] = array[random]
-        array[random] = tmp
+        array[i] = array[rm]
+        array[rm] = tmp
     }
     return array
 }

@@ -1,7 +1,7 @@
 /**
  * 音声や動画が取得されているかを全て確認します。
  * ただ、インデックスからの処理。
- * @param {any} ytIndex 
+ * @param ytIndex 
  */
 const fs = require("fs")
 const wait = require("util").promisify(setTimeout)

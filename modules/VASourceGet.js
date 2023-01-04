@@ -2,9 +2,9 @@ const fs = require("fs")
 /**
  * 動画や音声をスムーズにクライアントに送信する関数です
  * @param {string} videopath パスを入力します
- * @param {number} range リクエストのレンジを入力します
+ * @param {string} range リクエストのレンジを入力します
  * @param {string} type Content-Typeに使用します
- * @param {} res response変数を入力します
+ * @param res response変数を入力します
  */
 module.exports.VASourceGet = async (videopath, range, type, res) => {
     const videoSize = fs.statSync(videopath).size //ファイルサイズ(byte)
