@@ -1,9 +1,5 @@
-/**
- * 待機するやつ
- * @param {number} time 
- * @returns 
- */
-const wait = async time => await new Promise(resolve => setTimeout(() => { resolve() }, time))
-addEventListener("load", e => {
-    
+const wait = time => new Promise(resolve => setTimeout(n => resolve(), time))
+const random = num => Math.floor(Math.random() * num)
+addEventListener("load", async e => {
+    console.log(random(100))
 })
