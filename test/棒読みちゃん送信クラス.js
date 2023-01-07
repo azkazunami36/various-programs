@@ -46,38 +46,124 @@ const bsend = async (text, speed, tone, volume, voice) => {
     bclient.write(Message);
     bclient.end();
 };
-class Bouyomi {
-    /**
-     * 読み上げ設定をします。
-     * @param sp 速度
-     * @param tn 音程
-     * @param vol 音量
-     * @param vc 種類
-     */
-    constructor(sp, tn, vol, vc) {
-        //ここらへんは初期化するようなもんです。
-        this.speed = (!sp) ? sp : -1
-        this.tone = (!tn) ? tn : -1
-        this.volume = (!vol) ? vol : -1
-        this.voice = (!vc) ? vc : 0
-    }
-    /**
-     * 棒読みちゃんの読み上げ速度を設定します。
-     * @param {number} sp
-     */
-    set speed(sp) {
-        console.log("set")
-        let speed = sp
-        speed = (speed > 200) ? 200 : speed
-        speed = (speed < 0) ? 0 : speed
-    }
-    get speed() {
-        console.log("get")
-        return this.speed
-    }
 
-}
-const bclient2 = new Bouyomi(100, 120, 100, 0)
+const Bouyomi = (() => {
+    const indata = {
+        /** 速度 */ speed: 0,
+        /** 音程 */ tone: 0,
+        /** 音量 */ volume: 0,
+        /** 種類 */ voice: 0,
+        /** ポート */ port: 0,
+        /** アドレス */ address: "",
+        /** 文字コード */ ccode: ""
+    }
+    return class Bouyomi {
+        /**
+         * 読み上げ設定をします。
+         * @param {indata} data 入力します
+         */
+        constructor(data) {
+            //ここらへんは初期化するようなもんです。
+            this.speed = data.speed ? data.speed : -1
+            this.tone = data.tone ? data.tone : -1
+            this.volume = data.volume ? data.volume : -1
+            this.voice = data.voice ? data.voide : 0
+            this.port = data.port ? data.port : 50080
+            this.address = data.address ? data.address : "localhost"
+            this.ccode = data.ccode ? data.ccode : "utf-8"
+            this.client = new net.Socket()
+            this.client.on("ready", n => console.log("接続しました。"))
+            this.client.on("error", e => console.log(e))
+            this.client.on("end", n => console.log("切断済みです。"))
+        }
+        set speed(d) {
+            d = (d > 200) ? 200 : d
+            d = (d < -1) ? -1 : d
+            this.sp = d
+        }
+        get speed() {
+            return this.sp
+        }
+        set tone(d) {
+            d = (d > 200) ? 200 : d
+            d = (d < -1) ? -1 : d
+            this.tn = d
+        }
+        get tone() {
+            return this.tn
+        }
+        set volume(d) {
+            d = (d > 100) ? 100 : d
+            d = (d < -1) ? -1 : d
+            this.vol = d
+        }
+        get volume() {
+            return this.vol
+        }
+        set voice(d) {
+            d = (d < 0) ? 0 : d
+            this.vc = d
+        }
+        get voice() {
+            return this.vc
+        }
+        set port(d) {
+            d = (d > 65535) ? 65535 : d
+            d = (d < 0) ? 0 : d
+            this.pt = d
+        }
+        get port() {
+            return this.pt
+        }
+        set address(d) {
+            this.url = d
+        }
+        get address() {
+            return this.url
+        }
+        set ccode(d) {
+            this.code = d
+        }
+        get ccode() {
+            return this.code
+        }
+        send(msg) {
+            console.log("次のテキストを送信します。:" + msg);
+            this.client.connect(this.pt, this.url)
+            let Command = new Buffer.alloc(2)
+            Command.writeInt16LE(1, 0)
+            this.client.write(Command)
+            let Speed = new Buffer.alloc(2)
+            Speed.writeInt16LE(this.sp, 0)
+            this.client.write(Speed)
+            let Tone = new Buffer.alloc(2)
+            Tone.writeInt16LE(this.tn, 0)
+            this.client.write(Tone)
+            let Volume = new Buffer.alloc(2)
+            Volume.writeInt16LE(this.vol, 0)
+            this.client.write(Volume)
+            let Voice = new Buffer.alloc(2)
+            Voice.writeInt16LE(this.vc, 0)
+            this.client.write(Voice)
+            let Code = new Buffer.alloc(1)
+            Code.writeInt8(0, 0)
+            this.client.write(Code)
+            let Message = new Buffer.from(msg, "utf8")
+            let Length = new Buffer.alloc(4)
+            Length.writeInt32LE(Message.length, 0)
+            this.client.write(Length)
+            this.client.write(Message)
+            this.client.end()
+        }
+    }
+})()
+const bclient2 = new Bouyomi()
 setTimeout(() => {
+    console.log(bclient2.speed)
     bclient2.speed = 110
+    console.log(bclient2.speed)
+    bclient2.port = 2000
+    setTimeout(() => {
+        bclient2.send("てすと")
+    }, 100);
 }, 1000);
