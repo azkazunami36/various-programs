@@ -4,10 +4,8 @@
  */
 const fs = require("fs")
 const ytdl = require("ytdl-core")
-const mbyteString = require("./mbyteString").mbyteString
-const timeString = require("./timeString").timeString
 module.exports.ytAudioGet = async videoId => {
-    if (!fs.existsSync("C:/cache/YTDl/" + videoId + ".mp3")) {
+    if (!fs.existsSync("C:/cache/YTDl/" + videoId + ".mp3"))
         await new Promise(resolve => {
             let starttime
             if (!fs.existsSync("C:/cache/YouTubeDownloadingAudio")) fs.mkdirSync("C:/cache/YouTubeDownloadingAudio")
@@ -19,18 +17,16 @@ module.exports.ytAudioGet = async videoId => {
             audioDownload.on("progress", (chunkLength, downloaded, total) => {
                 const floatDownloaded = downloaded / total
                 const downloadedSeconds = (Date.now() - starttime) / 1000
-                //推定残り時間
-                const timeLeft = downloadedSeconds / floatDownloaded - downloadedSeconds
-                //パーセント
-                const percent = (floatDownloaded * 100).toFixed()
-                //ダウンロード済みサイズ
-                const mbyte = mbyteString(downloaded)
-                //最大ダウンロード量
-                const totalMbyte = mbyteString(total)
-                //推定残り時間
-                const elapsedTime = timeString(downloadedSeconds)
+                const status = {
+                    elapsedTime: downloadedSeconds,
+                    esTimeRemaining: downloadedSeconds / floatDownloaded - downloadedSeconds,
+                    percent: floatDownloaded,
+                    downloadedSize: downloaded,
+                    totalSize: total,
+                    chunkLength: chunkLength
+                }
             })
-            audioDownload.on("error", async err => { console.log("Audio Get Error " + videoId, err) })
+            audioDownload.on("error", async err => { console.log("音声取得中にエラー: " + videoId, err) })
             audioDownload.pipe(fs.createWriteStream("C:/cache/YouTubeDownloadingAudio/" + videoId + ".mp3"))
             audioDownload.on("end", async () => {
                 if (!fs.existsSync("C:/cache/YTDL")) fs.mkdirSync("cache/YTDL")
@@ -42,5 +38,5 @@ module.exports.ytAudioGet = async videoId => {
                 })
             })
         })
-    }
 }
+

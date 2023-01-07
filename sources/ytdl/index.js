@@ -39,8 +39,8 @@ addEventListener("load", async () => {
         const sTop = videoList.scrollTop //スクロールされている場所
         const cBottom = cHeight + sTop //下を基準にするため
         const sBottom = sHeight - cBottom //下から数えたスクロールされている場所
-        const videorow = (cWidth / thumbnailWidth).toFixed() //横にリストを並べる数を決める
-        if ((sBottom < videorow * 100 + cHeight)) videoLoad()
+        const videorow = (VideoListCenter.clientWidth / thumbnailWidth).toFixed() //横にリストを並べる数を決める
+        if (sBottom < videorow * 100 + cHeight) videoLoad()
     }
     let videoLoaded = 0 //ロード済みの動画をカウント
     let videos //サーバーから取得したVideoIDを保管
@@ -54,7 +54,7 @@ addEventListener("load", async () => {
         if (videoloading && !g) return //読み込み中で無視がfalseならリターン
         videoloading = true //読み込み中
         //ブラウザサイズからどれほど動画を並べられるか判断
-        const row = (document.body.clientWidth / thumbnailWidth).toFixed()
+        const row = (VideoListCenter.clientWidth / thumbnailWidth).toFixed()
         //videosが無かったらサーバーからデータを取得する
         if (!videos) videos = JSON.parse(await httpDataRequest("ytvideo-list"))
         if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
@@ -112,7 +112,7 @@ addEventListener("load", async () => {
             videoLoaded++
         }
         //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
-        if ((videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (document.body.clientWidth / thumbnailWidth).toFixed() * 100 + document.body.clientHeight)) videoLoad(true)
+        if ((videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < (VideoListCenter.clientWidth / thumbnailWidth).toFixed() * 100 + document.body.clientHeight)) videoLoad(true)
         else videoloading = false //出なければ読み込み終了
     }
     let ratio = (window.devicePixelRatio || 1).toFixed(2)
@@ -139,7 +139,7 @@ addEventListener("load", async () => {
      * 動画の列を決める関数
      */
     const videoNumberReload = () => {
-        const videonum = (videoList.clientWidth / thumbnailWidth).toFixed()
+        const videonum = (VideoListCenter.clientWidth / thumbnailWidth).toFixed()
         const popupvideonum = (infoVideos.clientWidth / 250).toFixed()
         const videoLinkStyle = getRuleBySelector(".VideoLink")
         const popupvideoLinkStyle = getRuleBySelector(".popupVideoLink")

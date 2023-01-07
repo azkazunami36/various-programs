@@ -59,8 +59,8 @@
     if (!dtbs.ytIndex) dtbs.ytIndex = {}
 
     if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
-    if (!fs.existsSync("C:/cache/")) fs.mkdirSync("cache")
-    if (!fs.existsSync("C:/cache/YTDL")) fs.mkdirSync("cache/YTDL")
+    if (!fs.existsSync("C:/cache/")) fs.mkdirSync("C:/cache")
+    if (!fs.existsSync("C:/cache/YTDL")) fs.mkdirSync("C:/cache/YTDL")
     if (!fs.existsSync("C:/cache/YouTubeDownloadingVideo")) fs.mkdirSync("C:/cache/YouTubeDownloadingVideo")
     if (!fs.existsSync("C:/cache/YouTubeDownloadingAudio")) fs.mkdirSync("C:/cache/YouTubeDownloadingAudio")
     if (!fs.existsSync("C:/cache/YouTubeThumbnail")) fs.mkdirSync("C:/cache/YouTubeThumbnail")
@@ -100,6 +100,10 @@
         } else if (req.url == "/sources/flmv/" || req.url == "/sources/flmv/index.html") { //ルートt (ry
             res.header("Content-Type", "text/html;charset=utf-8")
             res.end(fs.readFileSync("sources/flmv/index.html"))
+
+        } else if (req.url == "/sources/vd/" || req.url == "/sources/vd/index.html") { //ルートt (ry
+            res.header("Content-Type", "text/html;charset=utf-8")
+            res.end(fs.readFileSync("sources/vd/index.html"))
 
         } else if (req.url.match("/sources/ytdl/watch?")) {
             //watchというリンクは少々特殊なため、matchで検出し返答します
@@ -245,55 +249,55 @@
                 const videolist = JSON.parse(data) //VideoIDかURLの入った配列を取得
                 const videoIds = [] //VideoIDの配列をクライアントに返すため
                 const trueVideoIds = [] //存在するVideoIDのみをここに保存
-                console.log(videolist)
-                for (let i = 0; i != videolist.length; i++) { //VideoIDかURLの数だけ実行
+                console.log(videolist) //取得したデータを表示
+                for (let i = 0; i != videolist.length; i++) { //取得したデータの数だけ実行
                     let videoId = videolist[i] //VideoIDとなるもの
-                    console.log(videoId)
-                    if (videoId) {
-                        const ytdlURL = ytdl.validateURL(videoId)
-                        const ytdlID = ytdl.validateID(videoId)
-                        if (ytdlID || ytdlURL) {
-                            if (ytdlID) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
-                        } else {
-                            console.log("リンクデータ無し:" + videoId)
-                            const data = await yts({ query: videoId })
-                            let video
-                            if (data.videos[0]) video = data.videos[0]
-                            else videoIds.push("こんなやつなかったな")
-                            videoId = video.videoId
+                    console.log(videoId) //まだ処理される前のvideoId
+                    if (videoId) { //""や空のvideoIdで無ければ続行
+                        const ytdlURL = ytdl.validateURL(videoId) //URLであるかどうか
+                        const ytdlID = ytdl.validateID(videoId) //IDであるかどうか
+                        if (ytdlURL) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
+                        if (!ytdlID && !ytdlURL) { //どちらも違う場合
+                            console.log("リンクデータ無し:" + videoId) //該当しないデータを表示
+                            const data = await yts({ query: videoId }) //検索
+                            if (data.videos[0]) videoId = data.videos[0].videoId //検索から取得すると
+                            else videoIds.push("こんなやつなかったな") //見つからない場合
                         }
-                        if (!ytdlID && !ytdlURL) {
-                        }
-                        if (await new Promise(resolve => {
-                            request.get({
+                        await new Promise(resolve => {
+                            request.get({ //リクエスト
                                 url: videoId,
                                 headers: {
                                     "content-type": "text/plain"
                                 }
                             }, async (error, res, body) => {
-                                if (error) {
-                                    console.log(error)
-                                    resolve(false)
-                                } else resolve(true)
+                                if (error) {//アクセス出来ないと
+                                    console.log("URLではありません。" + String(error)) //理由を表示
+                                    /**
+                                    * 上の処理でyoutubeリンクでも無く文字列でもない際に
+                                    * 下のコードがスキップされるようにコードを組んで居ます
+                                    */
+                                   console.log(videoId)
+                                   const exisytdl = dtbs.ytdlRawInfoData[videoId] //ただ存在を確認するためだけなので、ね？
+                                   if (!exisytdl) //rawデータにvideoIdのデータが無い場合
+                                       dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData) //情報を取得
+                                   const authorId = dtbs.ytdlRawInfoData[videoId].author.id //ChannelIDを取得
+                                   const exisytch = dtbs.ytchRawInfoData[authorId] //ただ存在を確認するd(ry
+                                   if (!exisytch) //rawデータにauthorIdのデータが無い場合
+                                       dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData) //情報を取得
+                                   if (!exisytdl || !exisytch) { //どちらかが存在しなかったら
+                                       await saveingJson() //保存
+                                       dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex, dtbs.ytdlRawInfoData[videoId]) //インデックス作成
+                                   }
+                                   videoIds.push(videoId) //IDをプッシュ
+                                   trueVideoIds.push(videoId) //使用可能なvideoIdだという事にしてプッシュ
+                                   await ytThumbnailGet(videoId) //サムネを取得
+                                   await ytAuthorIconGet(authorId) //チャンネルアイコンを取得
+                                } else { //出来ると
+                                    videoIds.push("いみわからぁん")
+                                }
+                                resolve()
                             })
-                        })) {}
-
-                        console.log(videoId)
-                        const exisytdl = dtbs.ytdlRawInfoData[videoId] //ただ存在を確認するためだけなので、ね？
-                        if (!exisytdl)
-                            dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData)
-                        const authorId = dtbs.ytdlRawInfoData[videoId].author.id
-                        const exisytch = dtbs.ytchRawInfoData[authorId]
-                        if (!exisytch)
-                            dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData)
-                        if (!exisytdl || !exisytch) {
-                            await saveingJson() //保存
-                            dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex, dtbs.ytdlRawInfoData[videoId]) //インデックス作成
-                        }
-                        videoIds.push(videoId) //IDをプッシュ
-                        trueVideoIds.push(videoId)
-                        await ytThumbnailGet(videoId) //サムネを取得
-                        await ytAuthorIconGet(authorId)
+                        })
                     } else {
                         videoIds.push("なにこれ...")
                         console.log("存在しない:" + videoId)
@@ -405,7 +409,7 @@
         saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(false)
+    startToInfomation(true)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")
