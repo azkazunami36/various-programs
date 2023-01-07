@@ -78,4 +78,4 @@ client.on(Events.MessageCreate, async message => {
         connection.destroy()
     }
 })
-client.login("MTAyODI4NTcyMTk1NTU1MzM2Mg.GoOgO_.S5aVYsytDom75ET1_J9PbjtE19NEzKLpHbObkU")
+client.login(process.env.token)
