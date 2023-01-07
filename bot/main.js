@@ -11,6 +11,14 @@ let cmdexec = 0;
 let ari = 0;
 let countb = 0;
 const data = require("./data.json") //data.json
+const {
+  entersState,
+  createAudioPlayer,
+  createAudioResource,
+  joinVoiceChannel,
+  StreamType,
+  AudioPlayerStatus
+} = require("@discordjs/voice")
 //const//
 let counta = 0;
 const random = Math.random()
@@ -64,6 +72,11 @@ for (let i = 0; i != imageCount; i++) {
 
 const client = new Client(
   {
+    partials: [
+      Partials.Channel,
+      Partials.GuildMember,
+      Partials.User
+    ],
     intents: [
       GatewayIntentBits.DirectMessageReactions,
       GatewayIntentBits.DirectMessageTyping,
@@ -302,33 +315,44 @@ client.on('messageCreate', message => {  //切れてるのか横も
   
 
 })
-client.on('message', async message => {
-  // メッセージが "!yt" からはじまっていてサーバー内だったら実行する
-  if (message.content.startsWith('!yt') && message.guild) {
-    // メッセージから動画URLだけを取り出す
-    const url = message.content.split(' ')[1]
-    // まず動画が見つからなければ処理を止める
-    if (!ytdl.validateURL(url)) return message.reply('動画が存在しません！')
-    // コマンドを実行したメンバーがいるボイスチャンネルを取得
-    const channel = message.member.voice.channel
-    // コマンドを実行したメンバーがボイスチャンネルに入ってなければ処理を止める
-    if (!channel) return message.reply('先にボイスチャンネルに参加してください！')
-    // チャンネルに参加
-    const connection = await channel.join()
-    // 動画の音源を取得
-    const stream = ytdl(ytdl.getURLVideoID(url), { filter: 'audioonly' })
-    // 再生
-    const dispatcher = connection.play(stream)
-    
-    // 再生が終了したら抜ける
-    dispatcher.once('finish', () => {
-      channel.leave()
-    })
-  }
-})
-client.on('ready', async () => {
-  setInterval(() => console.log("実行中\n閉じないで下さい"), 60000);
+client.on(Events.MessageCreate, async message => {
+  if (message.content.startsWith("!yt")) {
+      if (message.member.voice.channel) return message.reply("先にボイスチャットに参加してください！")
+      const channel = message.member.voice.channel
 
+      let videoId = message.content.split(" ")[1]
+      const ytdlURL = ytdl.validateURL(videoId)
+      const ytdlID = ytdl.validateID(videoId)
+      if (ytdlURL) videoId = ytdl.getVideoID(videoId)
+      if (!ytdlURL && !ytdlID) {
+          console.log("VideoID検索で次の文字列は該当しませんでした。: " + videoId)
+          const data = await yts({ query: videoId })
+          if (data.videos[0]) videoId = data.videos[0].videoId
+          else return message.reply("動画が見つかりませんでした！")
+      }
+      const connection = joinVoiceChannel({
+          guildId: message.guild.id,
+          channelId: channel.id,
+          adapterCreator: message.guild.voiceAdapterCreator,
+          selfDeaf: true
+      })
+      connection.on("error", async e => {
+          console.log("予想外の通信エラーが発生しました。", e,
+              "\nこのエラーが何か具体的に記されている場合、エラーをGiuHubのIssuesにお送りください。")
+      })
+      const player = createAudioPlayer()
+      connection.subscribe(player)
+      const stream = ytdl(plist[channeldata.playing].url, {
+          filter: "audioonly",
+          quality: "highest", highWaterMark: 1 * 1e6
+      });
+      const resource = createAudioResource(stream, { inputType: StreamType.WebmOpus, inlineVolume: true })
+      resource.volume.setVolume(0.5)
+      player.play(resource)
+      await entersState(player, AudioPlayerStatus.Playing);
+      await entersState(player, AudioPlayerStatus.Idle);
+      connection.destroy()
+  }
 })
 process.on("exit", exitCode => {
   console.log(cmdexec)
