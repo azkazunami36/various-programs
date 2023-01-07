@@ -1,5 +1,9 @@
-const { Client, GatewayIntentBits, Message, EmbedBuilder, ActionRowBuilder, DataResolver, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, Message, EmbedBuilder, ActionRowBuilder, DataResolver, ButtonBuilder, ButtonStyle,} = require('discord.js');
 require("dotenv").config();
+const { entersState, AudioPlayerStatus, createAudioPlayer, createAudioResource, joinVoiceChannel,  StreamType } = require('@discordjs/voice');
+let jsonFile = require('jsonfile');
+const ytdl = require("ytdl-core");
+const ytpl = require("ytpl")
 require('date-utils');
 const sharp = require('sharp')
 var async = require('async'); //このようなパッケージは存在しない
@@ -44,11 +48,14 @@ for (let i = 0; i != data.Englishdata.length; i++) {
 }
 
 //sharpの連続コードをforで改善
-const imageCount = 13;
+const imageCount = 16;
 for (let i = 0; i != imageCount; i++) {
   sharp("data/" + i + ".jpg")
     .resize(512)
-    .toFile("data/" + i + "_0.jpg", info => {
+    .toFile("data/" + i + "_0.jpg", (err,info) => {
+      if(err){
+        throw err
+      }
       console.log(info)
     })
 }
@@ -97,10 +104,12 @@ client.on('messageCreate', message => {  //切れてるのか横も
           console.log(data.data[i] + "とマッチしました")
           idiotis = true
           const username = message.author.username
+          const black = message.author.id
+          client.users.cache.get(black).send('貴方は暴言等を発言したためブラックリストに入りました')
           if (data.data[i] === "それってあなたの感想ですよね") {
             message.channel.send("僕の感想で何か悪いですか？")
             if (data.data[i] === "伊吹chゴミ") {
-              message.channelId = '1057461118676779068'.send("悪口を言われました") //これ動くの！？
+              message.channelId = '1057461118676779068'.send("悪口を言われました") //これ動くの！？ さぁ 動かんと思う
             }
             if (data.data[i] === "まんこ") {
               message.channel.send("やめよう...")
@@ -126,6 +135,8 @@ client.on('messageCreate', message => {  //切れてるのか横も
         for (let i = 0; i != data.Englishdata.length; i++) {
           if (message.content === data.Englishdata[i]) {
             console.log(data.Englishdata[i] + "とマッチしました")
+            const black = message.author.id
+            client.users.cache.get(black).send('You were blacklisted for ranting on some server.')
             engidiotis = true
 
           }
@@ -227,10 +238,22 @@ client.on('messageCreate', message => {  //切れてるのか横も
   }
   if (message.content === "画像") {
     const random = Math.random()
-    const Num = Math.floor(random * 13)
+    const Num = Math.floor(random * 16)
 
-    message.channel.send({ files: ['./' + Num + '_0.jpg'] })
+    message.channel.send({ files: ['data/' + Num + '_0.jpg'] })
   }
+  if (message.content === "画像指定1"){
+    message.channel.send({ files: ['data/'+'1'+'_0.jpg']})
+  }
+  if (message.content === "画像指定2"){
+    message.channel.send({ files: ['data/'+'2'+'_0.jpg']})
+  }
+  if (message.content === "画像指定3"){
+    message.channel.send({ files: ['data/'+'3'+'_0.jpg']})
+  }
+  if (message.content === "画像指定4"){
+    message.channel.send({ files: ['data/'+'4'+'_0.jpg']})
+  }  
   if (message.content === "/2ch") {
     const wait = async time => {
       const thread = await message.channel.threads.create({
@@ -244,22 +267,64 @@ client.on('messageCreate', message => {  //切れてるのか横も
   }
   if (message.channel.id === "1057461166869319710") {
     if (message.content = "ああ") {
-      message.channel.send("スタッフが駆け付けるまで少々お待ちください")
-      const wait = async time => {
-        const row = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('primary')
-              .setLabel('Click me!')
-              .setStyle(ButtonStyle.Primary),
-          );
-        await message.reply({ content: 'I think you should,', components: [row] }); //変数を書き換えましょう。messageに
-
-
-      }
+      const row = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('primary')
+            .setLabel('Click me!')
+            .setStyle(ButtonStyle.Primary),
+        );
+      message.reply({
+        content: "スタッフが駆け付けるまで少々お待ちください",
+        components: [
+          new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('primary')
+                .setLabel('スタッフ到着')
+                .setStyle(ButtonStyle.Primary),
+            )]
+      }); //変数を書き換えましょう。messageに
+      
+      
+    }
+    
+  }
+  if (message.content === "あけましておめでとうございます"){
+    message.reply("あけおめ～ことよろ～")
+  }
+  if (message.content === "!おみくじ!"){
+    message.reply("準備中")
+    if (message.content.Math === "w"){
+      message.reply("わらうな")
     }
   }
+  
 
+})
+client.on('message', async message => {
+  // メッセージが "!yt" からはじまっていてサーバー内だったら実行する
+  if (message.content.startsWith('!yt') && message.guild) {
+    // メッセージから動画URLだけを取り出す
+    const url = message.content.split(' ')[1]
+    // まず動画が見つからなければ処理を止める
+    if (!ytdl.validateURL(url)) return message.reply('動画が存在しません！')
+    // コマンドを実行したメンバーがいるボイスチャンネルを取得
+    const channel = message.member.voice.channel
+    // コマンドを実行したメンバーがボイスチャンネルに入ってなければ処理を止める
+    if (!channel) return message.reply('先にボイスチャンネルに参加してください！')
+    // チャンネルに参加
+    const connection = await channel.join()
+    // 動画の音源を取得
+    const stream = ytdl(ytdl.getURLVideoID(url), { filter: 'audioonly' })
+    // 再生
+    const dispatcher = connection.play(stream)
+    
+    // 再生が終了したら抜ける
+    dispatcher.once('finish', () => {
+      channel.leave()
+    })
+  }
 })
 client.on('ready', async () => {
   setInterval(() => console.log("実行中\n閉じないで下さい"), 60000);
