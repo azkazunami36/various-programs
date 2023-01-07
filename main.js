@@ -195,7 +195,7 @@
             if (fs.existsSync(thumbnailpath)) { //上のifを遠し、画像が存在したら
                 res.header("Content-Type", "image/jpeg")
                 res.end(fs.readFileSync(thumbnailpath)) //返答
-            } else { //上のifを通しても存在しない場合は400
+            } else {//上のifを通しても存在しない場合は400
                 res.status(400)
                 res.end()
             }
@@ -204,14 +204,71 @@
             const videoId = String(req.url).split("/ytvideo/")[1] //urlから情報を取得
             const videopath = "C:/cache/YTDL/" + videoId + ".mp4" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
-                if (!fs.existsSync(videopath)) //動画が存在してい無かったら
-                    await ytVideoGet(videoId)  //動画を取得する
+                if (!fs.existsSync(videopath)) {
+                    if (ytdl.validateID(videoId)) {
+                        console.log("にゃ１")
+                        const info = await ytdl.getInfo(videoId)
+                        console.log("にゃん！１")
+                        let videoSize
+                        for (let i = 0; i != info.formats.length; i++) {
+                            if (info.formats[i].contentLength)
+                                if (info.formats[i].codecs == "vp9")
+                                    if (info.formats[i].qualityLabel == "144p") {
+                                        console.log("存在しました。")
+                                        videoSize = info.formats[i].contentLength
+                                    }
+                        }
+                        console.log(videoSize)
+                        console.log(info.formats)
+                        const chunkSize = 1 * 1e4 //チャンクサイズ
+                        //これは取得するデータ範囲を決定します。
+                        const start = Number(((Number(req.headers.range) < 0 ? 0 : req.headers.range) || "0").replace(/\D/g, "")) //始まりの指定
+                        const end = Number(Math.min(start + chunkSize, videoSize - 1)) //終わりの指定
+                        const headers = { //ヘッダー
+                            "Content-Range": "bytes " + start + "-" + end + "/" + videoSize,
+                            "Accept-Ranges": "bytes",
+                            "Content-Length": end - start + 1,
+                            "Content-Type": "video/webm"
+                        }
+                        console.log(headers)
+                        /**
+                         * @type {ytdl.downloadOptions}
+                         */
+                        const request = {
+                            format: {
+                                qualityLabel: "144p",
+                                hasAudio: false,
+                                hasVideo: true,
+                                indexRange: {
+                                    start: start,
+                                    end: end
+                                },
+                                url: info.videoDetails.video_url
+                            }
+                        }
+                        console.log(request)
+                        const Stream = ytdl(videoId, request)
+                        Stream.on("response", () => {
+                            console.log("れすぽんす")
+                        })
+                        Stream.on("progress", (chunk, down, total) => {
+                            console.log(chunk, down, total)
+                        })
+                        Stream.on("error", err => {
+                            console.log("エラーです。", err)
+                        })
+                        Stream.on("end", () => console.log("動画"))
+                        res.writeHead(206, headers) //206を使用すると接続を続行することが出来る
+                        Stream.pipe(res)
+                    }
+                }
             if (fs.existsSync(videopath)) //動画が存在したら
                 VASourceGet(videopath, req.headers.range, "video/mp4", res) //動画を送信
             else { //存在しない場合400
                 console.log("あれっ...動画は...？")
                 res.status(400)
                 res.end()
+
             }
 
         } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
@@ -219,13 +276,42 @@
             const audiopath = "C:/cache/YTDL/" + videoId + ".mp3" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(audiopath)) //音声が存在してい無かったら
-                    await ytAudioGet(videoId)  //音声を取得する
+                    ytAudioGet(videoId)  //音声を取得する
             if (fs.existsSync(audiopath)) //音声が存在したら
                 VASourceGet(audiopath, req.headers.range, "audio/mp3", res) //音声を送信
             else { //存在しない場合400
-                console.log("あれっ...音声は...？")
-                res.status(400)
-                res.end()
+                if (ytdl.validateID(videoId)) {
+                    console.log("にゃ２")
+                    const info = await ytdl.getInfo(videoId)
+                    console.log("にゃん！２")
+                    const videoSize = info.formats[info.formats.length - 1].contentLength
+                    console.log(videoSize, info.formats)
+                    const chunkSize = 1 * 100 //チャンクサイズ
+                    //これは取得するデータ範囲を決定します。
+                    const start = Number(((Number(req.headers.range) < 0 ? 0 : req.headers.range) || "0").replace(/\D/g, "")) //始まりの指定
+                    const end = Math.min(start + chunkSize, videoSize - 1) //終わりの指定
+                    const headers = { //ヘッダー
+                        "Content-Range": "bytes " + start + "-" + end + "/" + videoSize,
+                        "Accept-Ranges": "bytes",
+                        "Content-Length": end - start + 1,
+                        "Content-Type": "audio/webm"
+                    }
+                    console.log(headers)
+                    const Stream = ytdl(videoId, { range: { start: start, end: end }, filter: "videoonly", quality: "lowest" })
+                    Stream.on("response", () => {
+                        console.log("れすぽんす")
+                    })
+                    Stream.on("progress", (chunk, down, total) => {
+                        console.log(chunk, (down / total).toFixed(2) * 1e3)
+                    })
+                    Stream.on("end", () => console.log("音声"))
+                    res.writeHead(206, headers) //206を使用すると接続を続行することが出来る
+                    Stream.pipe(res)
+                } else {
+                    console.log("あれっ...音声は...？")
+                    res.status(400)
+                    res.end()
+                }
             }
         } else if (false) {
         } else if (false) {
@@ -276,22 +362,22 @@
                                     * 上の処理でyoutubeリンクでも無く文字列でもない際に
                                     * 下のコードがスキップされるようにコードを組んで居ます
                                     */
-                                   console.log(videoId)
-                                   const exisytdl = dtbs.ytdlRawInfoData[videoId] //ただ存在を確認するためだけなので、ね？
-                                   if (!exisytdl) //rawデータにvideoIdのデータが無い場合
-                                       dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData) //情報を取得
-                                   const authorId = dtbs.ytdlRawInfoData[videoId].author.id //ChannelIDを取得
-                                   const exisytch = dtbs.ytchRawInfoData[authorId] //ただ存在を確認するd(ry
-                                   if (!exisytch) //rawデータにauthorIdのデータが無い場合
-                                       dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData) //情報を取得
-                                   if (!exisytdl || !exisytch) { //どちらかが存在しなかったら
-                                       await saveingJson() //保存
-                                       dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex, dtbs.ytdlRawInfoData[videoId]) //インデックス作成
-                                   }
-                                   videoIds.push(videoId) //IDをプッシュ
-                                   trueVideoIds.push(videoId) //使用可能なvideoIdだという事にしてプッシュ
-                                   await ytThumbnailGet(videoId) //サムネを取得
-                                   await ytAuthorIconGet(authorId) //チャンネルアイコンを取得
+                                    console.log(videoId)
+                                    const exisytdl = dtbs.ytdlRawInfoData[videoId] //ただ存在を確認するためだけなので、ね？
+                                    if (!exisytdl) //rawデータにvideoIdのデータが無い場合
+                                        dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData) //情報を取得
+                                    const authorId = dtbs.ytdlRawInfoData[videoId].author.id //ChannelIDを取得
+                                    const exisytch = dtbs.ytchRawInfoData[authorId] //ただ存在を確認するd(ry
+                                    if (!exisytch) //rawデータにauthorIdのデータが無い場合
+                                        dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData) //情報を取得
+                                    if (!exisytdl || !exisytch) { //どちらかが存在しなかったら
+                                        await saveingJson() //保存
+                                        dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex, dtbs.ytdlRawInfoData[videoId]) //インデックス作成
+                                    }
+                                    videoIds.push(videoId) //IDをプッシュ
+                                    trueVideoIds.push(videoId) //使用可能なvideoIdだという事にしてプッシュ
+                                    await ytThumbnailGet(videoId) //サムネを取得
+                                    await ytAuthorIconGet(authorId) //チャンネルアイコンを取得
                                 } else { //出来ると
                                     videoIds.push("いみわからぁん")
                                 }
@@ -409,7 +495,7 @@
         saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(true)
+    startToInfomation(false)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")
