@@ -118,7 +118,7 @@ addEventListener("load", async () => {
     let ratio = (window.devicePixelRatio || 1).toFixed(2)
     addEventListener("resize", e => {
         videoNumberReload()
-        if (ratio != (window.devicePixelRatio || 1).toFixed(2)) {
+        if (ratio != (window.devicePixelRatio || 1).toFixed(2) && false) {
             imgratio = (window.devicePixelRatio || 1).toFixed(2)
             const Thumbnailimgs = document.getElementsByClassName("Thumbnailimg")
             if (Thumbnailimgs[0]) for (let i = 0; i != Thumbnailimgs.length; i++) {
