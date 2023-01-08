@@ -7,7 +7,12 @@ addEventListener("load", async e => {
         seekbarLoad = document.getElementById("seekbar-loadAudio"), //バッファ表示に使用
         seekpoint = document.getElementById("seek-point"), //小さな丸を表示するために使用
         seekbarIn = document.getElementById("seekbar-in"), //再生ケージ表示に使用
-        playButton = document.getElementById("playButton") //再生ボタン
+        playButton = document.getElementById("playButton"), //再生ボタン
+        downloadButton = document.getElementById("downloadButton"), //ダウンロードボタン
+        muteButton = document.getElementById("muteButton"), //ミュートボタン
+        loopButton = document.getElementById("loopButton"), //ループボタン
+        plusButton = document.getElementById("plusButton"), //プラススキップボタン
+        minusButton = document.getElementById("minusButton") //マイナススキップボタン
     const videoRestart = () => { //動画と音声を同期させるために使用する
         if (!audio.paused) { //再生中なら
             const delay = (audio.currentTime - video.currentTime).toFixed(2)
@@ -23,27 +28,22 @@ addEventListener("load", async e => {
     const seekpointmove = () => seekpoint.style.left = (audio.currentTime / audio.duration) * seekbarDrag.clientWidth - (seekpoint.clientWidth / 2)
     addEventListener("focus", videoRestart) //フォーカス。ページがアクティブになったら
     audio.addEventListener("timeupdate", e => { //時間が更新されたら
-        let bufferNo //バッファの数をカウントするために使用
         seekbarIn.style.transform = "scaleX(" + (audio.currentTime / audio.duration) + ")"; //反映
         seekpointmove() //丸の位置(ry
-        //再生位置にある最も近いバッファを取得する
-        for (let i = (audio.buffered.length); bufferNo == undefined && audio.buffered.length != 0 && i != 0; i--) {
-            if (audio.buffered.start(i - 1) < audio.currentTime) {
-                bufferNo = audio.buffered.end(i - 1);
+        const loadseek = (t, m) => {
+            let bufferNo //バッファの数をカウントするために使用
+            //再生位置にある最も近いバッファを取得する
+            for (let i = (t.buffered.length); bufferNo == undefined && t.buffered.length != 0 && i != 0; i--) {
+                if (t.buffered.start(i - 1) < t.currentTime) {
+                    bufferNo = t.buffered.end(i - 1);
+                }
             }
+            m.style.transform = "scaleX(" + (bufferNo / t.duration) + ")"; //反(ry
         }
-        seekbarLoad.style.transform = "scaleX(" + (bufferNo / audio.duration) + ")"; //反(ry
-        seekbarLoadVideo.style.transform = "scaleX(" + (bufferNo / audio.duration) + ")"; //反(ry
+        loadseek(audio, seekbarLoad)
+        loadseek(video, seekbarLoadVideo)
     })
     video.addEventListener("timeupdate", e => { //時間が更新されたら
-        let bufferNo //バッファの数をカウントするために使用
-        //再生位置にある最も近いバッファを取得する
-        for (let i = (video.buffered.length); bufferNo == undefined && video.buffered.length != 0 && i != 0; i--) {
-            if (video.buffered.start(i - 1) < video.currentTime) {
-                bufferNo = video.buffered.end(i - 1);
-            }
-        }
-        seekbarLoadVideo.style.transform = "scaleX(" + (bufferNo / video.duration) + ")"; //反(ry
     })
     //再生停止ボタンがクリックされると
     playButton.addEventListener("click", () => {
@@ -59,6 +59,14 @@ addEventListener("load", async e => {
         video.pause() //停止
         playButton.innerHTML = "再生" //文字を変更
         audio.currentTime = video.currentTime //同期
+    })
+    audio.addEventListener("volumechange", e => {
+        console.log("にゃ")
+        if (audio.muted) muteButton.innerHTML = "ミュート解除"
+        if (!audio.muted) muteButton.innerHTML = "ミュート"
+    })
+    audio.addEventListener("change", e => {
+        console.log("ちゃんげ")
     })
     seekbarDrag.addEventListener("click", e => { //シークバーのクリックで
         e.preventDefault() //軽量化を狙う
@@ -87,6 +95,16 @@ addEventListener("load", async e => {
             videoRestart() //同期
         }
     })
+    plusButton.addEventListener("click", e => {
+        audio.currentTime += 5 //反映
+        video.currentTime = audio.currentTime //反映
+        videoRestart() //同期
+    })
+    minusButton.addEventListener("click", e => {
+        audio.currentTime -= 5 //反映
+        video.currentTime -= audio.currentTime //反映
+        videoRestart() //同期
+    })
     addEventListener("keydown", e => {
         switch (e.key) {
             case " ": {
@@ -96,14 +114,14 @@ addEventListener("load", async e => {
                 break
             }
             case "ArrowLeft": {
-                video.currentTime -= 5 //反映
                 audio.currentTime -= 5 //反映
+                video.currentTime -= audio.currentTime //反映
                 videoRestart() //同期
                 break
             }
             case "ArrowRight": {
-                video.currentTime += 5 //反映
                 audio.currentTime += 5 //反映
+                video.currentTime += audio.currentTime //反映
                 videoRestart() //同期
                 break
             }
@@ -125,4 +143,22 @@ addEventListener("load", async e => {
     video.src = "/ytvideo/" + videoId //動画のファイルパス
     video.poster = "/ytimage/" + videoId //動画のサムネ
     audio.src = "/ytaudio/" + videoId //音声のファイルパス
+    downloadButton.addEventListener("click", e => {
+        
+    })
+    muteButton.addEventListener("click", e => {
+        if (audio.muted) audio.muted = false
+        else audio.muted = true
+    })
+    loopButton.addEventListener("click", e => {
+        if (audio.loop) {
+            audio.loop = false
+            video.loop = false
+            loopButton.innerHTML = "ループ"
+        } else {
+            audio.loop = true
+            video.loop = true
+            loopButton.innerHTML = "ループ解除"
+        }
+    })
 })

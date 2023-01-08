@@ -25,19 +25,22 @@
                     </div>
                     <div class="playerButton">
                         <div class="playerButtonLeft">
-                            <div id="playButton">再生</div>
+                            <div id="playButton" class="playerBtn">再生</div>
+                            <div id="minusButton" class="playerBtn">5-</div>
+                            <div id="plusButton" class="playerBtn">5+</div>
                         </div>
-                        <div class="playerButtonRight"></div>
+                        <div class="playerButtonRight">
+                            <div id="downloadButton" class="playerBtn">ダウンロード</div>
+                            <div id="muteButton" class="playerBtn">ミュート</div>
+                            <div id="loopButton" class="playerBtn">ループ</div>
+                            <div id="" class="playerBtn"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     <div class="rightAria">
-        <input type="button" value="ミュート" onclick="audio.muted = true">
-        <input type="button" value="ミュート解除" onclick="audio.muted = false">
-        <input type="button" value="ループ" onclick="audio.loop = true">
-        <input type="button" value="ループ解除" onclick="audio.loop = false">
     </div>
 </body>
 

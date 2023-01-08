@@ -106,13 +106,18 @@ body {
     height: 50px;
 }
 
-#playButton {
+#playbutton {
+    width: 50px;
+}
+
+.playerBtn {
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 50px;
+    min-width: 20px;
     height: 30px;
-    margin: 10px;
+    margin: 10px 5px;
+    padding: 0 5px;
     background: rgb(255, 215, 170);
     border-radius: 5px;
     font-size: 10px;
@@ -123,8 +128,9 @@ body {
 .playerButton {
     display: flex;
     justify-content: space-between;
-    width: 100%;
+    width: calc(100% - 10px);
     height: calc(100% - 5px);
+    margin: 0 5px;
 }
 
 .playerButtonLeft {
