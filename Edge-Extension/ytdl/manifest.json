@@ -1,0 +1,12 @@
+{
+    "name": "SumWave",
+    "version": "0.0.0",
+    "manifest_version": 3,
+    "description": "かずなみ作のWebをショートカットで操作します。",
+    "icons": {
+        "32": "icon.png"
+    },
+    "action": {
+        "default_popup": "popup.html"
+    }
+}
