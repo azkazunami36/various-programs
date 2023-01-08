@@ -3,15 +3,20 @@ addEventListener("load", async e => {
     const
         video = document.getElementById("video"), //動画
         seekbarDrag = document.getElementById("seekbar-wrap"), //シーク操作のために使用
-        seekbarLoad = document.getElementById("seekbar-load"), //バッファ表示に使用
+        seekbarLoadVideo = document.getElementById("seekbar-loadVideo"), //バッファ表示に使用
+        seekbarLoad = document.getElementById("seekbar-loadAudio"), //バッファ表示に使用
         seekpoint = document.getElementById("seek-point"), //小さな丸を表示するために使用
         seekbarIn = document.getElementById("seekbar-in"), //再生ケージ表示に使用
         playButton = document.getElementById("playButton") //再生ボタン
     const videoRestart = () => { //動画と音声を同期させるために使用する
         if (!audio.paused) { //再生中なら
-            audio.pause() //停止
-            video.currentTime = audio.currentTime //同期
-            setTimeout(() => audio.play(), 200) //パフォーマンスのため、遅延して再生
+            const delay = (audio.currentTime - video.currentTime).toFixed(2)
+            if (delay < -0.25 || delay > 0.25) {
+                console.log("音ズレを検知しました。: ", delay)
+                audio.pause() //停止
+                video.currentTime = audio.currentTime //同期
+                setTimeout(() => audio.play(), 500) //パフォーマンスのため、遅延して再生
+            } else console.log("音ズレはありません。: ", delay)
         } else video.currentTime = audio.currentTime //停止していたら同期のみ
     }
     //丸の位置を設定
@@ -28,6 +33,17 @@ addEventListener("load", async e => {
             }
         }
         seekbarLoad.style.transform = "scaleX(" + (bufferNo / audio.duration) + ")"; //反(ry
+        seekbarLoadVideo.style.transform = "scaleX(" + (bufferNo / audio.duration) + ")"; //反(ry
+    })
+    video.addEventListener("timeupdate", e => { //時間が更新されたら
+        let bufferNo //バッファの数をカウントするために使用
+        //再生位置にある最も近いバッファを取得する
+        for (let i = (video.buffered.length); bufferNo == undefined && video.buffered.length != 0 && i != 0; i--) {
+            if (video.buffered.start(i - 1) < video.currentTime) {
+                bufferNo = video.buffered.end(i - 1);
+            }
+        }
+        seekbarLoadVideo.style.transform = "scaleX(" + (bufferNo / video.duration) + ")"; //反(ry
     })
     //再生停止ボタンがクリックされると
     playButton.addEventListener("click", () => {
@@ -36,13 +52,13 @@ addEventListener("load", async e => {
     })
     addEventListener("resize", seekpointmove) //ウィンドウサイズ変更時に丸の位置を更新
     audio.addEventListener("play", e => { //再生されると
-        audio.currentTime = video.currentTime //同期
         video.play() //再生
         playButton.innerHTML = "一時停止" //文字を変更
     })
     audio.addEventListener("pause", e => { //停止すると
         video.pause() //停止
         playButton.innerHTML = "再生" //文字を変更
+        audio.currentTime = video.currentTime //同期
     })
     seekbarDrag.addEventListener("click", e => { //シークバーのクリックで
         e.preventDefault() //軽量化を狙う
@@ -51,7 +67,7 @@ addEventListener("load", async e => {
         audio.currentTime = audio.duration * percent //反映
         videoRestart() //同期
     })
-    addEventListener("mousemove", e => { //マウス移動
+    addEventListener("mousemove", async e => { //マウス移動
         e.preventDefault() //軽量化を狙う
         if (document.getElementsByClassName("drag")[0]) { //ドラッグ中だったら
             //シークバーの長さと丸のドラッグ位置からパーセ(ry
@@ -80,12 +96,14 @@ addEventListener("load", async e => {
                 break
             }
             case "ArrowLeft": {
-                audio.currentTime = audio.currentTime - 5 //反映
+                video.currentTime -= 5 //反映
+                audio.currentTime -= 5 //反映
                 videoRestart() //同期
                 break
             }
             case "ArrowRight": {
-                audio.currentTime = audio.currentTime + 5 //反映
+                video.currentTime += 5 //反映
+                audio.currentTime += 5 //反映
                 videoRestart() //同期
                 break
             }
