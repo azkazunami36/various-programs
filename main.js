@@ -205,62 +205,7 @@
             const videopath = "C:/cache/YTDL/" + videoId + ".mp4" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(videopath)) {
-                    if (ytdl.validateID(videoId)) {
-                        console.log("にゃ１")
-                        const info = await ytdl.getInfo(videoId)
-                        console.log("にゃん！１")
-                        let videoSize
-                        for (let i = 0; i != info.formats.length; i++) {
-                            if (info.formats[i].contentLength)
-                                if (info.formats[i].codecs == "vp9")
-                                    if (info.formats[i].qualityLabel == "144p") {
-                                        console.log("存在しました。")
-                                        videoSize = info.formats[i].contentLength
-                                    }
-                        }
-                        console.log(videoSize)
-                        console.log(info.formats)
-                        const chunkSize = 1 * 1e4 //チャンクサイズ
-                        //これは取得するデータ範囲を決定します。
-                        const start = Number(((Number(req.headers.range) < 0 ? 0 : req.headers.range) || "0").replace(/\D/g, "")) //始まりの指定
-                        const end = Number(Math.min(start + chunkSize, videoSize - 1)) //終わりの指定
-                        const headers = { //ヘッダー
-                            "Content-Range": "bytes " + start + "-" + end + "/" + videoSize,
-                            "Accept-Ranges": "bytes",
-                            "Content-Length": end - start + 1,
-                            "Content-Type": "video/webm"
-                        }
-                        console.log(headers)
-                        /**
-                         * @type {ytdl.downloadOptions}
-                         */
-                        const request = {
-                            format: {
-                                qualityLabel: "144p",
-                                hasAudio: false,
-                                hasVideo: true,
-                                indexRange: {
-                                    start: start,
-                                    end: end
-                                },
-                                url: info.videoDetails.video_url
-                            }
-                        }
-                        console.log(request)
-                        const Stream = ytdl(videoId, request)
-                        Stream.on("response", () => {
-                            console.log("れすぽんす")
-                        })
-                        Stream.on("progress", (chunk, down, total) => {
-                            console.log(chunk, down, total)
-                        })
-                        Stream.on("error", err => {
-                            console.log("エラーです。", err)
-                        })
-                        Stream.on("end", () => console.log("動画"))
-                        res.writeHead(206, headers) //206を使用すると接続を続行することが出来る
-                        Stream.pipe(res)
-                    }
+                    ytVideoGet(videoId)
                 }
             if (fs.existsSync(videopath)) //動画が存在したら
                 VASourceGet(videopath, req.headers.range, "video/mp4", res) //動画を送信
@@ -268,7 +213,6 @@
                 console.log("あれっ...動画は...？")
                 res.status(400)
                 res.end()
-
             }
 
         } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
@@ -280,38 +224,9 @@
             if (fs.existsSync(audiopath)) //音声が存在したら
                 VASourceGet(audiopath, req.headers.range, "audio/mp3", res) //音声を送信
             else { //存在しない場合400
-                if (ytdl.validateID(videoId)) {
-                    console.log("にゃ２")
-                    const info = await ytdl.getInfo(videoId)
-                    console.log("にゃん！２")
-                    const videoSize = info.formats[info.formats.length - 1].contentLength
-                    console.log(videoSize, info.formats)
-                    const chunkSize = 1 * 100 //チャンクサイズ
-                    //これは取得するデータ範囲を決定します。
-                    const start = Number(((Number(req.headers.range) < 0 ? 0 : req.headers.range) || "0").replace(/\D/g, "")) //始まりの指定
-                    const end = Math.min(start + chunkSize, videoSize - 1) //終わりの指定
-                    const headers = { //ヘッダー
-                        "Content-Range": "bytes " + start + "-" + end + "/" + videoSize,
-                        "Accept-Ranges": "bytes",
-                        "Content-Length": end - start + 1,
-                        "Content-Type": "audio/webm"
-                    }
-                    console.log(headers)
-                    const Stream = ytdl(videoId, { range: { start: start, end: end }, filter: "videoonly", quality: "lowest" })
-                    Stream.on("response", () => {
-                        console.log("れすぽんす")
-                    })
-                    Stream.on("progress", (chunk, down, total) => {
-                        console.log(chunk, (down / total).toFixed(2) * 1e3)
-                    })
-                    Stream.on("end", () => console.log("音声"))
-                    res.writeHead(206, headers) //206を使用すると接続を続行することが出来る
-                    Stream.pipe(res)
-                } else {
-                    console.log("あれっ...音声は...？")
-                    res.status(400)
-                    res.end()
-                }
+                console.log("あれっ...音声は...？")
+                res.status(400)
+                res.end()
             }
         } else if (false) {
         } else if (false) {
