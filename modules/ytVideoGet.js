@@ -5,10 +5,11 @@
 const fs = require("fs")
 const ytdl = require("ytdl-core")
 module.exports.ytVideoGet = async videoId => {
-    if (!fs.existsSync("C:/cache/YTDl/" + videoId + ".mp4"))
+    const savePass = require("../dataPass.json").default
+    if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".mp4"))
         await new Promise(resolve => {
             let starttime
-            if (!fs.existsSync("C:/cache/YouTubeDownloadingVideo")) fs.mkdirSync("C:/cache/YouTubeDownloadingVideo")
+            if (!fs.existsSync(savePass + "cache/YouTubeDownloadingVideo")) fs.mkdirSync(savePass + "cache/YouTubeDownloadingVideo")
             const videoDownload = ytdl(videoId, { filter: "videoonly", quality: "highest" })
             videoDownload.once("response", () => {
                 starttime = Date.now()
@@ -27,11 +28,11 @@ module.exports.ytVideoGet = async videoId => {
                 }
             })
             videoDownload.on("error", async err => console.log("動画取得中にエラー: " + videoId, err))
-            videoDownload.pipe(fs.createWriteStream("C:/cache/YouTubeDownloadingVideo/" + videoId + ".mp4"))
+            videoDownload.pipe(fs.createWriteStream(savePass + "cache/YouTubeDownloadingVideo/" + videoId + ".mp4"))
             videoDownload.on("end", async () => {
-                if (!fs.existsSync("C:/cache/YTDL")) fs.mkdirSync("C:/cache/YTDL")
-                const Stream = fs.createReadStream("C:/cache/YouTubeDownloadingVideo/" + videoId + ".mp4")
-                Stream.pipe(fs.createWriteStream("C:/cache/YTDL/" + videoId + ".mp4"))
+                if (!fs.existsSync(savePass + "cache/YTDL")) fs.mkdirSync(savePass + "cache/YTDL")
+                const Stream = fs.createReadStream(savePass + "cache/YouTubeDownloadingVideo/" + videoId + ".mp4")
+                Stream.pipe(fs.createWriteStream(savePass + "cache/YTDL/" + videoId + ".mp4"))
                 Stream.on("end", () => {
                     console.log("動画取得完了: " + videoId)
                     resolve()

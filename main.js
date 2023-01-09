@@ -52,6 +52,7 @@
      * このjson内を操作する際は、プログラムを終了してから変更を加えてください。
      */
     const dtbs = require("./data.json")
+    const savePass = require("./dataPass.json").default
     if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
     //----ここから初期化ラインです----
     if (!dtbs.ytdlRawInfoData) dtbs.ytdlRawInfoData = {}
@@ -59,14 +60,14 @@
     if (!dtbs.ytIndex) dtbs.ytIndex = {}
 
     if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
-    if (!fs.existsSync("C:/cache/")) fs.mkdirSync("C:/cache")
-    if (!fs.existsSync("C:/cache/YTDL")) fs.mkdirSync("C:/cache/YTDL")
-    if (!fs.existsSync("C:/cache/YouTubeDownloadingVideo")) fs.mkdirSync("C:/cache/YouTubeDownloadingVideo")
-    if (!fs.existsSync("C:/cache/YouTubeDownloadingAudio")) fs.mkdirSync("C:/cache/YouTubeDownloadingAudio")
-    if (!fs.existsSync("C:/cache/YouTubeThumbnail")) fs.mkdirSync("C:/cache/YouTubeThumbnail")
-    if (!fs.existsSync("C:/cache/YouTubeThumbnailRatioResize")) fs.mkdirSync("C:/cache/YouTubeThumbnailRatioResize")
-    if (!fs.existsSync("C:/cache/YouTubeAuthorIcon")) fs.mkdirSync("C:/cache/YouTubeAuthorIcon")
-    if (!fs.existsSync("C:/cache/YouTubeAuthorIconRatioResize")) fs.mkdirSync("C:/cache/YouTubeAuthorIconRatioResize")
+    if (!fs.existsSync(savePass + "cache/")) fs.mkdirSync(savePass + "cache")
+    if (!fs.existsSync(savePass + "cache/YTDL")) fs.mkdirSync(savePass + "cache/YTDL")
+    if (!fs.existsSync(savePass + "cache/YouTubeDownloadingVideo")) fs.mkdirSync(savePass + "cache/YouTubeDownloadingVideo")
+    if (!fs.existsSync(savePass + "cache/YouTubeDownloadingAudio")) fs.mkdirSync(savePass + "cache/YouTubeDownloadingAudio")
+    if (!fs.existsSync(savePass + "cache/YouTubeThumbnail")) fs.mkdirSync(savePass + "cache/YouTubeThumbnail")
+    if (!fs.existsSync(savePass + "cache/YouTubeThumbnailRatioResize")) fs.mkdirSync(savePass + "cache/YouTubeThumbnailRatioResize")
+    if (!fs.existsSync(savePass + "cache/YouTubeAuthorIcon")) fs.mkdirSync(savePass + "cache/YouTubeAuthorIcon")
+    if (!fs.existsSync(savePass + "cache/YouTubeAuthorIconRatioResize")) fs.mkdirSync(savePass + "cache/YouTubeAuthorIconRatioResize")
     //-----------ここまで------------
     require("dotenv").config()
     const processJson = require("./processJson.json")
@@ -160,9 +161,9 @@
             try {
                 param = querystring.parse(info[1]) //パラメータを取得
             } catch (e) { }
-            let thumbnailpath = "C:/cache/YouTubeThumbnail/" + videoId + ".jpg"
+            let thumbnailpath = savePass + "cache/YouTubeThumbnail/" + videoId + ".jpg"
             if (param.ratio && param.size)
-                thumbnailpath = "C:/cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
+                thumbnailpath = savePass + "cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
 
             //これはVideoIDが有効かつ画像がうまく取得出来なかった際に使用するif文です
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
@@ -184,9 +185,9 @@
             try {
                 param = querystring.parse(info[1]) //パラメータを取得
             } catch (e) { }
-            let thumbnailpath = "C:/cache/YouTubeAuthorIcon/" + channelId + ".jpg"
+            let thumbnailpath = savePass + "cache/YouTubeAuthorIcon/" + channelId + ".jpg"
             if (param.ratio && param.size)
-                thumbnailpath = "C:/cache/YouTubeAuthorIconRatioResize/" + channelId + "-r" + param.ratio + "-" + param.size + ".jpg"
+                thumbnailpath = savePass + "cache/YouTubeAuthorIconRatioResize/" + channelId + "-r" + param.ratio + "-" + param.size + ".jpg"
 
             //これはVideoIDが有効かつ画像がうまく取得出来なかった際に使用するif文です
             if (dtbs.ytchRawInfoData[channelId]) //データが存在したら
@@ -202,7 +203,7 @@
 
         } else if (req.url.match(/\/ytvideo\/*/)) { //YouTube動画にアクセスする
             const videoId = String(req.url).split("/ytvideo/")[1] //urlから情報を取得
-            const videopath = "C:/cache/YTDL/" + videoId + ".mp4" //パス
+            const videopath = savePass + "cache/YTDL/" + videoId + ".mp4" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(videopath)) {
                     ytVideoGet(videoId)
@@ -217,7 +218,7 @@
 
         } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
             const videoId = String(req.url).split("/ytaudio/")[1] //urlから情報を取得
-            const audiopath = "C:/cache/YTDL/" + videoId + ".mp3" //パス
+            const audiopath = savePass + "cache/YTDL/" + videoId + ".mp3" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(audiopath)) //音声が存在してい無かったら
                     ytAudioGet(videoId)  //音声を取得する

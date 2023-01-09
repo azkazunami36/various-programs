@@ -6,16 +6,17 @@
 const fs = require("fs")
 const wait = require("util").promisify(setTimeout)
 module.exports.ytVASourceCheck = async ytIndex => {
+    const savePass = require("../dataPass.json").default
     const videoIds = Object.keys(ytIndex.videoIds)
     for (let i = 0; i != videoIds.length; i++) {
         const videoId = videoIds[i]
-        if (!fs.existsSync("C:/cache/YTDl/" + videoId + ".mp4"))
+        if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".mp4"))
             await require("./ytVideoGet").ytVideoGet(videoId)
-        if (!fs.existsSync("C:/cache/YTDl/" + videoId + ".mp3"))
+        if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".mp3"))
             await require("./ytAudioGet").ytAudioGet(videoId)
-        if (!fs.existsSync("C:/cache/YouTubeThumbnail/" + videoId + ".jpg"))
+        if (!fs.existsSync(savePass + "cache/YouTubeThumbnail/" + videoId + ".jpg"))
             await require("./ytThumbnailGet").ytThumbnailGet(videoId)
-        if (!fs.existsSync("C:/cache/ytAuthorIcon" + ytIndex.videoIds[videoId].authorId + ".jpg"))
+        if (!fs.existsSync(savePass + "cache/ytAuthorIcon" + ytIndex.videoIds[videoId].authorId + ".jpg"))
             await require("./ytAuthorIconGet").ytAuthorIconGet(ytIndex.videoIds[videoId].authorId)
             await wait(10)
     }
