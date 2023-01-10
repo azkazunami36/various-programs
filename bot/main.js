@@ -12,8 +12,6 @@ let ari = 0;
 let countb = 0;
 const data = require("./data.json") //data.json
 const {
-  entersState,
-  createAudioPlayer,
   createAudioResource,
   joinVoiceChannel,
   StreamType,
