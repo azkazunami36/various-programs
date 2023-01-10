@@ -206,7 +206,7 @@
             const videopath = savePass + "cache/YTDL/" + videoId + ".mp4" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(videopath)) {
-                    ytVideoGet(videoId)
+                    await ytVideoGet(videoId)
                 }
             if (fs.existsSync(videopath)) //動画が存在したら
                 VASourceGet(videopath, req.headers.range, "video/mp4", res) //動画を送信
@@ -221,7 +221,7 @@
             const audiopath = savePass + "cache/YTDL/" + videoId + ".mp3" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(audiopath)) //音声が存在してい無かったら
-                    ytAudioGet(videoId)  //音声を取得する
+                    await ytAudioGet(videoId)  //音声を取得する
             if (fs.existsSync(audiopath)) //音声が存在したら
                 VASourceGet(audiopath, req.headers.range, "audio/mp3", res) //音声を送信
             else { //存在しない場合400
@@ -411,7 +411,7 @@
         saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(false)
+    startToInfomation(true)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")
