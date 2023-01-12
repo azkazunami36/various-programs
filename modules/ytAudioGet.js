@@ -37,7 +37,6 @@ module.exports.ytAudioGet = async videoId => {
                     "-c:a libopus",
                     "-ab 128k"
                 ])
-                convert.on("start", e => console.log(e))
                 convert.save(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".opus")
                 convert.on("end", () => {
                     if (!fs.existsSync(savePass + "cache/YTDL")) fs.mkdirSync("cache/YTDL")
