@@ -218,12 +218,12 @@
 
         } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
             const videoId = String(req.url).split("/ytaudio/")[1] //urlから情報を取得
-            const audiopath = savePass + "cache/YTDL/" + videoId + ".mp3" //パス
+            const audiopath = savePass + "cache/YTDL/" + videoId + ".opus" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(audiopath)) //音声が存在してい無かったら
                     await ytAudioGet(videoId)  //音声を取得する
             if (fs.existsSync(audiopath)) //音声が存在したら
-                VASourceGet(audiopath, req.headers.range, "audio/mp3", res) //音声を送信
+                VASourceGet(audiopath, req.headers.range, "audio/opus", res) //音声を送信
             else { //存在しない場合400
                 console.log("あれっ...音声は...？")
                 res.status(400)

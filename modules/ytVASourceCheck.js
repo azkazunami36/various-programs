@@ -12,7 +12,7 @@ module.exports.ytVASourceCheck = async ytIndex => {
         const videoId = videoIds[i]
         if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".mp4"))
             await require("./ytVideoGet").ytVideoGet(videoId)
-        if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".mp3"))
+        if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".opus"))
             await require("./ytAudioGet").ytAudioGet(videoId)
         if (!fs.existsSync(savePass + "cache/YouTubeThumbnail/" + videoId + ".jpg"))
             await require("./ytThumbnailGet").ytThumbnailGet(videoId)

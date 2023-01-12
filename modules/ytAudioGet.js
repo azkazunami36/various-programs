@@ -4,9 +4,10 @@
  */
 const fs = require("fs")
 const ytdl = require("ytdl-core")
+const ffmpeg = require("fluent-ffmpeg")
 module.exports.ytAudioGet = async videoId => {
     const savePass = require("../dataPass.json").default
-    if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".mp3"))
+    if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".aac"))
         await new Promise(resolve => {
             let starttime
             if (!fs.existsSync(savePass + "cache/YouTubeDownloadingAudio")) fs.mkdirSync(savePass + "cache/YouTubeDownloadingAudio")
@@ -30,12 +31,22 @@ module.exports.ytAudioGet = async videoId => {
             audioDownload.on("error", async err => { console.log("音声取得中にエラー: " + videoId, err) })
             audioDownload.pipe(fs.createWriteStream(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".mp3"))
             audioDownload.on("end", async () => {
-                if (!fs.existsSync(savePass + "cache/YTDL")) fs.mkdirSync("cache/YTDL")
-                const Stream = fs.createReadStream(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".mp3")
-                Stream.pipe(fs.createWriteStream(savePass + "cache/YTDL/" + videoId + ".mp3"))
-                Stream.on("end", () => {
-                    console.log("音声取得完了: " + videoId)
-                    resolve()
+                const convert = ffmpeg(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".mp3")
+                convert.addOptions([
+                    "-vn",
+                    "-c:a libopus",
+                    "-ab 128k"
+                ])
+                convert.on("start", e => console.log(e))
+                convert.save(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".opus")
+                convert.on("end", () => {
+                    if (!fs.existsSync(savePass + "cache/YTDL")) fs.mkdirSync("cache/YTDL")
+                    const Stream = fs.createReadStream(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".opus")
+                    Stream.pipe(fs.createWriteStream(savePass + "cache/YTDL/" + videoId + ".opus"))
+                    Stream.on("end", () => {
+                        console.log("音声取得完了: " + videoId)
+                        resolve()
+                    })
                 })
             })
         })
