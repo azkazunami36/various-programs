@@ -56,59 +56,67 @@ addEventListener("load", async () => {
         //ブラウザサイズからどれほど動画を並べられるか判断
         const row = (VideoListCenter.clientWidth / thumbnailWidth).toFixed()
         //videosが無かったらサーバーからデータを取得する
-        if (!videos) videos = JSON.parse(await httpDataRequest("ytvideo-list"))
+        if (!videos) {
+            videos = JSON.parse(await httpDataRequest("ytvideo-list"))
+            let logout = ""
+            for (let i = 0; videos.length != i; i++) logout += videos[i] + "\n"
+            console.log(logout)
+        }
         if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
         for (let i = 0; i != row; i++) {
-            if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
-            const videoLink = document.createElement("div")
-            VideoListCenter.appendChild(videoLink)
+            await new Promise(async resolve => {
+                if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
+                const videoLink = document.createElement("div")
+                VideoListCenter.appendChild(videoLink)
 
-            const videoId = videos[videoLoaded] //VideoID
-            const ratio = (window.devicePixelRatio || 1).toFixed(2)
-            const videoWindow = document.createElement("div")
-            const thumbnailImage = document.createElement("div")
-            const thumbnailimg = document.createElement("img")
-            const titleAria = document.createElement("div")
-            const iconAria = document.createElement("div")
-            const infoAria = document.createElement("div")
-            const authorIcon = document.createElement("img")
-            const videoTitle = document.createElement("p")
-            const videoAuthor = document.createElement("p")
-            const clickme = document.createElement("a")
-            videoLink.classList.add("VideoLink")
-            videoWindow.classList.add("VideoWindow")
-            thumbnailImage.classList.add("ThumbnailImage")
-            thumbnailimg.classList.add("Thumbnailimg")
-            titleAria.classList.add("TitleAria")
-            iconAria.classList.add("IconAria")
-            infoAria.classList.add("InfoAria")
-            authorIcon.classList.add("AuthorIcon")
-            videoTitle.classList.add("VideoTitle")
-            videoAuthor.classList.add("VideoAuthor")
-            clickme.classList.add("clickme")
-            thumbnailimg.src = "/ytimage/" + videoId + "?size=" + thumbnailWidth + "&ratio=" + ratio
-            clickme.href = "./watch?v=" + videoId
-            videoLink.appendChild(videoWindow)
-            videoWindow.appendChild(thumbnailImage)
-            videoWindow.appendChild(titleAria)
-            videoWindow.appendChild(clickme)
-            thumbnailImage.appendChild(thumbnailimg)
-            infoAria.appendChild(videoTitle)
-            infoAria.appendChild(videoAuthor)
-            iconAria.appendChild(authorIcon)
-            titleAria.appendChild(iconAria)
-            titleAria.appendChild(infoAria)
-            videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                videoId: videoId,
-                request: "title"
-            })))
-            const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                videoId: videoId,
-                request: "author"
-            })))
-            videoAuthor.innerHTML = author.name
-            authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
-            wait(1)
+                const videoId = videos[videoLoaded] //VideoID
+                const ratio = (window.devicePixelRatio || 1).toFixed(2)
+                const videoWindow = document.createElement("div")
+                const thumbnailImage = document.createElement("div")
+                const thumbnailimg = document.createElement("img")
+                const titleAria = document.createElement("div")
+                const iconAria = document.createElement("div")
+                const infoAria = document.createElement("div")
+                const authorIcon = document.createElement("img")
+                const videoTitle = document.createElement("p")
+                const videoAuthor = document.createElement("p")
+                const clickme = document.createElement("a")
+                videoLink.classList.add("VideoLink")
+                videoWindow.classList.add("VideoWindow")
+                thumbnailImage.classList.add("ThumbnailImage")
+                thumbnailimg.classList.add("Thumbnailimg")
+                titleAria.classList.add("TitleAria")
+                iconAria.classList.add("IconAria")
+                infoAria.classList.add("InfoAria")
+                authorIcon.classList.add("AuthorIcon")
+                videoTitle.classList.add("VideoTitle")
+                videoAuthor.classList.add("VideoAuthor")
+                clickme.classList.add("clickme")
+                thumbnailimg.src = "/ytimage/" + videoId + "?size=" + thumbnailWidth + "&ratio=" + ratio
+                clickme.href = "./watch?v=" + videoId
+                videoLink.appendChild(videoWindow)
+                videoWindow.appendChild(thumbnailImage)
+                videoWindow.appendChild(titleAria)
+                videoWindow.appendChild(clickme)
+                thumbnailImage.appendChild(thumbnailimg)
+                infoAria.appendChild(videoTitle)
+                infoAria.appendChild(videoAuthor)
+                iconAria.appendChild(authorIcon)
+                titleAria.appendChild(iconAria)
+                titleAria.appendChild(infoAria)
+                videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                    videoId: videoId,
+                    request: "title"
+                })))
+                const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                    videoId: videoId,
+                    request: "author"
+                })))
+                videoAuthor.innerHTML = author.name
+                authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
+                wait(1)
+                resolve()
+            })
             videoLoaded++
         }
         //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
@@ -258,17 +266,11 @@ addEventListener("load", async () => {
         infoTitle.innerHTML = "サーバーの返答を待っています..."
         infoVideos.innerHTML = ""
         console.log(videolist)
-        const data = JSON.parse(await httpDataRequest("youtube-info", JSON.stringify(videolist)))
-        console.log(data)
-        if (data.length === 1 && data[0] == "") {
-            infoTitle.innerHTML = "取得が出来ませんでした..."
-            console.log("ん？")
-            return
-        }
         let thumbnailWidth = 250 //ちいさなウィンドウの中で表示するため
-        for (let i = 0; i != data.length; i++) {
-            const videoId = data[i]
-            new Promise(resolve => {
+        for (let i = 0; i != videolist.length; i++) {
+            await new Promise(async resolve => {
+                const videoId = await httpDataRequest("youtube-videoId", videolist[i])
+                infoTitle.innerHTML = i + "本の動画を取得しました！"
                 const popupVideoLink = document.createElement("div")
                 infoVideos.appendChild(popupVideoLink)
                 const ratio = (window.devicePixelRatio || 1).toFixed(2)
@@ -326,6 +328,5 @@ addEventListener("load", async () => {
                 resolve()
             })
         }
-        infoTitle.innerHTML = data.length + "本の動画が取得完了しました！"
     };
 });
