@@ -1,10 +1,10 @@
+const fs = require("fs")
+const wait = require("util").promisify(setTimeout)
 /**
  * 音声や動画が取得されているかを全て確認します。
  * ただ、インデックスからの処理。
  * @param ytIndex 
  */
-const fs = require("fs")
-const wait = require("util").promisify(setTimeout)
 module.exports.ytVASourceCheck = async ytIndex => {
     const savePass = require("../dataPass.json").default
     const videoIds = Object.keys(ytIndex.videoIds)

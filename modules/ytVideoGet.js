@@ -1,9 +1,10 @@
+const fs = require("fs")
+const ytdl = require("ytdl-core")
+const ytVideoGetErrorMessage = require("./ytVideoGetErrorMessage").ytVideoGetErrorMessage
 /**
  * VideoIDから動画を取得します。
  * @param {string} videoId 
  */
-const fs = require("fs")
-const ytdl = require("ytdl-core")
 module.exports.ytVideoGet = async videoId => {
     const savePass = require("../dataPass.json").default
     if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".mp4"))
@@ -27,7 +28,11 @@ module.exports.ytVideoGet = async videoId => {
                     chunkLength: chunkLength
                 }
             })
-            videoDownload.on("error", async err => console.log("動画取得中にエラー: " + videoId, err))
+            videoDownload.on("error", async err => {
+                const jpmsg = ytVideoGetErrorMessage(err.message)
+                console.log("動画取得中にエラー: " + videoId, jpmsg ? jpmsg : err)
+                resolve()
+            })
             videoDownload.pipe(fs.createWriteStream(savePass + "cache/YouTubeDownloadingVideo/" + videoId + ".mp4"))
             videoDownload.on("end", async () => {
                 if (!fs.existsSync(savePass + "cache/YTDL")) fs.mkdirSync(savePass + "cache/YTDL")

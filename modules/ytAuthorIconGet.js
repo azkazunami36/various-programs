@@ -25,7 +25,7 @@ module.exports.ytAuthorIconGet = async (authorId, resize) => {
                     resolve()
                 })
                 .catch(err => {
-                    console.log(authorId, "の高品質アイコン取得時にエラー: ", err, thumbnails[thumbnails.length - 1].url)
+                    console.log(authorId, "の高品質アイコン取得時にエラー: ", String(err), thumbnails[thumbnails.length - 1].url)
                     resolve()
                 })
         })

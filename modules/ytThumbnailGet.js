@@ -25,7 +25,7 @@ module.exports.ytThumbnailGet = async (videoId, resize) => {
                     resolve()
                 })
                 .catch(err => {
-                    console.log(videoId, "の高品質サムネイル取得時にエラー: ", err)
+                    console.log(videoId, "の高品質サムネイル取得時にエラー: ", String(err), thumbnails[thumbnails.length - 1].url)
                     resolve()
                 })
         })

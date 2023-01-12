@@ -1,10 +1,11 @@
+const fs = require("fs")
+const ytdl = require("ytdl-core")
+const ffmpeg = require("fluent-ffmpeg")
+const ytVideoGetErrorMessage = require("./ytVideoGetErrorMessage").ytVideoGetErrorMessage
 /**
  * VideoIDから音声を取得します。
  * @param {string} videoId 
  */
-const fs = require("fs")
-const ytdl = require("ytdl-core")
-const ffmpeg = require("fluent-ffmpeg")
 module.exports.ytAudioGet = async videoId => {
     const savePass = require("../dataPass.json").default
     if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".aac"))
@@ -28,7 +29,11 @@ module.exports.ytAudioGet = async videoId => {
                     chunkLength: chunkLength
                 }
             })
-            audioDownload.on("error", async err => { console.log("音声取得中にエラー: " + videoId, err) })
+            audioDownload.on("error", async err => {
+                const jpmsg = ytVideoGetErrorMessage(err.message)
+                console.log("音声取得中にエラー: " + videoId, jpmsg ? jpmsg : err)
+                resolve()
+            })
             audioDownload.pipe(fs.createWriteStream(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".mp3"))
             audioDownload.on("end", async () => {
                 const convert = ffmpeg(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".mp3")
