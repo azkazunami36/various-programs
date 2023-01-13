@@ -6,6 +6,7 @@ const fs = require("fs")
 const imageSize = require("image-size")
 const sharp = require("sharp")
 const axios = require("axios")
+const ytVideoGetErrorMessage = require("./ytVideoGetErrorMessage").ytVideoGetErrorMessage
 /**
  * VideoIDからサムネイルを取得します。
  * @param {string} videoId
@@ -25,7 +26,8 @@ module.exports.ytThumbnailGet = async (videoId, resize) => {
                     resolve()
                 })
                 .catch(err => {
-                    console.log(videoId, "の高品質サムネイル取得時にエラー: ", String(err), thumbnails[thumbnails.length - 1].url)
+                    const jpmsg = ytVideoGetErrorMessage(String(err))
+                    console.log(videoId, "の高品質サムネイル取得時にエラー: ", jpmsg ? jpmsg : err, thumbnails[thumbnails.length - 1].url)
                     resolve()
                 })
         })

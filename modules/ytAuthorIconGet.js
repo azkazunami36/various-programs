@@ -6,6 +6,7 @@ const fs = require("fs")
 const imageSize = require("image-size")
 const sharp = require("sharp")
 const axios = require("axios")
+const ytVideoGetErrorMessage = require("./ytVideoGetErrorMessage").ytVideoGetErrorMessage
 /**
  * ChannelIDからサムネイルを取得します。
  * @param {string} authorId 
@@ -25,7 +26,8 @@ module.exports.ytAuthorIconGet = async (authorId, resize) => {
                     resolve()
                 })
                 .catch(err => {
-                    console.log(authorId, "の高品質アイコン取得時にエラー: ", String(err), thumbnails[thumbnails.length - 1].url)
+                    const jpmsg = ytVideoGetErrorMessage(String(err))
+                    console.log(authorId, "の高品質アイコン取得時にエラー: ", jpmsg ? jpmsg : err, thumbnails[thumbnails.length - 1].url)
                     resolve()
                 })
         })
