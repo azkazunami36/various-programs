@@ -20,7 +20,13 @@ addEventListener("load", async e => {
                 console.log("音ズレを検知しました。: ", delay)
                 audio.pause() //停止
                 video.currentTime = audio.currentTime //同期
-                setTimeout(() => audio.play(), 500) //パフォーマンスのため、遅延して再生
+                setTimeout(() => {
+                    audio.play() //パフォーマンスのため、遅延して再生
+                    setTimeout(() => {
+                        console.log("遅延がまだ残っている可能性があるため、繰り返し関数を実行します。")
+                        videoRestart() //もう一度念押しに遅延修正
+                    }, 500);
+                }, 500)
             } else console.log("音ズレはありません。: ", delay)
         } else video.currentTime = audio.currentTime //停止していたら同期のみ
     }
