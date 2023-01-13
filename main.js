@@ -219,20 +219,26 @@
                 res.end()
             }
 
-        } else if (req.url.match(/\/ytvideoDownload\/*/)) { //YouTube動画にアクセスする
-            const videoId = String(req.url).split("/ytvideoDownload/")[1] //urlから情報を取得
-            const info = String(req.url).split("/ytauthorimage/")[1].split("?") //urlから情報を取得
+        } else if (req.url.match(/\/ytDownload\/*/)) { //YouTube動画にアクセスする
+            const info = String(req.url).split("/ytDownload/")[1].split("?") //urlから情報を取得
+            const videoId = info[0] //urlから情報を取得
             let param = {}
             try {
                 param = querystring.parse(info[1]) //パラメータを取得
             } catch (e) { }
-            const videopath = savePass + "cache/YTDLConvert/" + videoId + (param.type == 1) ? ".opus" : ".mp4" //パス
+            const videopath = savePass + "cache/YTDLConvert/" + videoId + ((param.type == "1") ? ".webm" : ".mp4") //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(videopath)) {
                     await ytVAMargeConvert(videoId, param.type ? Number(param.type) : 0)
                 }
-            if (fs.existsSync(videopath)) //動画が存在したら
-                res.download(videopath)
+            if (fs.existsSync(videopath)) { //動画が存在したら
+                /**
+                 * @type {string}
+                 */
+                const title = dtbs.ytdlRawInfoData[videoId].title
+                const filename = ((title.length > 75) ? title.substring(0, 75) : title) + ((param.type == "1") ? ".webm" : ".mp4")
+                res.download(videopath, filename)
+            }
             else { //存在しない場合400
                 console.log("あれっ...動画は...？")
                 res.status(400)
@@ -281,12 +287,12 @@
                         const data = await yts({ query: videoId }) //検索
                         if (data.videos[0]) videoId = data.videos[0].videoId //検索から取得する
                     }
-                    request.get({ //リクエスト
+                    await new Promise(resolve => request.get({ //リクエスト
                         url: videoId,
                         headers: {
                             "content-type": "text/plain"
                         }
-                    }, async error => {
+                    }, resolve)).then(async error => {
                         /**
                          * このif処理でyoutubeリンクでも無く文字列でもない際に
                          * 下のコードがスキップされるようにコードを組んで居ます
@@ -411,7 +417,7 @@
         await saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(true)
+    startToInfomation(false)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")
