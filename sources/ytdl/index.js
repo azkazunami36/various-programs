@@ -64,7 +64,7 @@ addEventListener("load", async () => {
         }
         if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
         for (let i = 0; i != row; i++) {
-            await new Promise(async resolve => {
+            new Promise(async resolve => {
                 if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
                 const videoLink = document.createElement("div")
                 VideoListCenter.appendChild(videoLink)
@@ -104,17 +104,23 @@ addEventListener("load", async () => {
                 iconAria.appendChild(authorIcon)
                 titleAria.appendChild(iconAria)
                 titleAria.appendChild(infoAria)
-                videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                    videoId: videoId,
-                    request: "title"
-                })))
-                const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                    videoId: videoId,
-                    request: "author"
-                })))
-                videoAuthor.innerHTML = author.name
-                authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
-                wait(1)
+                new Promise(async resolve => {
+                    videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                        videoId: videoId,
+                        request: "title"
+                    })))
+                    resolve()
+                })
+                new Promise(async resolve => {
+                    const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
+                        videoId: videoId,
+                        request: "author"
+                    })))
+                    videoAuthor.innerHTML = author.name
+                    authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
+                    resolve()
+                })
+                await wait(1)
                 resolve()
             })
             videoLoaded++
@@ -268,9 +274,10 @@ addEventListener("load", async () => {
         console.log(videolist)
         let thumbnailWidth = 250 //ちいさなウィンドウの中で表示するため
         for (let i = 0; i != videolist.length; i++) {
-            await new Promise(async resolve => {
+            new Promise(async resolve => {
                 const videoId = await httpDataRequest("youtube-videoId", videolist[i])
-                infoTitle.innerHTML = i + "本の動画を取得しました！"
+                console.log(videoId)
+                infoTitle.innerHTML = (i + 1) + "本の動画を取得しました！"
                 const popupVideoLink = document.createElement("div")
                 infoVideos.appendChild(popupVideoLink)
                 const ratio = (window.devicePixelRatio || 1).toFixed(2)
@@ -317,6 +324,9 @@ addEventListener("load", async () => {
                         videoId: videoId,
                         request: "title"
                     })))
+                    resolve()
+                })
+                new Promise(async resolve => {
                     const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
                         videoId: videoId,
                         request: "author"
