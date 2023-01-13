@@ -1,5 +1,6 @@
 const audio = new Audio()
 addEventListener("load", async e => {
+    document.body.appendChild(audio)
     const
         video = document.getElementById("video"), //動画
         seekbarDrag = document.getElementById("seekbar-wrap"), //シーク操作のために使用
@@ -152,114 +153,120 @@ addEventListener("load", async e => {
     downloadButton.addEventListener("click", e => {
         const downloadPopup = document.getElementById("downloadPopup")
         if (!downloadPopup) {
+            const fill = {
+                width: "100%",
+                height: "100%"
+            }
+            const center = {
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+            }
+            const boldText = {
+                fontSize: "30px",
+                fontWeight: "600"
+            }
+
             const popup = document.createElement("div")
             document.body.appendChild(popup)
             popup.id = "downloadPopup"
-            popup.style.position = "absolute"
-            popup.style.width = "100%"
-            popup.style.height = "100%"
-            popup.style.background = "rgba(0, 0, 0, 0.2)"
-            popup.style.display = "flex"
-            popup.style.alignItems = "center"
-            popup.style.justifyContent = "center"
+            Object.assign(popup.style, {
+                position: "absolute",
+                background: "rgba(0, 0, 0, 0.2)",
+                ...fill,
+                ...center
+            })
             const bodyPopup = document.createElement("div")
             popup.appendChild(bodyPopup)
-            bodyPopup.style.maxWidth = "500px"
-            bodyPopup.style.maxHeight = "350px"
-            bodyPopup.style.width = "100%"
-            bodyPopup.style.height = "100%"
-            bodyPopup.style.background = "white"
-            bodyPopup.style.borderRadius = "10px"
-            bodyPopup.style.display = "flex"
-            bodyPopup.style.alignItems = "center"
-            bodyPopup.style.justifyContent = "center"
-            bodyPopup.style.flexDirection = "column"
+            Object.assign(bodyPopup.style, {
+                maxWidth: "500px",
+                maxHeight: "350px",
+                background: "white",
+                borderRadius: "10px",
+                flexDirection: "column",
+                ...center,
+                ...fill
+            })
             const titleBar = document.createElement("div")
             bodyPopup.appendChild(titleBar)
-            titleBar.style.width = "100%"
-            titleBar.style.height = "15%"
-            titleBar.style.display = "flex"
+            Object.assign(titleBar.style, {
+                width: "100%",
+                height: "15%",
+                display: "flex"
+            })
             const title = document.createElement("div")
             titleBar.appendChild(title)
-            title.style.width = "calc(100% - 40px)"
-            title.style.fontSize = "30px"
-            title.style.fontWeight = "600"
-            title.style.display = "flex"
-            title.style.justifyContent = "center"
-            title.style.alignItems = "center"
+            Object.assign(title.style, {
+                width: "calc(100% - 40px)",
+                ...boldText,
+                ...center
+            })
             title.innerHTML = "種類を選択してください。"
             const closeButoon = document.createElement("div")
             titleBar.appendChild(closeButoon)
-            closeButoon.style.width = "40px"
-            closeButoon.style.height = "100%"
-            closeButoon.style.fontSize = "9px"
-            closeButoon.style.color = "white"
-            closeButoon.style.display = "flex"
-            closeButoon.style.justifyContent = "center"
-            closeButoon.style.alignItems = "center"
-            closeButoon.style.background = "black"
-            closeButoon.style.borderRadius = "5px"
-            closeButoon.style.cursor = "pointer"
+            Object.assign(closeButoon.style, {
+                width: "40px",
+                height: "100%",
+                fontSize: "9px",
+                color: "white",
+                borderRadius: "5px",
+                cursor: "pointer",
+                background: "black",
+                ...center
+            })
             closeButoon.innerHTML = "閉じる"
             closeButoon.addEventListener("click", e => popup.style.display = "none")
             const info = document.createElement("div")
             bodyPopup.appendChild(info)
-            info.style.width = "80%"
-            info.style.height = "80%"
-            info.style.display = "flex"
+            Object.assign(info.style, {
+                width: "80%",
+                height: "80%",
+                display: "flex"
+            })
             const leftInfo = document.createElement("div")
             info.appendChild(leftInfo)
-            leftInfo.style.width = "50%"
-            leftInfo.style.height = "100%"
-            leftInfo.style.display = "flex"
-            leftInfo.style.alignItems = "center"
-            leftInfo.style.justifyContent = "space-evenly"
-            leftInfo.style.flexDirection = "column"
+            const LRInfoStyle = {
+                width: "50%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-evenly",
+                flexDirection: "column"
+            }
+            Object.assign(leftInfo.style, LRInfoStyle)
             const mp4text = document.createElement("div")
             leftInfo.appendChild(mp4text)
-            mp4text.style.fontSize = "30px"
-            mp4text.style.fontWeight = "600"
+            Object.assign(mp4text.style, {
+                ...boldText
+            })
             mp4text.innerHTML = "mp4"
             const mp4downloadButoon = document.createElement("a")
             leftInfo.appendChild(mp4downloadButoon)
             mp4downloadButoon.id = "mp4Link"
-            mp4downloadButoon.style.maxWidth = "115px"
-            mp4downloadButoon.style.maxHeight = "35px"
-            mp4downloadButoon.style.width = "100%"
-            mp4downloadButoon.style.height = "100%"
-            mp4downloadButoon.style.background = "rgb(100, 200, 255)"
-            mp4downloadButoon.style.borderRadius = "5px"
-            mp4downloadButoon.style.display = "flex"
-            mp4downloadButoon.style.alignItems = "center"
-            mp4downloadButoon.style.justifyContent = "center"
-            mp4downloadButoon.style.cursor = "pointer"
+            const downloadButtonStyle = {
+                maxWidth: "115px",
+                maxHeight: "35px",
+                background: "rgb(100, 200, 255)",
+                borderRadius: "5px",
+                cursor: "pointer",
+                ...fill,
+                ...center
+            }
+            Object.assign(mp4downloadButoon.style, downloadButtonStyle)
             mp4downloadButoon.href = "/ytDownload/" + videoId + "?type=0"
             mp4downloadButoon.innerHTML = "ダウンロード"
             const rightInfo = document.createElement("div")
             info.appendChild(rightInfo)
-            rightInfo.style.width = "50%"
-            rightInfo.style.height = "100%"
-            rightInfo.style.display = "flex"
-            rightInfo.style.alignItems = "center"
-            rightInfo.style.justifyContent = " space-evenly"
-            rightInfo.style.flexDirection = "column"
+            Object.assign(rightInfo.style, LRInfoStyle)
             const webmtext = document.createElement("div")
             rightInfo.appendChild(webmtext)
-            webmtext.style.fontSize = "30px"
-            webmtext.style.fontWeight = "600"
+            Object.assign(webmtext.style, {
+                ...boldText
+            })
             webmtext.innerHTML = "WebM"
             const webmdownloadButoon = document.createElement("a")
             rightInfo.appendChild(webmdownloadButoon)
-            webmdownloadButoon.style.maxWidth = "115px"
-            webmdownloadButoon.style.maxHeight = "35px"
-            webmdownloadButoon.style.width = "100%"
-            webmdownloadButoon.style.height = "100%"
-            webmdownloadButoon.style.background = "rgb(100, 200, 255)"
-            webmdownloadButoon.style.borderRadius = "5px"
-            webmdownloadButoon.style.display = "flex"
-            webmdownloadButoon.style.alignItems = "center"
-            webmdownloadButoon.style.justifyContent = "center"
-            webmdownloadButoon.style.cursor = "pointer"
+            Object.assign(webmdownloadButoon.style, downloadButtonStyle)
             webmdownloadButoon.href = "/ytDownload/" + videoId + "?type=1"
             webmdownloadButoon.innerHTML = "ダウンロード"
         } else {
