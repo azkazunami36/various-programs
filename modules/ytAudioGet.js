@@ -8,7 +8,7 @@ const ytVideoGetErrorMessage = require("./ytVideoGetErrorMessage").ytVideoGetErr
  */
 module.exports.ytAudioGet = async videoId => {
     const savePass = require("../dataPass.json").default
-    if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".aac"))
+    if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".opus"))
         await new Promise(resolve => {
             let starttime
             if (!fs.existsSync(savePass + "cache/YouTubeDownloadingAudio")) fs.mkdirSync(savePass + "cache/YouTubeDownloadingAudio")
