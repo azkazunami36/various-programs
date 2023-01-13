@@ -27,5 +27,7 @@ module.exports.ytVideoGetErrorMessage = message => {
         return "通信がタイムアウトしました。"
     if (message == "write EPIPE")
         return "保存処理中にエラーが発生し、通信を切断しました。"
+    if (message.match(/Request failed with status code 404/))
+        return "データが存在せず、取得できませんでした。"
     return null
 }
