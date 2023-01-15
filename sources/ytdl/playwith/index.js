@@ -13,7 +13,9 @@ addEventListener("load", async e => {
         muteButton = document.getElementById("muteButton"), //ミュートボタン
         loopButton = document.getElementById("loopButton"), //ループボタン
         plusButton = document.getElementById("plusButton"), //プラススキップボタン
-        minusButton = document.getElementById("minusButton") //マイナススキップボタン
+        minusButton = document.getElementById("minusButton"), //マイナススキップボタン
+        leftaria = document.getElementById("leftAria"), //左の表示エリア
+        rightAria = document.getElementById("rightAria") //右の表示エリア
     const videoRestart = () => { //動画と音声を同期させるために使用する
         if (!audio.paused) { //再生中なら
             const delay = (audio.currentTime - video.currentTime).toFixed(2)
@@ -57,7 +59,18 @@ addEventListener("load", async e => {
         if (audio.paused) audio.play() //停止していたら再生
         else audio.pause() //再生していたら停止
     })
-    addEventListener("resize", seekpointmove) //ウィンドウサイズ変更時に丸の位置を更新
+    const videoLayout = () => {
+        const status = (document.body.clientWidth / 2 > 350) ? "flex" : "block"
+        if (status != leftaria.style.display) {
+            document.body.style.display = status
+            leftaria.style.width = (status == "flex") ? "calc(100% - 350px)" : "100%"
+        }
+    }
+    videoLayout()
+    addEventListener("resize", () => {
+        seekpointmove() //ウィンドウサイズ変更時に丸の位置を更新
+        videoLayout() //動画を全画面表示するかどうかを設定します
+    })
     audio.addEventListener("play", e => { //再生されると
         video.play() //再生
         playButton.innerHTML = "一時停止" //文字を変更
@@ -82,14 +95,20 @@ addEventListener("load", async e => {
         audio.currentTime = audio.duration * percent //反映
         videoRestart() //同期
     })
-    addEventListener("mousemove", async e => { //マウス移動
-        e.preventDefault() //軽量化を狙う
+    const moveFunc = e => { //マウス移動
         if (document.getElementsByClassName("drag")[0]) { //ドラッグ中だったら
             //シークバーの長さと丸のドラッグ位置からパーセ(ry
             const percent = (e.pageX - (seekbarDrag.getBoundingClientRect().left + window.pageXOffset)) / seekbarDrag.clientWidth
             audio.currentTime = audio.duration * percent
             video.currentTime = audio.duration * percent
         }
+    }
+    addEventListener("mousemove", e => {
+        e.preventDefault() //軽量化を狙う
+        moveFunc(e)
+    })
+    addEventListener("touchmove", e => {
+        moveFunc(e)
     })
     seekpoint.addEventListener("mousedown", e => { //丸をクリックすると
         seekbarDrag.classList.add("drag") //ドラック判定
@@ -141,6 +160,9 @@ addEventListener("load", async e => {
                 const volume = (audio.volume * 100) - 5
                 audio.volume = (volume < 0 ? 0 : volume).toFixed() / 100
                 break
+            }
+            case "D": {
+
             }
         }
     })

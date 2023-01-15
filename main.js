@@ -47,6 +47,7 @@
     const ytAuthorInfoGet = require("./modules/ytAuthorInfoGet").ytAuthorInfoGet
     const ytVideoIdToAuthorInfoGet = require("./modules/ytVideoIdToAuthorInfoGet").ytVideoIdToAuthorInfoGet
     const ytVAMargeConvert = require("./modules/ytVAMargeConvert").ytVAMargeConvert
+    const ytVideoGetErrorMessage = require("./modules/ytVideoGetErrorMessage").ytVideoGetErrorMessage
     const wait = util.promisify(setTimeout)
     /**
      * データを格納しています。
@@ -417,7 +418,7 @@
         await saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(true)
+    startToInfomation(false)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")
