@@ -10,3 +10,4 @@
 /.vscode/*
 /test/cs-lang/obj/*
 /test/cs-lang/bin/*
+.DS_Store
