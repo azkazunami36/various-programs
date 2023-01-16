@@ -403,3 +403,78 @@ body {
     font-weight: 600;
     margin-top: -2px;
 }
+
+.contextmenu {
+    background: rgba(50, 50, 50, 0.5);
+    min-width: 5px;
+    min-height: 5px;
+    padding: 4px;
+    position: fixed;
+    border: 0.8px solid black;
+    border-radius: 7.5px;
+    backdrop-filter: blur(30px);
+    z-index: 30;
+    opacity: 0;
+    transform: scaleX(0);
+    top: 0;
+    left: 0;
+    animation-name: fade-out;
+    animation-duration: .25s;
+}
+
+@keyframes fade-out {
+    0% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scaleX(1);
+    }
+}
+
+@keyframes fade-in {
+    0% {
+        opacity: 0;
+        transform: scaleX(1);
+    }
+    100% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+}
+
+.contextmenuViewed {
+    opacity: 1;
+    transform: scaleX(1);
+    animation-name: fade-in;
+    animation-duration: .0s;
+}
+
+.menuItem {
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+    padding: 2.5px 7.5px;
+    border-radius: 5px;
+    padding-bottom: 5px;
+}
+
+.menuItem:hover {
+    background: rgb(50, 156, 255);
+}
+
+.contextmenuPT {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 1px;
+    padding: 5px 0;
+}
+
+.contextmenuPTB {
+    width: calc(100% - 10px);
+    height: 1px;
+    background: rgba(255, 255, 255, 0.5);
+}
