@@ -13,7 +13,7 @@ module.exports.ytVASourceCheck = async ytIndex => {
         console.log("ソース有無確認 " + videoId + " : 残り " + String(videoIds.length - (i + 1)) + " 個")
         if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".mp4"))
             await require("./ytVideoGet").ytVideoGet(videoId)
-        if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".opus"))
+        if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".aac"))
             await require("./ytAudioGet").ytAudioGet(videoId)
         if (!fs.existsSync(savePass + "cache/YouTubeThumbnail/" + videoId + ".jpg"))
             await require("./ytThumbnailGet").ytThumbnailGet(videoId)

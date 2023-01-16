@@ -8,7 +8,7 @@ const ytVideoGetErrorMessage = require("./ytVideoGetErrorMessage").ytVideoGetErr
  */
 module.exports.ytAudioGet = async videoId => {
     const savePass = require("../dataPass.json").default
-    if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".opus"))
+    if (!fs.existsSync(savePass + "cache/YTDl/" + videoId + ".aac"))
         await new Promise(resolve => {
             let starttime
             if (!fs.existsSync(savePass + "cache/YouTubeDownloadingAudio")) fs.mkdirSync(savePass + "cache/YouTubeDownloadingAudio")
@@ -39,14 +39,15 @@ module.exports.ytAudioGet = async videoId => {
                 const convert = ffmpeg(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".mp3")
                 convert.addOptions([
                     "-vn",
-                    "-c:a libopus",
-                    "-ab 128k"
+                    "-c:a aac",
+                    "-ab 128k",
+                    "-preset ultrafast"
                 ])
-                convert.save(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".opus")
+                convert.save(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".aac")
                 convert.on("end", () => {
                     if (!fs.existsSync(savePass + "cache/YTDL")) fs.mkdirSync("cache/YTDL")
-                    const Stream = fs.createReadStream(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".opus")
-                    Stream.pipe(fs.createWriteStream(savePass + "cache/YTDL/" + videoId + ".opus"))
+                    const Stream = fs.createReadStream(savePass + "cache/YouTubeDownloadingAudio/" + videoId + ".aac")
+                    Stream.pipe(fs.createWriteStream(savePass + "cache/YTDL/" + videoId + ".aac"))
                     Stream.on("end", () => {
                         console.log("音声取得完了: " + videoId)
                         resolve()
