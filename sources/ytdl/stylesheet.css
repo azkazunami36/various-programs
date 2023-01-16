@@ -1,4 +1,5 @@
 body {
+    position: relative;
     background: rgb(11, 43, 104);
     margin: 0;
 }
@@ -353,4 +354,52 @@ body {
     border-radius: 100%;
     margin: 7.5px;
     margin-left: 0px;
+}
+#frontBTBottom {
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    position: absolute;
+    display: flex;
+    align-items: flex-end;
+}
+
+#FBTBoToolBar {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    height: 30px;
+    margin: 10px;
+}
+
+#FBTBoToolBackGround {
+    display: flex;
+    width: auto;
+    height: 100%;
+    padding: 0 7.5px;
+    background: rgb(0, 93, 253);
+    border-radius: 99px;
+    z-index: 10;
+}
+
+.FBTBoBody {
+    height: 100%;
+    margin: 0 3px;
+    border-radius: 7px;
+    padding: 0 15px;
+}
+
+.FBTBoBody:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.FBTBoBName {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: -2px;
 }
