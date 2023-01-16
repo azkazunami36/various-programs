@@ -110,6 +110,10 @@
             res.header("Content-Type", "text/html;charset=utf-8")
             res.end(fs.readFileSync("sources/vd/index.html"))
 
+        } else if (req.url == "/sources/ytdl/clipcreate/" || req.url == "/sources/ytdl/clipcreate/") { //ルートt (ry
+            res.header("Content-Type", "text/html;charset=utf-8")
+            res.end(fs.readFileSync("sources/ytdl/clipcreate/index.html"))
+
         } else if (req.url.match("/sources/ytdl/watch?")) {
             //watchというリンクは少々特殊なため、matchで検出し返答します
             res.header("Content-Type", "text/html;charset=utf-8")
@@ -227,7 +231,14 @@
             try {
                 param = querystring.parse(info[1]) //パラメータを取得
             } catch (e) { }
-            const videopath = savePass + "cache/YTDLConvert/" + videoId + ((param.type == "1") ? ".webm" : ".mp4") //パス
+            let type
+            switch (Number(param.type)) {
+                case 0: type = "-mp4.mp4"; break
+                case 1: type = "-webm.webm"; break
+                case 2: type = "-copy.mp4"; break
+                default: type = "-mp4.mp4"; break
+            }
+            const videopath = savePass + "cache/YTDLConvert/" + videoId + type //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(videopath)) {
                     await ytVAMargeConvert(videoId, param.type ? Number(param.type) : 0)
@@ -237,7 +248,7 @@
                  * @type {string}
                  */
                 const title = dtbs.ytdlRawInfoData[videoId].title
-                const filename = ((title.length > 75) ? title.substring(0, 75) : title) + ((param.type == "1") ? ".webm" : ".mp4")
+                const filename = ((title.length > 75) ? title.substring(0, 75) : title) + type
                 res.download(videopath, filename)
             }
             else { //存在しない場合400
@@ -248,12 +259,12 @@
 
         } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
             const videoId = String(req.url).split("/ytaudio/")[1] //urlから情報を取得
-            const audiopath = savePass + "cache/YTDL/" + videoId + ".opus" //パス
+            const audiopath = savePass + "cache/YTDL/" + videoId + ".aac" //パス
             if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
                 if (!fs.existsSync(audiopath)) //音声が存在してい無かったら
                     await ytAudioGet(videoId)  //音声を取得する
             if (fs.existsSync(audiopath)) //音声が存在したら
-                VASourceGet(audiopath, req.headers.range, "audio/opus", res) //音声を送信
+                VASourceGet(audiopath, req.headers.range, "audio/aac", res) //音声を送信
             else { //存在しない場合400
                 console.log("あれっ...音声は...？")
                 res.status(400)
@@ -315,8 +326,10 @@
                             await ytAuthorIconGet(authorId) //チャンネルアイコンを取得
                             res.header("Content-Type", "text/plain;charset=utf-8")
                             res.end(videoId)
-                            await ytVideoGet(videoId) //動画を取得
-                            await ytAudioGet(videoId) //音声を取得
+                            if (false) {
+                                await ytVideoGet(videoId) //動画を取得
+                                await ytAudioGet(videoId) //音声を取得
+                            }
                         }
                     })
                 }
@@ -418,7 +431,7 @@
         await saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(false)
+    startToInfomation(true)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")
