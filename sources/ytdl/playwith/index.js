@@ -243,54 +243,41 @@ addEventListener("load", async e => {
             Object.assign(info.style, {
                 width: "80%",
                 height: "80%",
-                display: "flex"
-            })
-            const leftInfo = document.createElement("div")
-            info.appendChild(leftInfo)
-            const LRInfoStyle = {
-                width: "50%",
-                height: "100%",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "space-evenly",
-                flexDirection: "column"
-            }
-            Object.assign(leftInfo.style, LRInfoStyle)
-            const mp4text = document.createElement("div")
-            leftInfo.appendChild(mp4text)
-            Object.assign(mp4text.style, {
-                ...boldText
+                justifyContent: "space-around"
             })
-            mp4text.innerHTML = "mp4"
-            const mp4downloadButoon = document.createElement("a")
-            leftInfo.appendChild(mp4downloadButoon)
-            mp4downloadButoon.id = "mp4Link"
-            const downloadButtonStyle = {
-                maxWidth: "115px",
-                maxHeight: "35px",
-                background: "rgb(100, 200, 255)",
-                borderRadius: "5px",
-                cursor: "pointer",
-                ...fill,
-                ...center
+            const type = ["mp4", "WebM", "Raw"]
+            for (let i = 0; type.length != i; i++) {
+                const Info = document.createElement("div")
+                info.appendChild(Info)
+                Object.assign(Info.style, {
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-evenly",
+                    flexDirection: "column"
+                })
+                const text = document.createElement("div")
+                Info.appendChild(text)
+                Object.assign(text.style, {
+                    ...boldText
+                })
+                text.innerHTML = type[i]
+                const DLButoon = document.createElement("a")
+                Info.appendChild(DLButoon)
+                DLButoon.id = type[i] + "Link"
+                Object.assign(DLButoon.style, {
+                    maxWidth: "115px",
+                    maxHeight: "35px",
+                    background: "rgb(100, 200, 255)",
+                    borderRadius: "5px",
+                    cursor: "pointer",
+                    ...fill,
+                    ...center
+                })
+                DLButoon.href = "/ytDownload/" + videoId + "?type=" + i
+                DLButoon.innerHTML = "ダウンロード"
             }
-            Object.assign(mp4downloadButoon.style, downloadButtonStyle)
-            mp4downloadButoon.href = "/ytDownload/" + videoId + "?type=0"
-            mp4downloadButoon.innerHTML = "ダウンロード"
-            const rightInfo = document.createElement("div")
-            info.appendChild(rightInfo)
-            Object.assign(rightInfo.style, LRInfoStyle)
-            const webmtext = document.createElement("div")
-            rightInfo.appendChild(webmtext)
-            Object.assign(webmtext.style, {
-                ...boldText
-            })
-            webmtext.innerHTML = "WebM"
-            const webmdownloadButoon = document.createElement("a")
-            rightInfo.appendChild(webmdownloadButoon)
-            Object.assign(webmdownloadButoon.style, downloadButtonStyle)
-            webmdownloadButoon.href = "/ytDownload/" + videoId + "?type=1"
-            webmdownloadButoon.innerHTML = "ダウンロード"
         } else {
             downloadPopup.style.display = "flex"
         }
