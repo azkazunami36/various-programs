@@ -273,11 +273,13 @@ addEventListener("load", async () => {
         infoVideos.innerHTML = ""
         console.log(videolist)
         let thumbnailWidth = 250 //ちいさなウィンドウの中で表示するため
+        let videonum = 0
         for (let i = 0; i != videolist.length; i++) {
             new Promise(async resolve => {
                 const videoId = await httpDataRequest("youtube-videoId", videolist[i])
                 console.log(videoId)
-                infoTitle.innerHTML = (i + 1) + "本の動画を取得しました！"
+                videonum++
+                infoTitle.innerHTML = videonum + "本の動画を取得しました！"
                 const popupVideoLink = document.createElement("div")
                 infoVideos.appendChild(popupVideoLink)
                 const ratio = (window.devicePixelRatio || 1).toFixed(2)
