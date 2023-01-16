@@ -10,17 +10,19 @@ module.exports.ytVAMargeConvert = async (videoId, type) => {
         const savePass = require("../dataPass.json").default
         if (!fs.existsSync(savePass + "cache/YTDL/" + videoId + ".mp4"))
             await require("./ytVideoGet").ytVideoGet(videoId)
-        if (!fs.existsSync(savePass + "cache/YTDL/" + videoId + ".opus"))
+        if (!fs.existsSync(savePass + "cache/YTDL/" + videoId + ".aac"))
             await require("./ytAudioGet").ytAudioGet(videoId)
-        if (!fs.existsSync(savePass + "cache/YTDL/" + videoId + ".mp4") || !fs.existsSync(savePass + "cache/YTDL/" + videoId + ".opus")) return
+        if (!fs.existsSync(savePass + "cache/YTDL/" + videoId + ".mp4") || !fs.existsSync(savePass + "cache/YTDL/" + videoId + ".aac")) return
         if (!fs.existsSync(savePass + "cache/YTDLConverting")) fs.mkdirSync(savePass + "cache/YTDLConverting")
         let ext = ".mp4"
         const convert = ffmpeg()
         convert.addInput(savePass + "cache/YTDL/" + videoId + ".mp4")
-        convert.addInput(savePass + "cache/YTDL/" + videoId + ".opus")
+        convert.addInput(savePass + "cache/YTDL/" + videoId + ".aac")
         switch (type) {
-            case 0: convert.addOptions(["-c:v libx264", "-c:a aac", "-tag:v avc1"]); break
-            case 1: convert.addOptions(["-c:v libvpx-vp9", "-c:a libopus"]); ext = ".webm"; break
+            case 0: convert.addOptions(["-c:v libx264", "-c:a aac", "-tag:v avc1"]); ext = "-mp4.mp4"; break
+            case 1: convert.addOptions(["-c:v libvpx-vp9", "-c:a libopus"]); ext = "-webm.webm"; break
+            case 2: convert.addOptions(["-c:v copy", "-c:a copy", "-tag:v avc1"]); ext = "-copy.mp4"; break
+            default: convert.addOptions(["-c:v libx264", "-c:a aac", "-tag:v avc1"]); ext = "-mp4.mp4"; break
         }
         convert.addOptions(["-map 0:v:0", "-map 1:a:0"])
         convert.save(savePass + "cache/YTDLConverting/" + videoId + ext)
@@ -32,6 +34,11 @@ module.exports.ytVAMargeConvert = async (videoId, type) => {
                 console.log("動画合成完了: " + videoId)
                 resolve()
             })
+        })
+        let c = ""
+        convert.on("start", cm => c = cm)
+        convert.on("error", e => {
+            if (e) throw [e, c]
         })
     })
 }
