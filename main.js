@@ -32,22 +32,23 @@
         StreamType,
         AudioPlayerStatus
     } = require("@discordjs/voice")
-    const mbyteString = require("./modules/mbyteString").mbyteString
-    const timeString = require("./modules/timeString").timeString
-    const arrayRamdom = require("./modules/arrayRamdom").arrayRamdom
-    const VASourceGet = require("./modules/VASourceGet").VASourceGet
-    const ytThumbnailGet = require("./modules/ytThumbnailGet").ytThumbnailGet
-    const ytVideoGet = require("./modules/ytVideoGet").ytVideoGet
-    const ytAudioGet = require("./modules/ytAudioGet").ytAudioGet
-    const ytIndexCreate = require("./modules/ytIndexCreate").ytIndexCreate
-    const ytIndexRebuild = require("./modules/ytIndexRebuild").ytIndexReBuild
-    const ytVASourceCheck = require("./modules/ytVASourceCheck").ytVASourceCheck
-    const ytAuthorIconGet = require("./modules/ytAuthorIconGet").ytAuthorIconGet
-    const ytVideoInfoGet = require("./modules/ytVideoInfoGet").ytVideoInfoGet
-    const ytAuthorInfoGet = require("./modules/ytAuthorInfoGet").ytAuthorInfoGet
-    const ytVideoIdToAuthorInfoGet = require("./modules/ytVideoIdToAuthorInfoGet").ytVideoIdToAuthorInfoGet
-    const ytVAMargeConvert = require("./modules/ytVAMargeConvert").ytVAMargeConvert
-    const ytVideoGetErrorMessage = require("./modules/ytVideoGetErrorMessage").ytVideoGetErrorMessage
+    const { mbyteString } = require("./modules/mbyteString")
+    const { timeString } = require("./modules/timeString")
+    const { arrayRamdom } = require("./modules/arrayRamdom")
+    const { VASourceGet } = require("./modules/VASourceGet")
+    const { ytThumbnailGet } = require("./modules/ytThumbnailGet")
+    const { ytVideoGet } = require("./modules/ytVideoGet")
+    const { ytAudioGet } = require("./modules/ytAudioGet")
+    const { ytIndexCreate } = require("./modules/ytIndexCreate")
+    const { ytIndexRebuild } = require("./modules/ytIndexRebuild")
+    const { ytVASourceCheck } = require("./modules/ytVASourceCheck")
+    const { ytAuthorIconGet } = require("./modules/ytAuthorIconGet")
+    const { ytVideoInfoGet } = require("./modules/ytVideoInfoGet")
+    const { ytAuthorInfoGet } = require("./modules/ytAuthorInfoGet")
+    const { ytVideoIdToAuthorInfoGet } = require("./modules/ytVideoIdToAuthorInfoGet")
+    const { ytVAMargeConvert } = require("./modules/ytVAMargeConvert")
+    const { ytVideoGetErrorMessage } = require("./modules/ytVideoGetErrorMessage")
+    const { ytPassGet } = require("./modules/ytPassGet")
     const wait = util.promisify(setTimeout)
     /**
      * データを格納しています。
@@ -60,19 +61,23 @@
     if (!dtbs.ytdlRawInfoData) dtbs.ytdlRawInfoData = {}
     if (!dtbs.ytchRawInfoData) dtbs.ytchRawInfoData = {}
     if (!dtbs.ytIndex) dtbs.ytIndex = {}
-
+    const folderCreate = pass => {
+        if (!fs.existsSync(pass)) fs.mkdirSync(pass)
+    }
     if (!fs.existsSync(".env")) fs.writeFileSync(".env", "TOKEN=")
-    if (!fs.existsSync(savePass + "cache/")) fs.mkdirSync(savePass + "cache")
-    if (!fs.existsSync(savePass + "cache/YTDL")) fs.mkdirSync(savePass + "cache/YTDL")
-    if (!fs.existsSync(savePass + "cache/YouTubeDownloadingVideo")) fs.mkdirSync(savePass + "cache/YouTubeDownloadingVideo")
-    if (!fs.existsSync(savePass + "cache/YouTubeDownloadingAudio")) fs.mkdirSync(savePass + "cache/YouTubeDownloadingAudio")
-    if (!fs.existsSync(savePass + "cache/YouTubeThumbnail")) fs.mkdirSync(savePass + "cache/YouTubeThumbnail")
-    if (!fs.existsSync(savePass + "cache/YouTubeThumbnailRatioResize")) fs.mkdirSync(savePass + "cache/YouTubeThumbnailRatioResize")
-    if (!fs.existsSync(savePass + "cache/YouTubeAuthorIcon")) fs.mkdirSync(savePass + "cache/YouTubeAuthorIcon")
-    if (!fs.existsSync(savePass + "cache/YouTubeAuthorIconRatioResize")) fs.mkdirSync(savePass + "cache/YouTubeAuthorIconRatioResize")
-    if (!fs.existsSync(savePass + "cache/YTDLConverting")) fs.mkdirSync(savePass + "cache/YTDLConverting")
-    if (!fs.existsSync(savePass + "cache/YTDLConvert")) fs.mkdirSync(savePass + "cache/YTDLConvert")
+    folderCreate(savePass + "cache/")
+    folderCreate(savePass + "cache/YouTubeAuthorIcon")
+    folderCreate(savePass + "cache/YouTubeAuthorIconRatioResize")
+    folderCreate(savePass + "cache/YouTubeThumbnail")
+    folderCreate(savePass + "cache/YouTubeThumbnailRatioResize")
+    folderCreate(savePass + "cache/Temp")
+    folderCreate(savePass + "cache/YouTubeDL")
+    folderCreate(savePass + "cache/YouTubeDLConvert")
     //-----------ここまで------------
+    const videoIds = Object.keys(dtbs.ytdlRawInfoData)
+    for (let i = 0; i != videoIds.length; i++) {
+        console.log(await ytPassGet(videoIds[i], "mp4"))
+    }
     require("dotenv").config()
     const processJson = require("./processJson.json")
     const procData = {}
@@ -431,7 +436,7 @@
         await saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(true)
+    startToInfomation(false)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")
