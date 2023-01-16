@@ -12,33 +12,33 @@ const videocodec = [
         full: "h264.mp4",
         codec: "h264",
         ffmpegOption: [
-            "-an",
             "-c:v libx264"
-        ]
+        ],
+        contentType: "video/mp4"
     },
     {
         full: "h265.hevc",
         codec: "h265",
         ffmpegOption: [
-            "-an",
             "-c:v libx265"
-        ]
+        ],
+        contentType: "video/hevc"
     },
     {
         full: "vp9.webm",
         codec: "vp9",
         ffmpegOption: [
-            "-an",
             "-c:v libvpx-vp9"
-        ]
+        ],
+        contentType: "video/webm"
     },
     {
         full: "av1.webm",
         codec: "av1",
         ffmpegOption: [
-            "-an",
             "-c:v libaom-av1"
-        ]
+        ],
+        contentType: "video/webm"
     }
 ]
 /**
@@ -52,7 +52,8 @@ const audiocodec = [
         ffmpegOption: [
             "-vn",
             "-c:a aac"
-        ]
+        ],
+        contentType: "audio/aac"
     },
     {
         full: "opus.opus",
@@ -60,9 +61,11 @@ const audiocodec = [
         ffmpegOption: [
             "-vn",
             "-c:a libopus"
-        ]
+        ],
+        contentType: "audio/opus"
     }
 ]
+const speed = "ultrafast" //ffmpegのプリセットを決めます。
 /**
  * YouTubeDLフォルダのローカルパスを取得します。
  * @param {string} videoId VideoIDを入力
@@ -103,36 +106,13 @@ const ytPassGet = async (videoId, type) => {
     console.log("エラー: 予想外の要求です。")
     return null
 }
-const videoMarge = async (videoId, vcodec, acodec) => {
-    const videopass = await sourceRequest(videoId, vcodec)
-    const audiopass = await sourceRequest(videoId, acodec)
-    const pass = savePass + "cache/YouTubeDLConvert/" + videoId + "-" + vcodec + "_" + acodec + ".mp4"
-    if (videopass && audiopass) {
-        await new Promise(async resolve => {
-            const convert = ffmpeg()
-            convert.addInput(videopass)
-            convert.addInput(audiopass)
-            convert.addOptions(["-c:v copy", "-c:a copy", "-map 0:v:0", "-map 1:a:0"])
-            const time = Date.now()
-            convert.save(savePass + "cache/Temp/" + videoId + "-" + time)
-            convert.on("end", () => {
-                const Stream = fs.createReadStream(savePass + "cache/Temp/" + videoId + "-" + time)
-                Stream.pipe(fs.createWriteStream(pass))
-                Stream.on("end", () => {
-                    console.log("ソース: " + videoId + " の" + vcodec + "と" + acodec + "の統合が完了しました。")
-                    resolve(pass)
-                })
-            })
-        })
-    }
-}
 /**
  * YouTubeDLを使用してデータを取得します。
  * @param {string} videoId 
  * @param {string} type 
  * @param callback 
  */
-const youtubedl = async (videoId, type, callback) => {
+const youtubedl = async (videoId, type) => {
     await new Promise(async resolve => {
         const reqmsg = "要求: " + type + "/" + videoId
         let st
@@ -144,14 +124,14 @@ const youtubedl = async (videoId, type, callback) => {
         youtubedl.on("progress", (chunkLength, downloaded, total) => {
             const floatDownloaded = downloaded / total
             const downloadedSeconds = (Date.now() - st) / 1000
-            callback({
+            const status ={
                 elapsedTime: downloadedSeconds,
                 esTimeRemaining: downloadedSeconds / floatDownloaded - downloadedSeconds,
                 percent: floatDownloaded,
                 downloadedSize: downloaded,
                 totalSize: total,
                 chunkLength: chunkLength
-            })
+            }
         })
         youtubedl.on("error", async err => {
             const jpmsg = ytVideoGetErrorMessage(err.message)
@@ -188,7 +168,7 @@ const sourceRequest = async (videoId, type) => {
     const pass = savePass + "cache/YouTubeDL/" + videoId + "-" + (await codecMatchTest(type)).full
     if (!fs.existsSync(pass)) {
         console.log("要求されたソース " + videoId + "/" + type + " はローカルに存在しないため、変換をし取得します。")
-        const pass = await sourceExist(videoId, type)
+        const pass = await sourceExist(videoId, (await sourceType(type)))
         if (pass) {
             await convert(videoId, type, pass)
             if (!fs.existsSync(pass)) {
@@ -196,8 +176,8 @@ const sourceRequest = async (videoId, type) => {
                 return null
             }
         } else {
-            await youtubedl(videoId, sourceType(type))
-            const pass = await sourceExist(videoId, type)
+            await youtubedl(videoId, (await sourceType(type)))
+            const pass = await sourceExist(videoId, (await sourceType(type)))
             if (pass) {
                 await convert(videoId, type, pass)
                 if (!fs.existsSync(pass)) {
@@ -223,18 +203,48 @@ const convert = async (videoId, type, pass) => {
     await new Promise(async resolve => {
         const convert = ffmpeg()
         convert.addInput(pass)
-        convert.addOptions((await codecMatchTest(type)).ffmpegOption)
+        convert.addOptions([...(await codecMatchTest(type)).ffmpegOption, "-preset " + speed])
         const time = Date.now()
-        convert.save(savePass + "cache/Temp/" + videoId + "-" + time)
+        convert.on("start", start => console.log("要求されたソース " + videoId + "/" + type + " の変換を開始します。"))
+        convert.save(savePass + "cache/Temp/" + videoId + "-" + time + (await codecMatchTest(type)).full)
         convert.on("end", async () => {
-            const Stream = fs.createReadStream(savePass + "cache/Temp/" + videoId + "-" + time)
+            const Stream = fs.createReadStream(savePass + "cache/Temp/" + videoId + "-" + time + (await codecMatchTest(type)).full)
             Stream.pipe(fs.createWriteStream(npass))
-            Stream.on("end", async () => {
-                console.log("要求されたソース " + videoId + "-" + type + " の変換が完了しました。")
+            Stream.on("end", () => {
+                console.log("要求されたソース " + videoId + "/" + type + " の変換が完了しました。")
                 resolve(npass)
             })
         })
     })
+}
+/**
+ * 指定の動画コーデックと音声コーデックを統合します。
+ * @param {string} videoId 
+ * @param {string} vcodec 
+ * @param {string} acodec 
+ */
+const videoMarge = async (videoId, vcodec, acodec) => {
+    const videopass = await sourceRequest(videoId, vcodec)
+    const audiopass = await sourceRequest(videoId, acodec)
+    const pass = savePass + "cache/YouTubeDLConvert/" + videoId + "-" + vcodec + "_" + acodec + ".mp4"
+    if (videopass && audiopass) {
+        await new Promise(async resolve => {
+            const convert = ffmpeg()
+            convert.addInput(videopass)
+            convert.addInput(audiopass)
+            convert.addOptions(["-c:v copy", "-c:a copy", "-map 0:v:0", "-map 1:a:0"])
+            const time = Date.now()
+            convert.save(savePass + "cache/Temp/" + videoId + "-" + time + (await codecMatchTest(vcodec)).full)
+            convert.on("end", async () => {
+                const Stream = fs.createReadStream(savePass + "cache/Temp/" + videoId + "-" + time + (await codecMatchTest(vcodec)).full)
+                Stream.pipe(fs.createWriteStream(pass))
+                Stream.on("end", () => {
+                    console.log("ソース: " + videoId + " の" + vcodec + "と" + acodec + "の統合が完了しました。")
+                    resolve(pass)
+                })
+            })
+        })
+    }
 }
 /**
  * YouTubeDLフォルダ内からVideoIDの動画をどれかのコーデックから取得しパスを返します。
@@ -243,7 +253,7 @@ const convert = async (videoId, type, pass) => {
  * @returns 
  */
 const sourceExist = async (videoId, type) => {
-    if (sourceType(type) == "video") {
+    if (type == "video") {
         for (let i = 0; i != videocodec.length; i++) {
             const pass = savePass + "cache/YouTubeDL/" + videoId + "-" + videocodec[i].full
             if (fs.existsSync(pass)) return pass
@@ -285,6 +295,26 @@ const codecMatchTest = async codec => {
     console.log("コーデック名: " + codec + " を受け取りましたが、このプログラムでは判別ができませんでした。")
     return null
 }
+/**
+ * データパスのファイル名と拡張子から、Content-Typeを取得します。
+ * @param {string} pass 
+ */
+const passContentTypeGet = async pass => {
+    let videoId = ""
+    let codec = ""
+    let extension = ""
+    const oneSplit = pass.split("-")
+    const twoSplit = oneSplit[0].split("/")[oneSplit[0].split("/").length]
+    const threeSplit = oneSplit[1].split("-")
+    console.log(threeSplit)
+    if (threeSplit.length > 1) {
+        codec = threeSplit("_")[0]
+    } else {
+        codec = threeSplit[0].split(".")[0]
+        console.log(codec)
+    }
+    return (await codecMatchTest(codec)).contentType
+}
 module.exports = {
     ytPassGet,
     youtubedl,
@@ -293,6 +323,8 @@ module.exports = {
     sourceExist,
     convert,
     sourceType,
+    videoMarge,
     videocodec,
-    audiocodec
+    audiocodec,
+    passContentTypeGet
 }
