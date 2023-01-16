@@ -37,18 +37,15 @@
     const { arrayRamdom } = require("./modules/arrayRamdom")
     const { VASourceGet } = require("./modules/VASourceGet")
     const { ytThumbnailGet } = require("./modules/ytThumbnailGet")
-    const { ytVideoGet } = require("./modules/ytVideoGet")
-    const { ytAudioGet } = require("./modules/ytAudioGet")
     const { ytIndexCreate } = require("./modules/ytIndexCreate")
-    const { ytIndexRebuild } = require("./modules/ytIndexRebuild")
+    const { ytIndexReBuild } = require("./modules/ytIndexRebuild")
     const { ytVASourceCheck } = require("./modules/ytVASourceCheck")
     const { ytAuthorIconGet } = require("./modules/ytAuthorIconGet")
     const { ytVideoInfoGet } = require("./modules/ytVideoInfoGet")
     const { ytAuthorInfoGet } = require("./modules/ytAuthorInfoGet")
     const { ytVideoIdToAuthorInfoGet } = require("./modules/ytVideoIdToAuthorInfoGet")
-    const { ytVAMargeConvert } = require("./modules/ytVAMargeConvert")
     const { ytVideoGetErrorMessage } = require("./modules/ytVideoGetErrorMessage")
-    const { ytPassGet } = require("./modules/ytPassGet")
+    const { ytPassGet, sourceExist, youtubedl, passContentTypeGet } = require("./modules/ytPassGet")
     const wait = util.promisify(setTimeout)
     /**
      * データを格納しています。
@@ -74,10 +71,6 @@
     folderCreate(savePass + "cache/YouTubeDL")
     folderCreate(savePass + "cache/YouTubeDLConvert")
     //-----------ここまで------------
-    const videoIds = Object.keys(dtbs.ytdlRawInfoData)
-    for (let i = 0; i != videoIds.length; i++) {
-        console.log(await ytPassGet(videoIds[i], "mp4"))
-    }
     require("dotenv").config()
     const processJson = require("./processJson.json")
     const procData = {}
@@ -216,13 +209,9 @@
 
         } else if (req.url.match(/\/ytvideo\/*/)) { //YouTube動画にアクセスする
             const videoId = String(req.url).split("/ytvideo/")[1] //urlから情報を取得
-            const videopath = savePass + "cache/YTDL/" + videoId + ".mp4" //パス
-            if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
-                if (!fs.existsSync(videopath)) {
-                    await ytVideoGet(videoId)
-                }
-            if (fs.existsSync(videopath)) //動画が存在したら
-                VASourceGet(videopath, req.headers.range, "video/mp4", res) //動画を送信
+            const videopath = await sourceExist(videoId, "video") //パス
+            if (videopath) //動画が存在したら
+                VASourceGet(videopath, req.headers.range, (await passContentTypeGet(videopath)), res) //動画を送信
             else { //存在しない場合400
                 console.log("あれっ...動画は...？")
                 res.status(400)
@@ -238,17 +227,13 @@
             } catch (e) { }
             let type
             switch (Number(param.type)) {
-                case 0: type = "-mp4.mp4"; break
-                case 1: type = "-webm.webm"; break
-                case 2: type = "-copy.mp4"; break
-                default: type = "-mp4.mp4"; break
+                case 0: type = "mp4"; break
+                case 1: type = "webm"; break
+                case 2: type = "copy"; break
+                default: type = "mp4"; break
             }
-            const videopath = savePass + "cache/YTDLConvert/" + videoId + type //パス
-            if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
-                if (!fs.existsSync(videopath)) {
-                    await ytVAMargeConvert(videoId, param.type ? Number(param.type) : 0)
-                }
-            if (fs.existsSync(videopath)) { //動画が存在したら
+            const videopath = await ytPassGet(videoId, type) //パス
+            if (videopath) { //動画が存在したら
                 /**
                  * @type {string}
                  */
@@ -264,12 +249,9 @@
 
         } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
             const videoId = String(req.url).split("/ytaudio/")[1] //urlから情報を取得
-            const audiopath = savePass + "cache/YTDL/" + videoId + ".aac" //パス
-            if (dtbs.ytdlRawInfoData[videoId]) //データが存在したら
-                if (!fs.existsSync(audiopath)) //音声が存在してい無かったら
-                    await ytAudioGet(videoId)  //音声を取得する
-            if (fs.existsSync(audiopath)) //音声が存在したら
-                VASourceGet(audiopath, req.headers.range, "audio/aac", res) //音声を送信
+            const audiopath = await sourceExist(videoId, "audio") //パス
+            if (audiopath) //音声が存在したら
+                VASourceGet(audiopath, req.headers.range, (await passContentTypeGet(audiopath)), res) //音声を送信
             else { //存在しない場合400
                 console.log("あれっ...音声は...？")
                 res.status(400)
@@ -332,8 +314,10 @@
                             res.header("Content-Type", "text/plain;charset=utf-8")
                             res.end(videoId)
                             if (false) {
-                                await ytVideoGet(videoId) //動画を取得
-                                await ytAudioGet(videoId) //音声を取得
+                                if (await sourceExist(videoId, "video"))
+                                    await youtubedl(videoId, "video")
+                                if (await sourceExist(videoId, "audio"))
+                                    await youtubedl(videoId, "audio")
                             }
                         }
                     })
@@ -426,7 +410,7 @@
     })
     const startToInfomation = async start => {
         if (!start) return
-        await new Promise(resolve => ytIndexRebuild(dtbs.ytdlRawInfoData, dtbs.ytIndex, async ytIndex => {
+        await new Promise(resolve => ytIndexReBuild(dtbs.ytdlRawInfoData, dtbs.ytIndex, async ytIndex => {
             dtbs.ytIndex = ytIndex
             saveingJson()
             console.log("再作成完了")
@@ -436,7 +420,7 @@
         await saveingJson()
         ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(false)
+    startToInfomation(true)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")
