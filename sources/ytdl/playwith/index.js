@@ -15,7 +15,8 @@ addEventListener("load", async e => {
         plusButton = document.getElementById("plusButton"), //プラススキップボタン
         minusButton = document.getElementById("minusButton"), //マイナススキップボタン
         leftaria = document.getElementById("leftAria"), //左の表示エリア
-        rightAria = document.getElementById("rightAria") //右の表示エリア
+        rightAria = document.getElementById("rightAria"), //右の表示エリア
+        playPointText = document.getElementById("playPointText") //再生時間を表示します。
     const videoRestart = () => { //動画と音声を同期させるために使用する
         if (!audio.paused) { //再生中なら
             const delay = (audio.currentTime - video.currentTime).toFixed(2)
@@ -33,6 +34,18 @@ addEventListener("load", async e => {
             } else console.log("音ズレはありません。: ", delay)
         } else video.currentTime = audio.currentTime //停止していたら同期のみ
     }
+    const playTimeSet = () => {
+        const timeString = sec => {
+            if (!sec) sec = 0
+            let minute = 0, hour = 0
+            while (sec > 59) { sec -= 60; minute++ }
+            while (minute > 59) { minute -= 60; hour++ }
+            return ((hour != 0) ? hour + ":" : "") +
+                minute + ":" +
+                ("00" + sec.toFixed()).slice(-2)
+        }
+        playPointText.innerHTML = timeString(audio.currentTime) + " / " + timeString(audio.duration)
+    }
     //丸の位置を設定
     const seekpointmove = () => seekpoint.style.left = (audio.currentTime / audio.duration) * seekbarDrag.clientWidth - (seekpoint.clientWidth / 2)
     addEventListener("focus", videoRestart) //フォーカス。ページがアクティブになったら
@@ -48,6 +61,7 @@ addEventListener("load", async e => {
                 }
             }
             m.style.transform = "scaleX(" + (bufferNo / t.duration) + ")"; //反(ry
+            playTimeSet()
         }
         loadseek(audio, seekbarLoad)
         loadseek(video, seekbarLoadVideo)
@@ -72,13 +86,15 @@ addEventListener("load", async e => {
         videoLayout() //動画を全画面表示するかどうかを設定します
     })
     audio.addEventListener("play", e => { //再生されると
-        video.play() //再生
+        if (video.paused) video.play() //再生
         playButton.innerHTML = "一時停止" //文字を変更
+        playTimeSet()
     })
     audio.addEventListener("pause", e => { //停止すると
-        video.pause() //停止
+        if (!video.paused) video.pause() //停止
         playButton.innerHTML = "再生" //文字を変更
-        audio.currentTime = video.currentTime //同期
+        video.currentTime = audio.currentTime //同期
+        playTimeSet()
     })
     audio.addEventListener("volumechange", e => {
         console.log("にゃ")
@@ -112,12 +128,13 @@ addEventListener("load", async e => {
     })
     seekpoint.addEventListener("mousedown", e => { //丸をクリックすると
         seekbarDrag.classList.add("drag") //ドラック判定
-        if (video.played) video.pause() //動画のみ停止(パフォーマンス安定化)
+        if (!audio.paused) video.pause() //動画のみ停止(パフォーマンス安定化)
     })
     addEventListener("mouseup", e => { //クリック解除
         if (document.getElementsByClassName("drag")[0]) { //ドラッグ中だったら
             seekbarDrag.classList.remove("drag") //ドラッグ解除
             audio.currentTime = video.currentTime //反映
+            if (!audio.paused) video.play() //動画のみ停止(パフォーマンス安定化)
             videoRestart() //同期
         }
     })
@@ -172,6 +189,7 @@ addEventListener("load", async e => {
     video.src = "/ytvideo/" + videoId //動画のファイルパス
     video.poster = "/ytimage/" + videoId //動画のサムネ
     audio.src = "/ytaudio/" + videoId //音声のファイルパス
+    playTimeSet()
     downloadButton.addEventListener("click", e => {
         const downloadPopup = document.getElementById("downloadPopup")
         if (!downloadPopup) {
