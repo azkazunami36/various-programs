@@ -124,7 +124,7 @@ const youtubedl = async (videoId, type) => {
         youtubedl.on("progress", (chunkLength, downloaded, total) => {
             const floatDownloaded = downloaded / total
             const downloadedSeconds = (Date.now() - st) / 1000
-            const status ={
+            const status = {
                 elapsedTime: downloadedSeconds,
                 esTimeRemaining: downloadedSeconds / floatDownloaded - downloadedSeconds,
                 percent: floatDownloaded,
@@ -143,12 +143,12 @@ const youtubedl = async (videoId, type) => {
         youtubedl.on("end", async e => {
             const ffprobe = ffmpeg()
             ffprobe.addInput(savePass + "cache/Temp/" + videoId + "-" + time)
-            ffprobe.ffprobe((err, data) => {
+            ffprobe.ffprobe(async (err, data) => {
                 if (err) throw err
-                if (data.streams.length == 0) throw "ストリームがありません。", data
+                if (data.streams.length == 0) throw "ストリームがありません。", data, (data.streams) ? data.streams : undefined
                 const Stream = fs.createReadStream(savePass + "cache/Temp/" + videoId + "-" + time)
                 console.log(data.streams[0].codec_name)
-                let codec = codecMatchTest(data.streams[0].codec_name)
+                const codec = (await codecMatchTest(data.streams[0].codec_name)).full
                 Stream.pipe(fs.createWriteStream(savePass + "cache/YouTubeDL/" + videoId + "-" + codec))
                 Stream.on("end", () => {
                     console.log(reqmsg + "の取得をYouTubeDLで実行し、無事に完了しました。")
@@ -226,9 +226,10 @@ const convert = async (videoId, type, pass) => {
 const videoMarge = async (videoId, vcodec, acodec) => {
     const videopass = await sourceRequest(videoId, vcodec)
     const audiopass = await sourceRequest(videoId, acodec)
-    const pass = savePass + "cache/YouTubeDLConvert/" + videoId + "-" + vcodec + "_" + acodec + ".mp4"
     if (videopass && audiopass) {
         await new Promise(async resolve => {
+            console.log("ソース: " + videoId + " の" + vcodec + "と" + acodec + "の統合を開始します。")
+            const pass = savePass + "cache/YouTubeDLConvert/" + videoId + "-" + vcodec + "_" + acodec + ".mp4"
             const convert = ffmpeg()
             convert.addInput(videopass)
             convert.addInput(audiopass)
