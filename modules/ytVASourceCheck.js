@@ -19,8 +19,6 @@ module.exports.ytVASourceCheck = async ytIndex => {
             await require("./ytThumbnailGet").ytThumbnailGet(videoId)
         if (!fs.existsSync(savePass + "cache/ytAuthorIcon" + ytIndex.videoIds[videoId].authorId + ".jpg"))
             await require("./ytAuthorIconGet").ytAuthorIconGet(ytIndex.videoIds[videoId].authorId)
-        await wait(16.67)
     }
-
     console.log("ソースの有無のチェックが完了しました。")
 }

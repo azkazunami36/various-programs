@@ -12,7 +12,7 @@ module.exports.ytIndexCreate = async (videoId, ytIndex, videoDetails) => {
     let videoIdIndex = 0
     let authorIdIndex = 0
     if (!ytIndex.videoIds[videoId]) videoIdIndex++
-    if (!ytIndex.authorId[videoId]) authorIdIndex++
+    if (!ytIndex.authorId[videoDetails.author.id]) authorIdIndex++
     console.log(videoId + "のインデックスを作成。ステータス: VideoID:" + videoIdIndex + " AuthorID:" + authorIdIndex)
     ytIndex.videoIds[videoId] = {
         authorId: videoDetails.author.id

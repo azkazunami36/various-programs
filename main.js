@@ -420,15 +420,10 @@
     })
     const startToInfomation = async start => {
         if (!start) return
-        await new Promise(resolve => ytIndexReBuild(dtbs.ytdlRawInfoData, dtbs.ytIndex, async ytIndex => {
-            dtbs.ytIndex = ytIndex
-            saveingJson()
-            console.log("再作成完了")
-            resolve()
-        }))
+        dtbs.ytIndex = await ytIndexReBuild(dtbs.ytdlRawInfoData, dtbs.ytIndex)
         dtbs.ytchRawInfoData = await ytVideoIdToAuthorInfoGet(dtbs.ytdlRawInfoData, dtbs.ytchRawInfoData)
         await saveingJson()
-        ytVASourceCheck(dtbs.ytIndex)
+        await ytVASourceCheck(dtbs.ytIndex)
     }
     startToInfomation(true)
     const saveingJson = async () => {
