@@ -363,6 +363,7 @@ body {
     position: absolute;
     display: flex;
     align-items: flex-end;
+    z-index: -1;
 }
 
 #FBTBoToolBar {
@@ -380,7 +381,7 @@ body {
     padding: 0 7.5px;
     background: rgb(0, 93, 253);
     border-radius: 99px;
-    z-index: 10;
+    z-index: 20;
 }
 
 .FBTBoBody {
@@ -453,11 +454,12 @@ body {
 
 .menuItem {
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 400;
     color: white;
     padding: 2.5px 7.5px;
     border-radius: 5px;
     padding-bottom: 5px;
+    padding-right: 50px;
 }
 
 .menuItem:hover {
@@ -474,7 +476,7 @@ body {
 }
 
 .contextmenuPTB {
-    width: calc(100% - 10px);
+    width: calc(100% - 15px);
     height: 1px;
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.25);
 }

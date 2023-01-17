@@ -15,7 +15,6 @@ module.exports.ytVASourceCheck = async ytIndex => {
             await require("./ytPassGet").youtubedl(videoId, "video")
         if (!await require("./ytPassGet").sourceExist(videoId, "audio"))
             await require("./ytPassGet").youtubedl(videoId, "audio")
-        await require("./ytPassGet").ytPassGet(videoId, "mp4")
         if (!fs.existsSync(savePass + "cache/YouTubeThumbnail/" + videoId + ".jpg"))
             await require("./ytThumbnailGet").ytThumbnailGet(videoId)
         if (!fs.existsSync(savePass + "cache/ytAuthorIcon" + ytIndex.videoIds[videoId].authorId + ".jpg"))
