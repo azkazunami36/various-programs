@@ -297,24 +297,29 @@ const codecMatchTest = async codec => {
     return null
 }
 /**
- * データパスのファイル名と拡張子から、Content-Typeを取得します。
+ * データパスのファイル名と拡張子から、Content-Typeを取得します。  
+ * [VideoID]-[Codec|VideoCodec]_[AudioCodec].[Extension]という規則のファイル名でないと、エラーになる可能性があります。
  * @param {string} pass 
  */
 const passContentTypeGet = async pass => {
     let videoId = ""
     let codec = ""
     let extension = ""
-    const oneSplit = pass.split("-")
-    const twoSplit = oneSplit[0].split("/")[oneSplit[0].split("/").length]
-    const threeSplit = oneSplit[1].split("-")
-    console.log(threeSplit)
-    if (threeSplit.length > 1) {
-        codec = threeSplit("_")[0]
-    } else {
-        codec = threeSplit[0].split(".")[0]
-        console.log(codec)
+    const passSplit = pass.split("/") //階層の数だけ配列ができる
+    const filename = passSplit[passSplit.length - 1] //一番最後を指定することでファイル名を取得
+    const svideoId = filename.split("-") //規則の中から「VideoID」を取得し、反対にはコーデック等がある
+    for (let i = 0; i != svideoId.length - 1; i++) { //もしVideoIDに「-」が合った場合は統合される
+        if (i != 0) videoId += "-"
+        videoId += svideoId[i]
     }
-    return (await codecMatchTest(codec)).contentType
+    const scodec = svideoId[svideoId.length - 1] //最後の方を取得することで、必然的にコーデックの文字列にアクセスできる
+    const sextension = scodec.split(".") //あらかじめ拡張子とコーデックを分けておく
+    extension = sextension[1] //確定したので格納
+    codec = sextension[0] //まず１度コーデック名を格納
+    const mcodec = sextension[0].split("_") //「_」が使われている場合、コーデックが２つあるため配列が作成される
+    if (mcodec.length != 1) codec = mcodec[0] //配列が２つある場合、１つ目のコーデック名を格納する
+    console.log(videoId, codec, extension)
+    return (await codecMatchTest(codec)).contentType //取得されたコーデック名からContent-Typeを取得する
 }
 module.exports = {
     ytPassGet,
