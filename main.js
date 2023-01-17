@@ -276,51 +276,61 @@
             let data = ""
             req.on("data", chunk => data += chunk)
             req.on("end", async () => {
-                let videoId = data //VideoIDとなるもの
-                if (videoId) { //""や空のvideoIdで無ければ続行
+                /**
+                 * 入力された文字列からVideoIDを取得します。
+                 * @param {string} videoId 
+                 * @returns 
+                 */
+                const videoIdGet = async videoId => {
+                    const time = Date.now() //経過時間を測ります。
                     const ytdlURL = ytdl.validateURL(videoId) //URLであるかどうか
                     const ytdlID = ytdl.validateID(videoId) //IDであるかどうか
                     if (ytdlURL) videoId = ytdl.getVideoID(videoId) //URLからVideoIDを取得
-                    if (!ytdlID && !ytdlURL) { //どちらも違う場合
-                        console.log("リンクデータ無し:" + videoId) //該当しないデータを表示
-                        const data = await yts({ query: videoId }) //検索
-                        if (data.videos[0]) videoId = data.videos[0].videoId //検索から取得する
+                    if (!ytdlID && !ytdlURL) { //どちらも存在しない場合
+                        if (await new Promise(resolve => request.get({
+                            url: videoId,
+                            headers: {
+                                "content-type": "text/plain"
+                            }
+                        }, resolve))) {
+                            console.log("次の文字列ではVideoIDは見つかりませんでした。: " + videoId) //該当しないデータを表示
+                            const data = await yts({ query: videoId }) //検索
+                            if (data.videos[0]) videoId = data.videos[0].videoId //検索から取得する
+                            else {
+                                console.log("検索してもVideoIDは取得できませんでした。: " + videoId)
+                                return null
+                            }
+                        } else {
+                            console.log("次の文字列はYouTube以外のリンクです。: " + videoId)
+                            return null
+                        }
                     }
-                    await new Promise(resolve => request.get({ //リクエスト
-                        url: videoId,
-                        headers: {
-                            "content-type": "text/plain"
-                        }
-                    }, resolve)).then(async error => {
-                        /**
-                         * このif処理でyoutubeリンクでも無く文字列でもない際に
-                         * 下のコードがスキップされるようにコードを組んで居ます
-                         */
-                        if (error) {
-                            console.log(videoId, data)
-                            const exisytdl = dtbs.ytdlRawInfoData[videoId] //ただ存在を確認するためだけなので、ね？
-                            if (!exisytdl) //rawデータにvideoIdのデータが無い場合
-                                dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData) //情報を取得
-                            const authorId = dtbs.ytdlRawInfoData[videoId].author.id //ChannelIDを取得
-                            const exisytch = dtbs.ytchRawInfoData[authorId] //ただ存在を確認するd(ry
-                            if (!exisytch) //rawデータにauthorIdのデータが無い場合
-                                dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData) //情報を取得
-                            if (!exisytdl || !exisytch) { //どちらかが存在しなかったら
-                                await saveingJson() //保存
-                                dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex, dtbs.ytdlRawInfoData[videoId]) //インデックス作成
-                            }
-                            await ytThumbnailGet(videoId) //サムネを取得
-                            await ytAuthorIconGet(authorId) //チャンネルアイコンを取得
-                            res.header("Content-Type", "text/plain;charset=utf-8")
-                            res.end(videoId)
-                            if (false) {
-                                if (await sourceExist(videoId, "video"))
-                                    await youtubedl(videoId, "video")
-                                if (await sourceExist(videoId, "audio"))
-                                    await youtubedl(videoId, "audio")
-                            }
-                        }
-                    })
+                    console.log("VideoIDの取得に" + timeString((Date.now() - time) / 1000) + "かかりました。: " + videoId)
+                    return videoId
+                }
+                const videoId = await videoIdGet(data)
+                if (videoId) { //""や空のvideoIdで無ければ続行
+                    const exisytdl = dtbs.ytdlRawInfoData[videoId] //ただ存在を確認するためだけなので、ね？
+                    if (!exisytdl) //rawデータにvideoIdのデータが無い場合
+                        dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData) //情報を取得
+                    const authorId = dtbs.ytdlRawInfoData[videoId].author.id //ChannelIDを取得
+                    const exisytch = dtbs.ytchRawInfoData[authorId] //ただ存在を確認するd(ry
+                    if (!exisytch) //rawデータにauthorIdのデータが無い場合
+                        dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData) //情報を取得
+                    if (!exisytdl || !exisytch) {
+                        await saveingJson() //保存
+                        dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex, dtbs.ytdlRawInfoData[videoId]) //インデックス作成
+                    }
+                    await ytThumbnailGet(videoId) //サムネを取得
+                    await ytAuthorIconGet(authorId) //チャンネルアイコンを取得
+                    res.header("Content-Type", "text/plain;charset=utf-8")
+                    res.end(videoId)
+                    if (false) {
+                        if (await sourceExist(videoId, "video"))
+                            await youtubedl(videoId, "video")
+                        if (await sourceExist(videoId, "audio"))
+                            await youtubedl(videoId, "audio")
+                    }
                 }
             })
         } else if (req.url == "/applcation-info") {
