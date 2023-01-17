@@ -105,17 +105,43 @@ addEventListener("load", async () => {
                 titleAria.appendChild(iconAria)
                 titleAria.appendChild(infoAria)
                 videoWindow.addEventListener("contextmenu", async e => {
-                    contextmenu(e, [
-                        [
-                            {
-                                name: "ダウンロード",
-                                id: "download",
-                                data: {
-                                    videoId: videoId
+                    contextmenu(e, {
+                        title: videoId,
+                        contextmenu: [
+                            [
+                                {
+                                    name: "ダウンロード",
+                                    id: "download",
+                                    data: {
+                                        videoId: videoId
+                                    }
+                                },
+                                {
+                                    name: "\"" + videoId + "\"を削除",
+                                    id: "download",
+                                    data: {
+                                        videoId: videoId
+                                    }
+                                },
+                                {
+                                    name: "情報を編集",
+                                    id: "download",
+                                    data: {
+                                        videoId: videoId
+                                    }
                                 }
-                            }
+                            ],
+                            [
+                                {
+                                    name: "\"" + videoId + "\"からクリップを作成",
+                                    id: "download",
+                                    data: {
+                                        videoId: videoId
+                                    }
+                                }
+                            ]
                         ]
-                    ])
+                    })
                 })
                 new Promise(async resolve => {
                     videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
@@ -278,43 +304,26 @@ addEventListener("load", async () => {
     })
     /**
      * 自分のコンテキストメニューを表示します。
-     * @param e 
-     * @param {[[{name: string, id: string, data: any}]]} data 
+     * @param {{pageX: number, pageY: number}} e 
+     * @param {{title: string, contextmenu: [[{name: string, id: string, data: any}]]}} context 
      */
-    const contextmenu = async (e, data) => {
+    const contextmenu = async (e, context) => {
         e.preventDefault()
-        const remove = e => {
-            contextmenu.classList.remove("contextmenuViewed")
-            removeEventListener("click", remove)
-            removeEventListener("contextmenu", remove)
-        }
-        removeEventListener("click", remove)
-        removeEventListener("contextmenu", remove)
+        const remove = e => contextmenu.classList.remove("contextmenuViewed")
         if (!document.getElementById("contextmenu")) {
             const contextmenu = document.createElement("div")
             document.body.appendChild(contextmenu)
             contextmenu.id = "contextmenu"
             contextmenu.classList.add("contextmenu")
+            addEventListener("click", remove)
         }
         const contextmenu = document.getElementById("contextmenu")
-        await wait(1)
-        contextmenu.addEventListener("mouseleave", e => { console.log("n") })
-        addEventListener("click", remove)
-        addEventListener("contextmenu", remove)
-        if (await new Promise(resolve => {
-            for (let i = 0; contextmenu.classList.length != i; i++)
-                if (contextmenu.classList[i] == "contextmenuViewed") resolve(true)
-            resolve(false)
-        })) {
-            console.log("ほ")
+        if (contextmenu.classList.contains("contextmenuViewed")) {
             contextmenu.classList.remove("contextmenuViewed")
             await wait(250)
         }
-        contextmenu.classList.add("contextmenuViewed")
-        contextmenu.style.top = e.pageY
-        contextmenu.style.left = e.pageX
         contextmenu.innerHTML = ""
-        for (let i = 0; i != data.length; i++) {
+        for (let i = 0; i != context.contextmenu.length; i++) {
             if (i != 0) {
                 const partition = document.createElement("div")
                 contextmenu.appendChild(partition)
@@ -323,8 +332,8 @@ addEventListener("load", async () => {
                 partition.appendChild(PTColor)
                 PTColor.classList.add("contextmenuPTB")
             }
-            for (let n = 0; n != data[i].length; n++) {
-                const menuData = data[i][n]
+            for (let n = 0; n != context.contextmenu[i].length; n++) {
+                const menuData = context.contextmenu[i][n]
                 const menu = document.createElement("div")
                 contextmenu.appendChild(menu)
                 menu.classList.add("menuItem")
@@ -332,19 +341,6 @@ addEventListener("load", async () => {
                 switch (menuData.id) {
                     case "download": {
                         menu.addEventListener("click", e => {
-                            const fill = {
-                                width: "100%",
-                                height: "100%"
-                            }
-                            const center = {
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center"
-                            }
-                            const boldText = {
-                                fontSize: "30px",
-                                fontWeight: "600"
-                            }
                             if (!document.getElementById("downloadPopup")) {
                                 const popup = document.createElement("div")
                                 document.body.appendChild(popup)
@@ -355,8 +351,11 @@ addEventListener("load", async () => {
                                     top: "0",
                                     left: "0",
                                     zIndex: "30",
-                                    ...fill,
-                                    ...center
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    width: "100%",
+                                    height: "100%"
                                 })
                                 const bodyPopup = document.createElement("div")
                                 popup.appendChild(bodyPopup)
@@ -366,8 +365,11 @@ addEventListener("load", async () => {
                                     background: "white",
                                     borderRadius: "10px",
                                     flexDirection: "column",
-                                    ...center,
-                                    ...fill
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    width: "100%",
+                                    height: "100%"
                                 })
                                 const titleBar = document.createElement("div")
                                 bodyPopup.appendChild(titleBar)
@@ -380,8 +382,11 @@ addEventListener("load", async () => {
                                 titleBar.appendChild(title)
                                 Object.assign(title.style, {
                                     width: "calc(100% - 40px)",
-                                    ...boldText,
-                                    ...center
+                                    fontSize: "30px",
+                                    fontWeight: "600",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center"
                                 })
                                 title.innerHTML = "種類を選択してください。"
                                 const closeButoon = document.createElement("div")
@@ -394,7 +399,9 @@ addEventListener("load", async () => {
                                     borderRadius: "5px",
                                     cursor: "pointer",
                                     background: "black",
-                                    ...center
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center"
                                 })
                                 closeButoon.innerHTML = "閉じる"
                                 closeButoon.addEventListener("click", e => popup.style.display = "none")
@@ -407,10 +414,9 @@ addEventListener("load", async () => {
                                     justifyContent: "space-around"
                                 })
                                 info.id = "popupInfo"
-                            } else {
-                                downloadPopup.style.display = "flex"
                             }
                             const downloadPopup = document.getElementById("downloadPopup")
+                            downloadPopup.style.display = "flex"
                             const info = document.getElementById("popupInfo")
                             info.innerHTML = ""
                             const videoId = menuData.data.videoId
@@ -428,7 +434,8 @@ addEventListener("load", async () => {
                                 const text = document.createElement("div")
                                 Info.appendChild(text)
                                 Object.assign(text.style, {
-                                    ...boldText
+                                    fontSize: "30px",
+                                    fontWeight: "600"
                                 })
                                 text.innerHTML = type[i]
                                 const DLButoon = document.createElement("a")
@@ -440,8 +447,11 @@ addEventListener("load", async () => {
                                     background: "rgb(100, 200, 255)",
                                     borderRadius: "5px",
                                     cursor: "pointer",
-                                    ...fill,
-                                    ...center
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    width: "100%",
+                                    height: "100%"
                                 })
                                 DLButoon.href = "/ytDownload/" + videoId + "?type=" + i
                                 DLButoon.innerHTML = "ダウンロード"
@@ -451,6 +461,15 @@ addEventListener("load", async () => {
                 }
             }
         }
+        contextmenu.classList.add("contextmenuViewed")
+        let pageX = e.pageX + 2
+        let pageY = e.pageY - 5
+        if ((contextmenu.clientWidth + pageX) > document.body.clientWidth)
+            pageX = document.body.clientWidth - contextmenu.clientWidth
+        if ((contextmenu.clientHeight + pageY) > document.body.clientHeight)
+            pageY = document.body.clientHeight - contextmenu.clientHeight
+        contextmenu.style.top = pageY
+        contextmenu.style.left = pageX
     }
     /**
      * 動画を取得する関数
@@ -511,17 +530,20 @@ addEventListener("load", async () => {
                 titleAria.appendChild(iconAria)
                 titleAria.appendChild(infoAria)
                 videoWindow.addEventListener("contextmenu", async e => {
-                    contextmenu(e, [
-                        [
-                            {
-                                name: "ダウンロード",
-                                id: "download",
-                                data: {
-                                    videoId: videoId
+                    contextmenu(e, {
+                        title: videoId,
+                        contextmenu: [
+                            [
+                                {
+                                    name: "ダウンロード",
+                                    id: "download",
+                                    data: {
+                                        videoId: videoId
+                                    }
                                 }
-                            }
+                            ]
                         ]
-                    ])
+                    })
                 })
                 new Promise(async resolve => {
                     videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({

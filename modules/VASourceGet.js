@@ -8,7 +8,7 @@ const fs = require("fs")
  */
 module.exports.VASourceGet = async (videopath, range, type, res) => {
     const videoSize = fs.statSync(videopath).size //ファイルサイズ(byte)
-    const chunkSize = 1 * 1e6 //チャンクサイズ
+    const chunkSize = 1 * 1e7 //チャンクサイズ
 
     const ranges = String(range).split("-")
     //これは取得するデータ範囲を決定します。

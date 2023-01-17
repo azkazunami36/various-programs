@@ -23,6 +23,8 @@ module.exports.ytVideoGetErrorMessage = message => {
         return "エラーにより通信がリセットされました。"
     if (message.match(/connect ETIMEDOUT/))
         return "通信がタイムアウトしました。"
+    if (message.match(/connect ECONNREFUSED/))
+        return "通信が拒否されました。"
     if (message.match(/connect ENETUNREACH/))
         return "通信がタイムアウトしました。"
     if (message == "write EPIPE")
