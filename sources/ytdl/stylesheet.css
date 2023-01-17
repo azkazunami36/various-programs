@@ -355,33 +355,18 @@ body {
     margin: 7.5px;
     margin-left: 0px;
 }
-#frontBTBottom {
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    position: absolute;
-    display: flex;
-    align-items: flex-end;
-    z-index: -1;
-}
-
-#FBTBoToolBar {
-    display: flex;
-    justify-content: flex-end;
-    width: 100%;
-    height: 30px;
-    margin: 10px;
-}
 
 #FBTBoToolBackGround {
     display: flex;
     width: auto;
-    height: 100%;
+    height: 30px;
     padding: 0 7.5px;
     background: rgb(0, 93, 253);
     border-radius: 99px;
     z-index: 20;
+    position: fixed;
+    right: 10px;
+    bottom: 10px;
 }
 
 .FBTBoBody {
