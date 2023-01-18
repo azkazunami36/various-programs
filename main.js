@@ -85,7 +85,6 @@
         if (port != "80") address += ":" + port //Webではポート80がデフォルトなため、省略としてif
         console.info("ポート" + port + "でWebを公開しました！ " + address + " にアクセスして、操作を開始します！")
     })
-    app.use(cors())
     app.get("*", async (req, res) => {
         console.log("Get :", req.url) //URL確認
         if (req.url == "/" || req.url == "/sources/index.html") { //ルートとindex.htmlが取得できる
@@ -209,6 +208,7 @@
 
         } else if (req.url.match(/\/ytvideo\/*/)) { //YouTube動画にアクセスする
             const videoId = String(req.url).split("/ytvideo/")[1] //urlから情報を取得
+            if (!await sourceExist(videoId, "video")) await youtubedl(videoId, "video")
             const videopath = await sourceExist(videoId, "video") //パス
             if (videopath) //動画が存在したら
                 VASourceGet(videopath, req.headers.range, (await passContentTypeGet(videopath)), res) //動画を送信
@@ -238,8 +238,13 @@
                  * @type {string}
                  */
                 const title = dtbs.ytdlRawInfoData[videoId].title
-                const filename = ((title.length > 75) ? title.substring(0, 75) : title) + type
-                res.download(videopath, filename)
+                const filename = ((title.length > 75) ? title.substring(0, 75) : title) + "." + type
+                const headers = {} //ヘッダー
+                headers["Content-Length"] = String(fs.statSync(videopath).size)
+                headers["Content-Disposition"] = "attachment; filename=" + encodeURI(filename)
+                res.writeHead(200, headers)
+                const Stream = fs.createReadStream(videopath)
+                Stream.pipe(res)
             }
             else { //存在しない場合400
                 console.log("あれっ...動画は...？")
@@ -249,6 +254,7 @@
 
         } else if (req.url.match(/\/ytaudio\/*/)) { //YouTube音声にアクセスする
             const videoId = String(req.url).split("/ytaudio/")[1] //urlから情報を取得
+            if (!await sourceExist(videoId, "audio")) await youtubedl(videoId, "audio")
             const audiopath = await sourceExist(videoId, "audio") //パス
             if (audiopath) //音声が存在したら
                 VASourceGet(audiopath, req.headers.range, (await passContentTypeGet(audiopath)), res) //音声を送信
@@ -313,10 +319,12 @@
                     const exisytdl = dtbs.ytdlRawInfoData[videoId] //ただ存在を確認するためだけなので、ね？
                     if (!exisytdl) //rawデータにvideoIdのデータが無い場合
                         dtbs.ytdlRawInfoData[videoId] = await ytVideoInfoGet(videoId, dtbs.ytdlRawInfoData) //情報を取得
+                    if (!dtbs.ytdlRawInfoData[videoId]) return res.end()
                     const authorId = dtbs.ytdlRawInfoData[videoId].author.id //ChannelIDを取得
                     const exisytch = dtbs.ytchRawInfoData[authorId] //ただ存在を確認するd(ry
                     if (!exisytch) //rawデータにauthorIdのデータが無い場合
                         dtbs.ytchRawInfoData[authorId] = await ytAuthorInfoGet(authorId, dtbs.ytchRawInfoData) //情報を取得
+                    if (!dtbs.ytchRawInfoData[authorId]) return res.end()
                     if (!exisytdl || !exisytch) {
                         await saveingJson() //保存
                         dtbs.ytIndex = await ytIndexCreate(videoId, dtbs.ytIndex, dtbs.ytdlRawInfoData[videoId]) //インデックス作成
@@ -425,7 +433,7 @@
         await saveingJson()
         await ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(true)
+    startToInfomation(false)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")
