@@ -9,7 +9,9 @@ module.exports.ytAuthorInfoGet = async (authorId, ytchRawInfoData) => await new 
     if (!ytchRawInfoData[authorId]) await ytch.getChannelInfo({ channelId: authorId }).then(info => {
         console.log("取得完了" + info.author)
         resolve(info)
+    }).catch(e => {
+        console.log(authorId + " のユーザー情報の取得中にエラーが発生しました。: " + e)
+        resolve(null)
     })
-        .catch((e) => console.log(e))
     else resolve(ytchRawInfoData[authorId])
 })

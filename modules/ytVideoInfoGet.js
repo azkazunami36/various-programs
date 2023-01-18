@@ -10,8 +10,10 @@ module.exports.ytVideoInfoGet = async (videoId, ytdlRawInfoData) => {
         if (!ytdlRawInfoData[videoId]) await ytdl.getInfo(videoId).then(async info => {
             console.log("取得完了: " + info.videoDetails.title)
             resolve(info.videoDetails)
+        }).catch(e => {
+            console.log(videoId + " の動画取得中にエラーが発生しました。: " + e)
+            resolve(null)
         })
-            .catch((e) => console.log(e))
         else resolve(ytdlRawInfoData[videoId])
     })
 }
