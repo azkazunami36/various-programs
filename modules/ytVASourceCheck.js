@@ -8,9 +8,14 @@ const wait = require("util").promisify(setTimeout)
 module.exports.ytVASourceCheck = async ytIndex => {
     const savePass = require("../dataPass.json").default
     const videoIds = Object.keys(ytIndex.videoIds)
+    let time = Date.now()
     for (let i = 0; i != videoIds.length; i++) {
         const videoId = videoIds[i]
-        console.log("ソース有無確認 " + videoId + " : 残り " + String(videoIds.length - (i + 1)) + " 個")
+        const nowTime = Date.now()
+        if ((time + 500) < nowTime) {
+            time = nowTime
+            console.log("ソース有無確認 " + videoId + " : 残り " + String(videoIds.length - (i + 1)) + " 個")
+        }
         if (!await require("./ytPassGet").sourceExist(videoId, "video"))
             await require("./ytPassGet").youtubedl(videoId, "video")
         if (!await require("./ytPassGet").sourceExist(videoId, "audio"))
