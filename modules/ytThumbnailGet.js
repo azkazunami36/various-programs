@@ -33,6 +33,8 @@ module.exports.ytThumbnailGet = async (videoId, resize) => {
         })
     }
     if (resize && !fs.existsSync(savePass + "cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + resize.ratio + "-" + resize.size + ".jpg")) {
+        if (!Number(resize.ratio) || !Number(resize.size)) return //エラー回避
+        console.log(Number(resize.ratio),Number(resize.size))
         if (!fs.existsSync(savePass + "cache/YouTubeThumbnail/" + videoId + ".jpg")) return
         await new Promise(async resolve => {
             //大きさなどを取得
