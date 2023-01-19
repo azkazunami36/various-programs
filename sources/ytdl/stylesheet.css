@@ -391,14 +391,12 @@ body {
 }
 
 .contextmenu {
-    background: rgba(50, 50, 50, 0.5);
     min-width: 5px;
     min-height: 5px;
-    padding: 4px;
+    padding: 0.1px;
     position: fixed;
     border: 0.8px solid black;
     border-radius: 7.5px;
-    backdrop-filter: blur(30px);
     z-index: 30;
     opacity: 0;
     transform: scaleX(0);
@@ -406,6 +404,14 @@ body {
     left: 0;
     animation-name: fade-out;
     animation-duration: .25s;
+}
+
+#contextBody {
+    background: rgba(50, 50, 50, 0.75);
+    backdrop-filter: blur(30px);
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 7.5px;
 }
 
 @keyframes fade-out {
@@ -441,14 +447,12 @@ body {
     font-size: 12px;
     font-weight: 400;
     color: white;
-    padding: 2.5px 7.5px;
+    padding: 1.5px 7.5px 4px 7.5px;
     border-radius: 5px;
-    padding-bottom: 5px;
-    padding-right: 50px;
 }
 
 .menuItem:hover {
-    background: rgb(50, 156, 255);
+    background: rgba(0, 132, 255, 0.9);
 }
 
 .contextmenuPT {
@@ -462,6 +466,6 @@ body {
 
 .contextmenuPTB {
     width: calc(100% - 15px);
-    height: 1px;
+    height: 1.1px;
     background: rgba(255, 255, 255, 0.25);
 }

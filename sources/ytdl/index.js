@@ -43,7 +43,8 @@ addEventListener("load", async () => {
         if (sBottom < videorow * 100 + cHeight) videoLoad()
     }
     let videoLoaded = 0 //ロード済みの動画をカウント
-    let videos //サーバーから取得したVideoIDを保管
+    let videoIds //サーバーから取得したVideoIDを保管
+    let videos
     let videoloading = false //読み込み中かどうか
     /**
      * 動画を取得しリストに追加する関数
@@ -56,20 +57,27 @@ addEventListener("load", async () => {
         //ブラウザサイズからどれほど動画を並べられるか判断
         const row = (VideoListCenter.clientWidth / thumbnailWidth).toFixed()
         //videosが無かったらサーバーからデータを取得する
-        if (!videos) {
-            videos = JSON.parse(await httpDataRequest("ytvideo-list"))
+        if (!videoIds) {
+            videos = JSON.parse(await httpDataRequest("ytindex-list"))
+            videoIds = Object.keys(videos)
+            for (let i = 0; videoIds.length != i; i++) {
+                const rm = Math.floor(Math.random() * i)
+                let tmp = videoIds[i]
+                videoIds[i] = videoIds[rm]
+                videoIds[rm] = tmp
+            }
             let logout = ""
-            for (let i = 0; videos.length != i; i++) logout += videos[i] + "\n"
+            for (let i = 0; videoIds.length != i; i++) logout += videoIds[i] + "\n"
             console.log(logout)
         }
-        if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
+        if (videoLoaded > (videoIds.length - 1)) return //読み込める動画がもう無かったらリターン
         for (let i = 0; i != row; i++) {
             new Promise(async resolve => {
-                if (videoLoaded > (videos.length - 1)) return //読み込める動画がもう無かったらリターン
+                if (videoLoaded > (videoIds.length - 1)) return //読み込める動画がもう無かったらリターン
                 const videoLink = document.createElement("div")
                 VideoListCenter.appendChild(videoLink)
 
-                const videoId = videos[videoLoaded] //VideoID
+                const videoId = videoIds[videoLoaded] //VideoID
                 const ratio = (window.devicePixelRatio || 1).toFixed(2)
                 const videoWindow = document.createElement("div")
                 const thumbnailImage = document.createElement("div")
@@ -93,6 +101,9 @@ addEventListener("load", async () => {
                 videoAuthor.classList.add("VideoAuthor")
                 clickme.classList.add("clickme")
                 thumbnailimg.src = "/ytimage/" + videoId + "?size=" + thumbnailWidth + "&ratio=" + ratio
+                authorIcon.src = "/ytauthorimage/" + videos[videoId].author.id + "?size=32&ratio=" + ratio
+                videoTitle.innerHTML = videos[videoId].title
+                videoAuthor.innerHTML = videos[videoId].author.name
                 clickme.href = "./watch?v=" + videoId
                 videoLink.appendChild(videoWindow)
                 videoWindow.appendChild(thumbnailImage)
@@ -142,22 +153,6 @@ addEventListener("load", async () => {
                             ]
                         ]
                     })
-                })
-                new Promise(async resolve => {
-                    videoTitle.innerHTML = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                        videoId: videoId,
-                        request: "title"
-                    })))
-                    resolve()
-                })
-                new Promise(async resolve => {
-                    const author = JSON.parse(await httpDataRequest("ytdlRawInfoData", JSON.stringify({
-                        videoId: videoId,
-                        request: "author"
-                    })))
-                    videoAuthor.innerHTML = author.name
-                    authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
-                    resolve()
                 })
                 await wait(1)
                 resolve()
@@ -312,21 +307,34 @@ addEventListener("load", async () => {
         const remove = e => contextmenu.classList.remove("contextmenuViewed")
         if (!document.getElementById("contextmenu")) {
             const contextmenu = document.createElement("div")
-            document.body.appendChild(contextmenu)
             contextmenu.id = "contextmenu"
             contextmenu.classList.add("contextmenu")
+            const contextBody = document.createElement("div")
+            contextmenu.appendChild(contextBody)
+            contextBody.id = "contextBody"
             addEventListener("click", remove)
+            let status = 0
+            contextmenu.addEventListener("mouseleave", e => {
+                if (status != 0) addEventListener("click", remove)
+                status = 0
+            })
+            contextmenu.addEventListener("mouseover", e => {
+                if (status != 1) removeEventListener("click", remove)
+                status = 1
+            })
+            document.body.appendChild(contextmenu)
         }
         const contextmenu = document.getElementById("contextmenu")
+        const contextBody = document.getElementById("contextBody")
         if (contextmenu.classList.contains("contextmenuViewed")) {
             contextmenu.classList.remove("contextmenuViewed")
             await wait(250)
         }
-        contextmenu.innerHTML = ""
+        contextBody.innerHTML = ""
         for (let i = 0; i != context.contextmenu.length; i++) {
             if (i != 0) {
                 const partition = document.createElement("div")
-                contextmenu.appendChild(partition)
+                contextBody.appendChild(partition)
                 partition.classList.add("contextmenuPT")
                 const PTColor = document.createElement("div")
                 partition.appendChild(PTColor)
@@ -335,130 +343,15 @@ addEventListener("load", async () => {
             for (let n = 0; n != context.contextmenu[i].length; n++) {
                 const menuData = context.contextmenu[i][n]
                 const menu = document.createElement("div")
-                contextmenu.appendChild(menu)
+                contextBody.appendChild(menu)
                 menu.classList.add("menuItem")
                 menu.innerHTML = menuData.name
-                switch (menuData.id) {
-                    case "download": {
-                        menu.addEventListener("click", e => {
-                            if (!document.getElementById("downloadPopup")) {
-                                const popup = document.createElement("div")
-                                document.body.appendChild(popup)
-                                popup.id = "downloadPopup"
-                                Object.assign(popup.style, {
-                                    position: "absolute",
-                                    background: "rgba(0, 0, 0, 0.2)",
-                                    top: "0",
-                                    left: "0",
-                                    zIndex: "30",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    width: "100%",
-                                    height: "100%"
-                                })
-                                const bodyPopup = document.createElement("div")
-                                popup.appendChild(bodyPopup)
-                                Object.assign(bodyPopup.style, {
-                                    maxWidth: "500px",
-                                    maxHeight: "350px",
-                                    background: "white",
-                                    borderRadius: "10px",
-                                    flexDirection: "column",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    width: "100%",
-                                    height: "100%"
-                                })
-                                const titleBar = document.createElement("div")
-                                bodyPopup.appendChild(titleBar)
-                                Object.assign(titleBar.style, {
-                                    width: "100%",
-                                    height: "15%",
-                                    display: "flex"
-                                })
-                                const title = document.createElement("div")
-                                titleBar.appendChild(title)
-                                Object.assign(title.style, {
-                                    width: "calc(100% - 40px)",
-                                    fontSize: "30px",
-                                    fontWeight: "600",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center"
-                                })
-                                title.innerHTML = "種類を選択してください。"
-                                const closeButoon = document.createElement("div")
-                                titleBar.appendChild(closeButoon)
-                                Object.assign(closeButoon.style, {
-                                    width: "40px",
-                                    height: "100%",
-                                    fontSize: "9px",
-                                    color: "white",
-                                    borderRadius: "5px",
-                                    cursor: "pointer",
-                                    background: "black",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center"
-                                })
-                                closeButoon.innerHTML = "閉じる"
-                                closeButoon.addEventListener("click", e => popup.style.display = "none")
-                                const info = document.createElement("div")
-                                bodyPopup.appendChild(info)
-                                Object.assign(info.style, {
-                                    width: "80%",
-                                    height: "80%",
-                                    display: "flex",
-                                    justifyContent: "space-around"
-                                })
-                                info.id = "popupInfo"
-                            }
-                            const downloadPopup = document.getElementById("downloadPopup")
-                            downloadPopup.style.display = "flex"
-                            const info = document.getElementById("popupInfo")
-                            info.innerHTML = ""
-                            const videoId = menuData.data.videoId
-                            const type = ["mp4", "WebM", "Raw"]
-                            for (let i = 0; type.length != i; i++) {
-                                const Info = document.createElement("div")
-                                info.appendChild(Info)
-                                Object.assign(Info.style, {
-                                    height: "100%",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-evenly",
-                                    flexDirection: "column"
-                                })
-                                const text = document.createElement("div")
-                                Info.appendChild(text)
-                                Object.assign(text.style, {
-                                    fontSize: "30px",
-                                    fontWeight: "600"
-                                })
-                                text.innerHTML = type[i]
-                                const DLButoon = document.createElement("a")
-                                Info.appendChild(DLButoon)
-                                DLButoon.id = type[i] + "Link"
-                                Object.assign(DLButoon.style, {
-                                    maxWidth: "115px",
-                                    maxHeight: "35px",
-                                    background: "rgb(100, 200, 255)",
-                                    borderRadius: "5px",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    width: "100%",
-                                    height: "100%"
-                                })
-                                DLButoon.href = "/ytDownload/" + videoId + "?type=" + i
-                                DLButoon.innerHTML = "ダウンロード"
-                            }
-                        })
+                menu.addEventListener("click", e => {
+                    switch (menuData.id) {
+                        case "download": downloadPopup(menuData.data.videoId); break
                     }
-                }
+                    contextmenu.classList.remove("contextmenuViewed")
+                })
             }
         }
         contextmenu.classList.add("contextmenuViewed")
@@ -470,6 +363,122 @@ addEventListener("load", async () => {
             pageY = document.body.clientHeight - contextmenu.clientHeight
         contextmenu.style.top = pageY
         contextmenu.style.left = pageX
+    }
+    const downloadPopup = videoId => {
+        if (!document.getElementById("downloadPopup")) {
+            const popup = document.createElement("div")
+            document.body.appendChild(popup)
+            popup.id = "downloadPopup"
+            Object.assign(popup.style, {
+                position: "absolute",
+                background: "rgba(0, 0, 0, 0.2)",
+                top: "0",
+                left: "0",
+                zIndex: "30",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%",
+                height: "100%"
+            })
+            const bodyPopup = document.createElement("div")
+            popup.appendChild(bodyPopup)
+            Object.assign(bodyPopup.style, {
+                maxWidth: "500px",
+                maxHeight: "350px",
+                background: "white",
+                borderRadius: "10px",
+                flexDirection: "column",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%",
+                height: "100%"
+            })
+            const titleBar = document.createElement("div")
+            bodyPopup.appendChild(titleBar)
+            Object.assign(titleBar.style, {
+                width: "100%",
+                height: "15%",
+                display: "flex"
+            })
+            const title = document.createElement("div")
+            titleBar.appendChild(title)
+            Object.assign(title.style, {
+                width: "calc(100% - 40px)",
+                fontSize: "30px",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+            })
+            title.innerHTML = "種類を選択してください。"
+            const closeButoon = document.createElement("div")
+            titleBar.appendChild(closeButoon)
+            Object.assign(closeButoon.style, {
+                width: "40px",
+                height: "100%",
+                fontSize: "9px",
+                color: "white",
+                borderRadius: "5px",
+                cursor: "pointer",
+                background: "black",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+            })
+            closeButoon.innerHTML = "閉じる"
+            closeButoon.addEventListener("click", e => popup.style.display = "none")
+            const info = document.createElement("div")
+            bodyPopup.appendChild(info)
+            Object.assign(info.style, {
+                width: "80%",
+                height: "80%",
+                display: "flex",
+                justifyContent: "space-around"
+            })
+            info.id = "popupInfo"
+        }
+        const downloadPopup = document.getElementById("downloadPopup")
+        downloadPopup.style.display = "flex"
+        const info = document.getElementById("popupInfo")
+        info.innerHTML = ""
+        const type = ["mp4", "WebM", "Raw"]
+        for (let i = 0; type.length != i; i++) {
+            const Info = document.createElement("div")
+            info.appendChild(Info)
+            Object.assign(Info.style, {
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-evenly",
+                flexDirection: "column"
+            })
+            const text = document.createElement("div")
+            Info.appendChild(text)
+            Object.assign(text.style, {
+                fontSize: "30px",
+                fontWeight: "600"
+            })
+            text.innerHTML = type[i]
+            const DLButoon = document.createElement("a")
+            Info.appendChild(DLButoon)
+            DLButoon.id = type[i] + "Link"
+            Object.assign(DLButoon.style, {
+                maxWidth: "115px",
+                maxHeight: "35px",
+                background: "rgb(100, 200, 255)",
+                borderRadius: "5px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%",
+                height: "100%"
+            })
+            DLButoon.href = "/ytDownload/" + videoId + "?type=" + i
+            DLButoon.innerHTML = "ダウンロード"
+        }
     }
     /**
      * 動画を取得する関数
@@ -485,8 +494,11 @@ addEventListener("load", async () => {
         for (let i = 0; i != videolist.length; i++) {
             new Promise(async resolve => {
                 const videoId = await httpDataRequest("youtube-videoId", videolist[i])
-                console.log(videoId)
-                videonum++
+                if (!videoId) {
+                    return infoTitle.innerHTML = videonum + "本の動画を取得しました！"
+                } else videonum++
+                const videoDetails = JSON.parse(await httpDataRequest("ytdlRawInfoData", videoId))
+                console.log(videoId, videoDetails)
                 infoTitle.innerHTML = videonum + "本の動画を取得しました！"
                 const popupVideoLink = document.createElement("div")
                 infoVideos.appendChild(popupVideoLink)
@@ -517,6 +529,9 @@ addEventListener("load", async () => {
                 videoAuthor.style.color = "black"
                 videoAuthor.style.fontSize = "4px"
                 clickme.classList.add("clickme")
+                videoTitle.innerHTML = videoDetails.title
+                videoAuthor.innerHTML = videoDetails.author.name
+                authorIcon.src = "/ytauthorimage/" + videoDetails.author.id + "?size=32&ratio=" + ratio
                 thumbnailimg.src = "/ytimage/" + videoId + "?size=" + thumbnailWidth + "&ratio=" + ratio
                 clickme.href = "./watch?v=" + videoId
                 popupVideoLink.appendChild(videoWindow)
