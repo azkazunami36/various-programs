@@ -34,7 +34,7 @@ async function wait(time) { await new Promise(resolve => setTimeout(() => resolv
  * ２: 一番下から数えた数  
  * この２が１より小さいとなった場合、trueが返されます。
  */
-function ifScrollBottom() {
+async function ifScrollBottom() {
     const videoList = document.getElementById("videoList")
     const sHeight = videoList.scrollHeight //要素の高さ
     const cHeight = videoList.clientHeight //クライアントに映ってる要素の高さ
@@ -46,28 +46,28 @@ function ifScrollBottom() {
 /**
  * 倍率状態を更新します。
  */
-function updateRatio() { statusData["ratio"] = (window.devicePixelRatio || 1).toFixed(2) }
+async function updateRatio() { statusData["ratio"] = (window.devicePixelRatio || 1).toFixed(2) }
 /**
  * 動画の並ぶ数を更新します。
  */
-function updateRow() {
+async function updateRow() {
     const videonum = (document.getElementById("VideoListCenter").clientWidth / statusData["thumbnailWidth"]).toFixed()
     if (videonum != statusData["videoRow"]) {
-        const videoLinkStyle = getRuleBySelector(".VideoLink")
+        const videoLinkStyle = await getRuleBySelector(".VideoLink")
         statusData["videoRow"] = videonum
         //スタイルに反映
         videoLinkStyle.style.width = "calc(100% / " + String(videonum) + ")"
     }
     const popupvideonum = (document.getElementById("infoVideos").clientWidth / 250).toFixed()
     if (popupvideonum != statusData["popupVideoRow"]) {
-        const popupvideoLinkStyle = getRuleBySelector(".popupVideoLink")
+        const popupvideoLinkStyle = await getRuleBySelector(".popupVideoLink")
         statusData["popupVideoRow"] = popupvideonum
         //スタイルに反映
         popupvideoLinkStyle.style.width = "calc(100% / " + String(videonum) + ")"
     }
-    if (ifScrollBottom()) videoLoad() //サイズ変更時に一番下まで移動してしまったら読み込む
+    if (await ifScrollBottom()) videoLoad() //サイズ変更時に一番下まで移動してしまったら読み込む
 }
-function updateState() {
+async function updateState() {
     updateRatio()
     updateRow()
 }
@@ -107,7 +107,7 @@ async function videoLoad(g) {
         })
     }
     //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
-    if (ifScrollBottom()) videoLoad(true)
+    if (await ifScrollBottom()) videoLoad(true)
     else statusData["videoloading"] = false //出なければ読み込み終了
 }
 /**
@@ -253,7 +253,7 @@ async function createVT(Element, data) {
     })
 }
 //ネットから見つけたやぁつぅ
-function getRuleBySelector(sele) {
+async function getRuleBySelector(sele) {
     const styleSheets = document.styleSheets; //全てのcssを取得する
 
     for (let i = 0; i < styleSheets.length; i++) { //cssの数だけ
@@ -270,7 +270,7 @@ function getRuleBySelector(sele) {
  * バックグラウンドを黒くしたり消したりする関数
  * @param {boolean} status 
  */
-function BlackBackground(status) {
+async function BlackBackground(status) {
     //暗転するための要素を取得
     const ytBlackBackground = document.getElementById("BlackBackground")
     const blacked = document.getElementsByClassName("Blacked")
@@ -350,7 +350,7 @@ async function contextmenu(e, context) {
     contextmenu.style.top = pageY
     contextmenu.style.left = pageX
 }
-function downloadPopup(videoId) {
+async function downloadPopup(videoId) {
     if (!document.getElementById("downloadPopup")) {
         const popup = document.createElement("div")
         document.body.appendChild(popup)
@@ -470,7 +470,7 @@ function downloadPopup(videoId) {
  * 動画を取得する関数
  * @param {[]} videolist 
  */
-const ytdlInfoGet = async videolist => {
+async function ytdlInfoGet(videolist) {
     const infoVideos = document.getElementById("infoVideos")
     const infoTitle = document.getElementById("infoTitle")
     infoTitle.innerHTML = "サーバーの返答を待っています..."
