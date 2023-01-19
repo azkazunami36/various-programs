@@ -159,7 +159,6 @@
             }
 
         } else if (req.url.match(/\/ytimage\/*/)) { //YouTubeサムネイルにアクセスする
-            await wait(Math.floor(Math.random() * 450) + 50) //安定のため応答にラグを作る
             const info = String(req.url).split("/ytimage/")[1].split("?") //urlから情報を取得
             const videoId = info[0] //urlからVideoIDを取得
             let param = {}

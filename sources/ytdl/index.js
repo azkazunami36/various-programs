@@ -41,7 +41,7 @@ async function ifScrollBottom() {
     const sTop = videoList.scrollTop //スクロールされている場所
     const cBottom = cHeight + sTop //下を基準にするため
     const sBottom = sHeight - cBottom //下から数えたスクロールされている場所
-    return statusData["videoRow"] * 100 + cHeight > sBottom
+    return statusData["videoRow"] * 200 + cHeight > sBottom
 }
 /**
  * 倍率状態を更新します。
