@@ -293,7 +293,10 @@ async function BlackBackground(status) {
  */
 async function contextmenu(e, context) {
     e.preventDefault() //メニューを表示しないように
-    const remove = e => contextmenu.classList.remove("contextmenuViewed") //非表示にするときの関数
+    const remove = e => { //非表示にするときの関数
+        if (e) e.preventDefault()
+        contextmenu.classList.remove("contextmenuViewed")
+    }
     if (!document.getElementById("contextmenu")) {
         const contextmenu = document.createElement("div") //外枠(黒ライン)
         contextmenu.id = "contextmenu"
@@ -327,7 +330,7 @@ async function contextmenu(e, context) {
     }
     contextBody.innerHTML = ""
     for (let i = 0; i != context.contextmenu.length; i++) {
-        if (!i) {
+        if (i != 0) {
             const partition = document.createElement("div")
             contextBody.appendChild(partition)
             partition.classList.add("contextmenuPT")
@@ -522,40 +525,40 @@ addEventListener("load", async () => {
     updateState()
     updateRow() //動画の列を初期化する
     videoLoad() //初回の動画読み込みをする
-    videoList.addEventListener("scroll", e => {
+    videoList.addEventListener("scroll", async e => {
         /** 
          * 一番下についている場合、1pxだけ上に戻す(多分1px)
          */
         if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < 1) videoList.scrollTop--
-        if (ifScrollBottom()) videoLoad() //スクロールすると動画を読み込むかを検証する
+        if (await ifScrollBottom()) videoLoad() //スクロールすると動画を読み込むかを検証する
     })
     const ytURLSend = document.getElementById("URLSend") //ボタンの取得
     const infoPopup = document.getElementById("infoPopup") //ポップアップウィンドウを取得
     const ytURLBox = document.getElementById("URLBox") //テキストボックスの取得
     const msDataBox = document.getElementById("msDataBox") //テキストボックスの取得
-    ytURLSend.addEventListener("click", e => { //クリックされたら
+    ytURLSend.addEventListener("click", async e => { //クリックされたら
         infoPopup.classList.add("Popuped") //クラス「ポップアップ有効化用」を追加
         BlackBackground(true)
         ytdlInfoGet([ytURLBox.value]) //関数に送信
     })
     const infoPopupCloseBtn = document.getElementById("infoPopupCloseBtn") //ポップアップを閉じるボタンの取得
-    infoPopupCloseBtn.addEventListener("click", e => { //クリックされたら
+    infoPopupCloseBtn.addEventListener("click", async e => { //クリックされたら
         infoPopup.classList.remove("Popuped") //クラス「ポップアップ有効化用」を削除
         BlackBackground(false)
     })
     const ytmultichoice = document.getElementById("multichoice") //ボタンの取得
     const multichoicePopup = document.getElementById("msPopup") //ポップアップウィンドウを取得
-    ytmultichoice.addEventListener("click", e => { //クリックされたら
+    ytmultichoice.addEventListener("click", async e => { //クリックされたら
         multichoicePopup.classList.add("Popuped") //クラス「ポップアップ有効化用」を追加
         BlackBackground(true)
     })
     const multichoiceCloseBtn = document.getElementById("msPopupCloseBtn") //ポップアップを閉じるボタンの取得
-    multichoiceCloseBtn.addEventListener("click", e => { //クリックされたら
+    multichoiceCloseBtn.addEventListener("click", async e => { //クリックされたら
         multichoicePopup.classList.remove("Popuped") //クラス「ポップアップ有効化用」を削除
         BlackBackground(false)
     })
     const MultiURLSend = document.getElementById("MultiURLSend") //ボタンの取得
-    MultiURLSend.addEventListener("click", e => {
+    MultiURLSend.addEventListener("click", async e => {
         const text = msDataBox.value
         try {
             ytdlInfoGet(JSON.parse(text))

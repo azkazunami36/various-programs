@@ -393,7 +393,6 @@ body {
 .contextmenu {
     min-width: 5px;
     min-height: 5px;
-    padding: 0.1px;
     position: fixed;
     border: 0.8px solid black;
     border-radius: 7.5px;
