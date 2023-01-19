@@ -327,7 +327,7 @@ async function contextmenu(e, context) {
     }
     contextBody.innerHTML = ""
     for (let i = 0; i != context.contextmenu.length; i++) {
-        if (i != 0) {
+        if (!i) {
             const partition = document.createElement("div")
             contextBody.appendChild(partition)
             partition.classList.add("contextmenuPT")
