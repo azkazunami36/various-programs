@@ -65,7 +65,19 @@ const audiocodec = [
         contentType: "audio/opus"
     }
 ]
-const speed = "ultrafast" //ffmpegのプリセットを決めます。
+//ffmpegのプリセットを決めます。
+const speed = [
+    "ultrafast", //[0]
+    "superfast", //[1]
+    "veryfast", //[2]
+    "faster", //[3]
+    "fast", //[4]
+    "medium", //[5]
+    "slow", //[6]
+    "slower", //[7]
+    "veryslow", //[8]
+    "placebo" //[9]
+][5]
 /**
  * YouTubeDLフォルダのローカルパスを取得します。
  * @param {string} videoId VideoIDを入力
@@ -165,7 +177,7 @@ const youtubedl = async (videoId, type) => {
  * @returns 
  */
 const sourceRequest = async (videoId, type) => {
-    const pass = savePass + "cache/YouTubeDL/" + videoId + "-" + (await codecMatchTest(type)).full
+    const pass = savePass + "cache/YouTubeDL/" + videoId + "-" + (await codecMatchTest(type)).full.split(".")[1]
     if (!fs.existsSync(pass)) {
         console.log("要求されたソース " + videoId + "/" + type + " はローカルに存在しないため、変換をし取得します。")
         const pass = await sourceExist(videoId, (await sourceType(type)))
@@ -229,7 +241,7 @@ const videoMarge = async (videoId, vcodec, acodec) => {
     if (videopass && audiopass) {
         await new Promise(async resolve => {
             console.log("ソース: " + videoId + " の" + vcodec + "と" + acodec + "の統合を開始します。")
-            const pass = savePass + "cache/YouTubeDLConvert/" + videoId + "-" + vcodec + "_" + acodec + ".mp4"
+            const pass = savePass + "cache/YouTubeDLConvert/" + videoId + "-" + vcodec + "_" + acodec + "." + (await codecMatchTest(vcodec)).full
             const convert = ffmpeg()
             convert.addInput(videopass)
             convert.addInput(audiopass)
