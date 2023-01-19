@@ -218,6 +218,15 @@ async function createVT(Element, data) {
             contextmenu: [
                 [
                     {
+                        name: "YouTubeで見る",
+                        id: "youtubeView",
+                        data: {
+                            videoId: videoId
+                        }
+                    }
+                ],
+                [
+                    {
                         name: "ダウンロード",
                         id: "download",
                         data: {
@@ -335,6 +344,7 @@ async function contextmenu(e, context) {
             menu.addEventListener("click", e => {
                 switch (menuData.id) {
                     case "download": downloadPopup(menuData.data.videoId); break
+                    case "youtubeView": window.open("https://www.youtube.com/watch?v=" + menuData.data.videoId)
                 }
                 remove()
             })
