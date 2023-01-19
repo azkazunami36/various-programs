@@ -294,7 +294,7 @@ async function BlackBackground(status) {
 async function contextmenu(e, context) {
     e.preventDefault() //メニューを表示しないように
     const remove = e => { //非表示にするときの関数
-        if (e) e.preventDefault()
+        if (e && contextmenu.classList.contains("contextmenuViewed")) e.preventDefault()
         contextmenu.classList.remove("contextmenuViewed")
     }
     if (!document.getElementById("contextmenu")) {
