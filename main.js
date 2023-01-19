@@ -288,6 +288,10 @@
                  * @returns 
                  */
                 const videoIdGet = async videoId => {
+                    if (!videoId) {
+                        console.log("VideoIDを取得するためのデータがありません: " + videoId)
+                        return null
+                    }
                     const time = Date.now() //経過時間を測ります。
                     const ytdlURL = ytdl.validateURL(videoId) //URLであるかどうか
                     const ytdlID = ytdl.validateID(videoId) //IDであるかどうか
@@ -339,6 +343,9 @@
                         if (await sourceExist(videoId, "audio"))
                             await youtubedl(videoId, "audio")
                     }
+                } else {
+                    res.header("Content-Type", "text/plain;charset=utf-8")
+                    res.end(videoId)
                 }
             })
         } else if (req.url == "/applcation-info") {
@@ -347,22 +354,28 @@
             res.end(JSON.stringify(processJson.Apps))
 
         } else if (req.url == "/ytvideo-list") {
-            //indexから高速でデータを取得するときに使用する
+            //indexから高速でデータを取得するときに使用する(現在非推奨)
             res.header("Content-Type", "text/plain;charset=utf-8")
             const videoIds = arrayRamdom(Object.keys(dtbs.ytIndex.videoIds))
             res.end(JSON.stringify(videoIds))
 
+        } else if (req.url == "/ytindex-list") {
+            //indexデータを取得する時に使用する
+            res.header("Content-Type", "text/plain;charset=utf-8")
+            res.end(JSON.stringify(dtbs.ytIndex.videoIds))
+
         } else if (req.url == "/ytdlRawInfoData") {
-            //そのままのデータを指定して取得するときに使用する
-            let data = ""
-            req.on("data", async chunk => data += chunk)
+            /**
+             * VideoIDのデータをそのまま取得する際に使用します。
+             */
+            let data
+            req.on("data", async chunk => {
+                if (data) data += chunk
+                if (!data) data = chunk
+            })
             req.on("end", async () => {
-                const { videoId, request } = JSON.parse(data)
                 res.header("Content-Type", "text/plain;charset=utf-8")
-                const details = dtbs.ytdlRawInfoData[videoId]
-                if (!details) return res.end("不明")
-                const text = JSON.stringify(details[request])
-                res.end(text || "不明")
+                res.end(JSON.stringify(dtbs.ytdlRawInfoData[data]) || "不明")
             })
 
         } else if (req.url == "/ytdlRawInfoArray") {
@@ -370,6 +383,7 @@
              * 動画リストのそのままの配列を渡す
              * 最後に取得した動画などを見るときに使います。
              * ただデータを取得したいだけの場合、パフォーマンス低下を防ぐため使わないように
+             * ytdlRawInfoDataと共に使用すれば、全データを取得することができます。
              */
             res.header("Content-Type", "text/plain;charset=utf-8")
             res.end(JSON.stringify(Object.keys(dtbs.ytdlRawInfoData)))
@@ -433,7 +447,7 @@
         await saveingJson()
         await ytVASourceCheck(dtbs.ytIndex)
     }
-    startToInfomation(false)
+    startToInfomation(true)
     const saveingJson = async () => {
         fs.writeFileSync("data.json", JSON.stringify(dtbs))
         console.log("JSON保存済み")

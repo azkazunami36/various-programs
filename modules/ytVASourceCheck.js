@@ -22,8 +22,8 @@ module.exports.ytVASourceCheck = async ytIndex => {
             await require("./ytPassGet").youtubedl(videoId, "audio")
         if (!fs.existsSync(savePass + "cache/YouTubeThumbnail/" + videoId + ".jpg"))
             await require("./ytThumbnailGet").ytThumbnailGet(videoId)
-        if (!fs.existsSync(savePass + "cache/ytAuthorIcon" + ytIndex.videoIds[videoId].authorId + ".jpg"))
-            await require("./ytAuthorIconGet").ytAuthorIconGet(ytIndex.videoIds[videoId].authorId)
+        if (!fs.existsSync(savePass + "cache/ytAuthorIcon" + ytIndex.videoIds[videoId].author.id + ".jpg"))
+            await require("./ytAuthorIconGet").ytAuthorIconGet(ytIndex.videoIds[videoId].author.id)
     }
     console.log("ソースの有無のチェックが完了しました。")
 }
