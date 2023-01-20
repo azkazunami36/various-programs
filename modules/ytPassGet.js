@@ -99,7 +99,7 @@ const ytPassGet = async (videoId, type) => {
         case "webm": {
             const vcodec = "vp9"
             const acodec = "opus"
-            const pass = savePass + "cache/YouTubeDLConvert/" + videoId + "-" + vcodec + "_" + acodec + ".mp4"
+            const pass = savePass + "cache/YouTubeDLConvert/" + videoId + "-" + vcodec + "_" + acodec + ".webm"
             if (!fs.existsSync(pass)) await videoMarge(videoId, vcodec, acodec)
             if (!fs.existsSync(pass)) {
                 console.log("エラー: 存在するはずのデータが存在しません。")
@@ -177,7 +177,7 @@ const youtubedl = async (videoId, type) => {
  * @returns 
  */
 const sourceRequest = async (videoId, type) => {
-    const pass = savePass + "cache/YouTubeDL/" + videoId + "-" + (await codecMatchTest(type)).full.split(".")[1]
+    const pass = savePass + "cache/YouTubeDL/" + videoId + "-" + (await codecMatchTest(type)).full
     if (!fs.existsSync(pass)) {
         console.log("要求されたソース " + videoId + "/" + type + " はローカルに存在しないため、変換をし取得します。")
         const pass = await sourceExist(videoId, (await sourceType(type)))
@@ -241,7 +241,7 @@ const videoMarge = async (videoId, vcodec, acodec) => {
     if (videopass && audiopass) {
         await new Promise(async resolve => {
             console.log("ソース: " + videoId + " の" + vcodec + "と" + acodec + "の統合を開始します。")
-            const pass = savePass + "cache/YouTubeDLConvert/" + videoId + "-" + vcodec + "_" + acodec + "." + (await codecMatchTest(vcodec)).full
+            const pass = savePass + "cache/YouTubeDLConvert/" + videoId + "-" + vcodec + "_" + acodec + "." + (await codecMatchTest(vcodec)).full.split(".")[1]
             const convert = ffmpeg()
             convert.addInput(videopass)
             convert.addInput(audiopass)
