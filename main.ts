@@ -8,6 +8,9 @@ import querystring from "querystring"
 const app = express()
 app.listen(80, async () => console.log("サーバーが立ち上がりました。"))
 
+/**
+ * コンテンツタイプ
+ */
 enum contentType {
     html = "text/html;charset=utf-8",
     plain = "text/plain;charset=utf-8",
@@ -58,64 +61,66 @@ interface settings {
     }
 }
 
-interface RelatedChannel {
-    channelName: string;
-    channelId: string;
-    channelUrl: string;
-    thumbnail: Image[];
-    videoCount: number;
-    subscriberText: string;
-    subscriberCount: number;
-    verified: boolean;
-    officialArist: boolean;
-}
-
-/**
- * ChannelInfo type returned by getChannelVideos and getChannelInfoMore
- */
-interface ChannelInfo {
-    author: string;
-    authorId: string;
-    authorUrl: string;
-    /**
-    * Is null if none exist
-    **/
-    authorBanners: Image[] | null;
-    /**
-    * Is null if none exist
-    **/
-    authorThumbnails: Image[] | null;
-    subscriberText: string;
-    subscriberCount: number;
-    description: string;
-    isFamilyFriendly: boolean;
-    relatedChannels: RelatedChannel[];
-    allowedRegions: string[];
-    isVerified: boolean;
-    isOfficialArtist: boolean;
-    tags: string[];
-    channelIdType: number;
-    channelTabs: string[];
-    alertMessage: string;
-    channelLinks: {
-        primaryLinks: ChannelLink[],
-        secondaryLinks: ChannelLink[]
+namespace ytchInterface {
+    interface RelatedChannel {
+        channelName: string;
+        channelId: string;
+        channelUrl: string;
+        thumbnail: Image[];
+        videoCount: number;
+        subscriberText: string;
+        subscriberCount: number;
+        verified: boolean;
+        officialArist: boolean;
     }
-}
-
-interface ChannelLink {
-    url: string,
-    icon: string,
-    title: string
-}
-
-/**
- * An Image which represents all banners and thumbnails
- */
-interface Image {
-    url: string;
-    height: number;
-    width: number;
+    
+    /**
+     * ChannelInfo type returned by getChannelVideos and getChannelInfoMore
+     */
+    export interface ChannelInfo {
+        author: string;
+        authorId: string;
+        authorUrl: string;
+        /**
+        * Is null if none exist
+        **/
+        authorBanners: Image[] | null;
+        /**
+        * Is null if none exist
+        **/
+        authorThumbnails: Image[] | null;
+        subscriberText: string;
+        subscriberCount: number;
+        description: string;
+        isFamilyFriendly: boolean;
+        relatedChannels: RelatedChannel[];
+        allowedRegions: string[];
+        isVerified: boolean;
+        isOfficialArtist: boolean;
+        tags: string[];
+        channelIdType: number;
+        channelTabs: string[];
+        alertMessage: string;
+        channelLinks: {
+            primaryLinks: ChannelLink[],
+            secondaryLinks: ChannelLink[]
+        }
+    }
+    
+    interface ChannelLink {
+        url: string,
+        icon: string,
+        title: string
+    }
+    
+    /**
+     * An Image which represents all banners and thumbnails
+     */
+    interface Image {
+        url: string;
+        height: number;
+        width: number;
+    }
 }
 
 interface data {
@@ -123,7 +128,7 @@ interface data {
         [videoId: string]: ytdl.VideoDetails
     },
     ytchRawInfoData: {
-        [authorId: string]: ChannelInfo
+        [authorId: string]: ytchInterface.ChannelInfo
     },
     ytIndex: {
         videoIds: {
@@ -216,7 +221,7 @@ namespace youtube {
             [videoId: string]: ytdl.VideoDetails
         },
         ytchRawInfoData: {
-            [authorId: string]: ChannelInfo
+            [authorId: string]: ytchInterface.ChannelInfo
         },
         ytIndex: {
             videoIds: {
@@ -246,7 +251,7 @@ namespace youtube {
                 [videoId: string]: ytdl.VideoDetails
             },
             ytchRawInfoData: {
-                [authorId: string]: ChannelInfo
+                [authorId: string]: ytchInterface.ChannelInfo
             },
             ytIndex: {
                 videoIds: {
