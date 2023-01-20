@@ -15,7 +15,13 @@ async function httpDataRequest(request, send) {
 }
 const statusData = {
     videoLoaded: 0, //表示済みの動画をカウント
+    /**
+     * @type {string[]}
+     */
     videoIds: [], //取得したVideoID
+    /**
+     * @type {[{title: string, author: {id: string, name: string}}]}
+     */
     ytIndex: {}, //インデックスデータを格納
     videoloading: false, //読み込み中かどうか
     videoRow: 0, //横に並べる動画の数
@@ -27,7 +33,7 @@ const statusData = {
  * 待機
  * @param {number} time 
  */
-async function wait(time) { await new Promise(resolve => setTimeout(() => resolve(), time)) }
+async function wait(time) { await new Promise(resolve => setTimeout(resolve, time)) }
 /**
  * 最もわかりやすく言うと、一番下ならtrueを返すという意味です。  
  * １: cHeight(画面の高さ)+動画の並ぶ数x100した数  
@@ -93,173 +99,233 @@ async function videoLoad(g) {
         }
     }
     //表示済み数がVideoIDsと同じならリターン
-    if (statusData["videoLoaded"] == statusData["videoIds"].length) return
+    if (statusData["videoLoaded"] == statusData["videoIds"].length - 1) return
     for (let i = 0; i != statusData["videoRow"]; i++) {
-        if (statusData["videoLoaded"] == statusData["videoIds"].length) return //読み込める動画が無くなるとリターン
+        if (statusData["videoLoaded"] == statusData["videoIds"].length - 1) return //読み込める動画が無くなるとリターン
+        statusData["videoLoaded"]++
         const videoId = statusData["videoIds"][statusData["videoLoaded"]] //VideoID
         updateRatio()
-        statusData["videoLoaded"]++
-        createVT(document.getElementById("VideoListCenter"), {
-            ratio: statusData["ratio"],
-            videoId: videoId,
-            thumbnailWidth: statusData["thumbnailWidth"],
-            data: statusData["ytIndex"][videoId]
-        })
+        const video = new createVT(document.getElementById("VideoListCenter"))
+        video.setElement()
+        video.ratio = statusData["ratio"]
+        video.thumbnailWidth = statusData["thumbnailWidth"]
+        video.videoId = videoId
+        video.title = statusData["ytIndex"][videoId].title
+        video.author = statusData["ytIndex"][videoId].author
+        video.update()
     }
     //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
     if (await ifScrollBottom()) videoLoad(true)
     else statusData["videoloading"] = false //出なければ読み込み終了
 }
-/**
- * 関数に入力されるデータのガイドです。
- */
-const createVTdata = {
-    ratio: 0,
-    videoId: "",
-    thumbnailWidth: 0,
-    data: {
+class createVT {
+    _data = {
         title: "",
+        videoId: "",
+        thumbnailWidth: 320,
+        ratio: 1,
         author: {
             id: "",
             name: ""
-        }
-    },
-    displaySet: {
-        title: {
-            fontSize: "",
-            color: ""
         },
-        author: {
-            fontSize: "",
-            color: "",
-            iconSize: ""
-        }
+        displaySet: {
+            title: {
+                fontSize: "",
+                color: ""
+            },
+            author: {
+                fontSize: "",
+                color: "",
+                iconSize: ""
+            }
+        },
+        /**
+         * @type {HTMLElement}
+         */
+        Element: "",
+        set: false
     }
-}
-/**
- * 動画へ飛ぶリンクを持った、画像付きのボタンを作成します。
- * @param {HTMLElement} Element
- * @param {createVTdata} data
- * @returns 
- */
-async function createVT(Element, data) {
-    const { ratio, videoId, thumbnailWidth, displaySet } = data
-    const { title, author } = data.data
-    const videoLink = document.createElement("div")
-    videoLink.classList.add("VideoLink")
-    Element.appendChild(videoLink)
+    element = {}
+    /**
+     * @param {HTMLElement} Element 
+     */
+    constructor(Element) {
+        this._data.Element = Element
+        this.element.videoLink = document.createElement("div")
+        this.element.videoLink.classList.add("VideoLink")
 
-    const videoWindow = document.createElement("div")
-    videoWindow.classList.add("VideoWindow")
-    videoLink.appendChild(videoWindow)
+        const videoWindow = document.createElement("div")
+        videoWindow.classList.add("VideoWindow")
+        this.element.videoLink.appendChild(videoWindow)
 
-    const thumbnailImage = document.createElement("div")
-    thumbnailImage.classList.add("ThumbnailImage")
-    videoWindow.appendChild(thumbnailImage)
+        const thumbnailImage = document.createElement("div")
+        thumbnailImage.classList.add("ThumbnailImage")
+        videoWindow.appendChild(thumbnailImage)
 
-    const thumbnailimg = document.createElement("img")
-    thumbnailimg.classList.add("Thumbnailimg")
-    thumbnailimg.src = "/ytimage/" + videoId + "?size=" + thumbnailWidth + "&ratio=" + ratio
-    thumbnailImage.appendChild(thumbnailimg)
+        this.element.thumbnailimg = document.createElement("img")
+        this.element.thumbnailimg.classList.add("Thumbnailimg")
+        thumbnailImage.appendChild(this.element.thumbnailimg)
 
-    const titleAria = document.createElement("div")
-    titleAria.classList.add("TitleAria")
-    videoWindow.appendChild(titleAria)
+        const titleAria = document.createElement("div")
+        titleAria.classList.add("TitleAria")
+        videoWindow.appendChild(titleAria)
 
-    const iconAria = document.createElement("div")
-    iconAria.classList.add("IconAria")
-    titleAria.appendChild(iconAria)
+        const iconAria = document.createElement("div")
+        iconAria.classList.add("IconAria")
+        titleAria.appendChild(iconAria)
 
-    const infoAria = document.createElement("div")
-    infoAria.classList.add("InfoAria")
-    titleAria.appendChild(infoAria)
+        const infoAria = document.createElement("div")
+        infoAria.classList.add("InfoAria")
+        titleAria.appendChild(infoAria)
 
-    const authorIcon = document.createElement("img")
-    authorIcon.classList.add("AuthorIcon")
-    authorIcon.src = "/ytauthorimage/" + author.id + "?size=32&ratio=" + ratio
-    iconAria.appendChild(authorIcon)
+        this.element.authorIcon = document.createElement("img")
+        this.element.authorIcon.classList.add("AuthorIcon")
+        iconAria.appendChild(this.element.authorIcon)
 
-    const videoTitle = document.createElement("p")
-    videoTitle.classList.add("VideoTitle")
-    videoTitle.innerHTML = title
-    infoAria.appendChild(videoTitle)
+        this.element.videoTitle = document.createElement("p")
+        this.element.videoTitle.classList.add("VideoTitle")
+        infoAria.appendChild(this.element.videoTitle)
 
-    const videoAuthor = document.createElement("p")
-    videoAuthor.classList.add("VideoAuthor")
-    videoAuthor.innerHTML = author.name
-    infoAria.appendChild(videoAuthor)
+        this.element.videoAuthor = document.createElement("p")
+        this.element.videoAuthor.classList.add("VideoAuthor")
+        infoAria.appendChild(this.element.videoAuthor)
 
-    const clickme = document.createElement("a")
-    clickme.classList.add("clickme")
-    clickme.href = "./watch?v=" + videoId
-    videoWindow.appendChild(clickme)
+        this.element.clickme = document.createElement("a")
+        this.element.clickme.classList.add("clickme")
+        videoWindow.appendChild(this.element.clickme)
 
-    if (displaySet) { //上書きでスタイルを変更する場合に使用します。
-        if (displaySet.title) {
-            const title = displaySet.title
-            if (title.color)
-                videoTitle.style.color = title.color
-            if (title.fontSize)
-                videoTitle.style.fontSize = title.fontSize
-        }
-        if (displaySet.author) {
-            const author = displaySet.author
-            if (author.color)
-                videoAuthor.style.color = author.color
-            if (author.fontSize)
-                videoAuthor.style.fontSize = author.fontSize
-            if (author.iconSize)
-                authorIcon.width = author.iconSize
-        }
-    }
-    videoWindow.addEventListener("contextmenu", async e => {
-        contextmenu(e, {
-            title: videoId,
-            contextmenu: [
-                [
-                    {
-                        name: "YouTubeで見る",
-                        id: "youtubeView",
-                        data: {
-                            videoId: videoId
+        videoWindow.addEventListener("contextmenu", async e => {
+            contextmenu(e, {
+                title: this._data.videoId,
+                contextmenu: [
+                    [
+                        {
+                            name: "YouTubeで見る",
+                            id: "youtubeView",
+                            data: {
+                                videoId: this._data.videoId
+                            }
+                        },
+                        {
+                            name: "新しいタブで開く",
+                            id: "newWindowVideoView",
+                            data: {
+                                videoId: this._data.videoId
+                            }
                         }
-                    }
-                ],
-                [
-                    {
-                        name: "ダウンロード",
-                        id: "download",
-                        data: {
-                            videoId: videoId
+                    ],
+                    [
+                        {
+                            name: "VideoIDをコピー",
+                            id: "clipboardVideoID",
+                            data: {
+                                videoId: this._data.videoId
+                            }
+                        },
+                        {
+                            name: "ダウンロード",
+                            id: "download",
+                            data: {
+                                videoId: this._data.videoId
+                            }
+                        },
+                        {
+                            name: "\"" + this._data.videoId + "\"を削除",
+                            id: "download",
+                            data: {
+                                videoId: this._data.videoId
+                            }
+                        },
+                        {
+                            name: "情報を編集",
+                            id: "download",
+                            data: {
+                                videoId: this._data.videoId
+                            }
                         }
-                    },
-                    {
-                        name: "\"" + videoId + "\"を削除",
-                        id: "download",
-                        data: {
-                            videoId: videoId
+                    ],
+                    [
+                        {
+                            name: "\"" + this._data.videoId + "\"からクリップを作成",
+                            id: "download",
+                            data: {
+                                videoId: this._data.videoId
+                            }
                         }
-                    },
-                    {
-                        name: "情報を編集",
-                        id: "download",
-                        data: {
-                            videoId: videoId
-                        }
-                    }
-                ],
-                [
-                    {
-                        name: "\"" + videoId + "\"からクリップを作成",
-                        id: "download",
-                        data: {
-                            videoId: videoId
-                        }
-                    }
+                    ]
                 ]
-            ]
+            })
         })
-    })
+    }
+    setElement() {
+        if (!this._data.set) this._data.Element.appendChild(this.element.videoLink)
+        this._data.set = true
+    }
+    deleteElement() {
+        if (this._data.set) this._data.Element.removeChild(this.element.videoLink)
+        this._data.set = false
+    }
+    /**
+     * @param {number} r
+     */
+    set ratio(r) {
+        this._data.ratio = r
+    }
+    /**
+     * @param {string} t
+     */
+    set title(t) {
+        this._data.title = t
+    }
+    /**
+     * @param {{name: string, id: string}} a
+     */
+    set author(a) {
+        this._data.author = a
+    }
+    /**
+     * @param {string} v
+     */
+    set videoId(v) {
+        this._data.videoId = v
+    }
+    /**
+     * @param {number} t
+     */
+    set thumbnailWidth(t) {
+        this._data.thumbnailWidth = t
+    }
+    /**
+     * @param {{title: {color: string, fontSize: string}, author: {color: string, fontSize: string, iconSize: string}}} d
+     */
+    set displaySet(d) {
+        this._data.displaySet = d
+        if (this._data.displaySet) { //上書きでスタイルを変更する場合に使用します。
+            if (this._data.displaySet.title) {
+                const title = this._data.displaySet.title
+                if (title.color)
+                    this.element.videoTitle.style.color = title.color
+                if (title.fontSize)
+                    this.element.videoTitle.style.fontSize = title.fontSize
+            }
+            if (this._data.displaySet.author) {
+                const author = this._data.displaySet.author
+                if (author.color)
+                    this.element.videoAuthor.style.color = author.color
+                if (author.fontSize)
+                    this.element.videoAuthor.style.fontSize = author.fontSize
+                if (author.iconSize)
+                    this.element.authorIcon.width = author.iconSize
+            }
+        }
+    }
+    update() {
+        this.element.videoTitle.innerHTML = this._data.title
+        this.element.videoAuthor.innerHTML = this._data.author.name
+        this.element.authorIcon.src = "/ytauthorimage/" + this._data.author.id + "?size=32&ratio=" + this._data.ratio
+        this.element.clickme.href = "./watch?v=" + this._data.videoId
+        this.element.thumbnailimg.src = "/ytimage/" + this._data.videoId + "?size=" + this._data.thumbnailWidth + "&ratio=" + this._data.ratio
+    }
 }
 //ネットから見つけたやぁつぅ
 async function getRuleBySelector(sele) {
@@ -347,21 +413,47 @@ async function contextmenu(e, context) {
             menu.addEventListener("click", e => {
                 switch (menuData.id) {
                     case "download": downloadPopup(menuData.data.videoId); break
-                    case "youtubeView": window.open("https://www.youtube.com/watch?v=" + menuData.data.videoId)
+                    case "youtubeView": window.open("https://www.youtube.com/watch?v=" + menuData.data.videoId); break
+                    case "newWindowVideoView":
+                        window.open(
+                            "http://" + location.hostname + ":" + location.port +
+                            "/sources/ytdl/watch?v=" + menuData.data.videoId
+                        )
+                        break
+                    case "clipboardVideoID": navigator.clipboard.writeText(menuData.data.videoId); break
                 }
                 remove()
             })
         }
     }
     contextmenu.classList.add("contextmenuViewed")
-    let pageX = e.pageX + 2
-    let pageY = e.pageY - 5
-    if ((contextmenu.clientWidth + pageX) > document.body.clientWidth)
-        pageX = document.body.clientWidth - contextmenu.clientWidth
-    if ((contextmenu.clientHeight + pageY) > document.body.clientHeight)
-        pageY = document.body.clientHeight - contextmenu.clientHeight
-    contextmenu.style.top = pageY
-    contextmenu.style.left = pageX
+    /**
+     * 
+     * @param {{pageX: number, pageY: number}} e 
+     * @param {{x: boolean, y: boolean}} reverse 
+     */
+    const set = (e, reverse) => {
+        let pageX = e.pageX + 1
+        let pageY = e.pageY - 2
+        let reverseX = false
+        let reverseY = false
+        if ((pageX + contextmenu.clientWidth + 7) > document.body.clientWidth)
+            if (reverse.x) reverseX = true
+            else pageX = document.body.clientWidth - contextmenu.clientWidth - 7
+        if ((pageY + contextmenu.clientHeight + 6) > document.body.clientHeight)
+            if (reverse.y) reverseY = true
+            else pageY = document.body.clientHeight - contextmenu.clientHeight - 6
+        if (pageX - 5 < 0) pageX = 5
+        if (pageY - 5 < 0) pageY = 5
+        if (pageX + 5 > document.body.clientWidth)
+            pageX = document.body.clientWidth - 5
+        if (pageY + 13 > document.body.clientHeight)
+            pageY = document.body.clientHeight - 13
+        contextmenu.style.top = pageY - ((reverseY) ? (contextmenu.clientHeight - 7) : 0)
+        contextmenu.style.left = pageX - ((reverseX) ? (contextmenu.clientWidth + 3) : 0)
+    }
+    set(e, { x: true, y: true })
+    if (false) addEventListener("mousemove", e => set(e, { x: false, y: false }))
 }
 async function downloadPopup(videoId) {
     if (!document.getElementById("downloadPopup")) {
@@ -491,31 +583,35 @@ async function ytdlInfoGet(videolist) {
     console.log(videolist)
     let videonum = 0
     for (let i = 0; i != videolist.length; i++) {
+        const video = new createVT(infoVideos)
+        video.setElement()
         new Promise(async resolve => {
             const videoId = await httpDataRequest("youtube-videoId", videolist[i])
-            if (!videoId)
+            if (!videoId) {
+                video.deleteElement()
                 return infoTitle.innerHTML = videonum + "本の動画を取得しました！"
+            }
+            videonum++
             const videoDetails = JSON.parse(await httpDataRequest("ytdlRawInfoData", videoId))
-            console.log(videoId, videoDetails)
             infoTitle.innerHTML = videonum + "本の動画を取得しました！"
-            createVT(infoVideos, {
-                ratio: statusData["ratio"],
-                videoId,
-                thumbnailWidth: 250,
-                data: videoDetails,
-                displaySet: {
-                    title: {
-                        color: "black",
-                        fontSize: "10px"
-                    },
-                    author: {
-                        color: "black",
-                        fontSize: "4px",
-                        iconSize: "24px"
-                    }
+            video.title = videoDetails.title
+            video.author = videoDetails.author
+            video.ratio = statusData["ratio"]
+            video.thumbnailWidth = 250
+            video.videoId = videoId
+            video.displaySet = {
+                title: {
+                    color: "black",
+                    fontSize: "10px"
+                },
+                author: {
+                    color: "black",
+                    fontSize: "4px",
+                    iconSize: "24px"
                 }
-            })
-            resolve(videonum++)
+            }
+            video.update()
+            resolve()
         })
     }
 };
@@ -525,11 +621,21 @@ addEventListener("load", async () => {
     updateState()
     updateRow() //動画の列を初期化する
     videoLoad() //初回の動画読み込みをする
+    let low = 0
+    let scrollHeight = 0
+    let clientHeight = 0
     videoList.addEventListener("scroll", async e => {
         /** 
          * 一番下についている場合、1pxだけ上に戻す(多分1px)
          */
-        if (videoList.scrollHeight - (videoList.clientHeight + videoList.scrollTop) < 1) videoList.scrollTop--
+        if (scrollHeight - (clientHeight + videoList.scrollTop) < 1) {
+            videoList.scrollTop--
+            low = 20
+        }
+        if (low < 15) return low++ //lowが大きくなるまで自他のコードを実行しない
+        scrollHeight = videoList.scrollHeight
+        clientHeight = videoList.clientHeight
+        low = 0
         if (await ifScrollBottom()) videoLoad() //スクロールすると動画を読み込むかを検証する
     })
     const ytURLSend = document.getElementById("URLSend") //ボタンの取得
@@ -540,6 +646,65 @@ addEventListener("load", async () => {
         infoPopup.classList.add("Popuped") //クラス「ポップアップ有効化用」を追加
         BlackBackground(true)
         ytdlInfoGet([ytURLBox.value]) //関数に送信
+    })
+    const offlineSearch = document.getElementById("offlineSearch")
+    offlineSearch.addEventListener("click", async e => {
+        let videoIds = [] //検索に一致するとここに追加
+        let searchStrings = ytURLBox.value.split(" ")
+        /**
+         * @type {{[num: string]: {[videoId: string]: boolean}}}
+         */
+        let matching = {
+            0: {}
+        }
+        for (let i = 0; i != statusData["videoIds"].length; i++) { //VideoIDの数だけ
+            const videoId = statusData["videoIds"][i]
+            for (let m = 0; m != searchStrings.length; m++) { //検索ボックスにスペース区切りした分だけ
+                //一致するかどうか
+                const ifString = async (e, data) => {
+                    if (!e) return
+                    let num = 0 //優先度
+                    if (data == searchStrings[m]) num += 1 //完全一致した場合は優先度を上げる
+                    await new Promise(resolve => {
+                        const mtObj = Object.keys(matching) //マッチの優先度を記したデータ
+                        for (let i = 0; i != mtObj.length; i++) { //優先度の数だけ
+                            if (matching[mtObj[i]][videoId]) { //VideoIDがある場合
+                                matching[mtObj[i]][videoId] = false //元のVideoIDを無効化
+                                num += Number(mtObj[i]) + 1 //優先度をあげる
+                                resolve()
+                            }
+                        }
+                        num += (searchStrings.length - m) * 2 //ない場合は優先度を設定し追加
+                        resolve()
+                    })
+                    if (num != 0 && !num) {
+                        console.log("検索時に優先度を設定した結果、予期せぬエラーが発生しました。", num)
+                        num = 0
+                    }
+                    if (!matching[num]) matching[num] = {}
+                    matching[num][videoId] = true //追加
+                    console.log(videoId, num)
+                }
+                /**
+                 * @type {string}
+                 */
+                const data = statusData["ytIndex"][videoId]
+                await ifString(data.title.match(searchStrings[m]), data.title)
+                await ifString(data.author.name.match(searchStrings[m]), data.author.name)
+            }
+        }
+        const mtObj = Object.keys(matching) //マッチの優先度を記したデータ
+        console.log(matching, mtObj)
+        for (let i = mtObj[mtObj.length - 1]; i > 0; i--) { //一致した数の量だけ
+            if (Number(mtObj[i])) { //存在するかどうか
+                const videoIdObj = Object.keys(matching[mtObj[i]])
+                for (let m = 0; m < videoIdObj.length; m++) //その中に含まれたVideoIDの数だけ
+                    if (matching[mtObj[i]][videoIdObj[m]]) videoIds.push(videoIdObj[m])
+            }
+        }
+        infoPopup.classList.add("Popuped") //クラス「ポップアップ有効化用」を追加
+        BlackBackground(true)
+        ytdlInfoGet(videoIds) //関数に送信
     })
     const infoPopupCloseBtn = document.getElementById("infoPopupCloseBtn") //ポップアップを閉じるボタンの取得
     infoPopupCloseBtn.addEventListener("click", async e => { //クリックされたら

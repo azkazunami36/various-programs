@@ -349,11 +349,17 @@ body {
     color: white;
 }
 
-.AuthorIcon {
+.IconAria {
     width: 32px;
+    height: 32px;
+    aspect-ratio: 1/1;
+    padding: 7.5px;
+    padding-left: 0;
+}
+
+.AuthorIcon {
+    width: 100%;
     border-radius: 100%;
-    margin: 7.5px;
-    margin-left: 0px;
 }
 
 #FBTBoToolBackGround {
@@ -396,9 +402,11 @@ body {
     position: fixed;
     border: 0.8px solid black;
     border-radius: 7.5px;
+    margin: 0 -5px -5px 0;
     z-index: 30;
     opacity: 0;
-    transform: scaleX(0);
+    transform-style: preserve-3d;
+    transform: scale(0);
     top: 0;
     left: 0;
     animation-name: fade-out;
@@ -416,28 +424,28 @@ body {
 @keyframes fade-out {
     0% {
         opacity: 1;
-        transform: scaleX(1);
+        transform: scale(1);
     }
     100% {
         opacity: 0;
-        transform: scaleX(1);
+        transform: scale(1);
     }
 }
 
 @keyframes fade-in {
     0% {
         opacity: 0;
-        transform: scaleX(1);
+        transform: scale(1);
     }
     100% {
         opacity: 1;
-        transform: scaleX(1);
+        transform: scale(1);
     }
 }
 
 .contextmenuViewed {
     opacity: 1;
-    transform: scaleX(1);
+    transform: scale(1);
     animation-name: fade-in;
     animation-duration: .0s;
 }
