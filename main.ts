@@ -27,12 +27,14 @@ interface settings {
      */
     headers: {
         "Content-Type"?: string,
-        "Content-Length"?: string
+        "Content-Length"?: string,
+        "Accept-Ranges"?: string,
+        "Content-Range"?: string
     },
     /**
      * ステータスコードです。
      */
-    statusCode: 200 | 204 | 400 | 404 | 500,
+    statusCode: 200 | 204 | 206 | 400 | 404 | 500,
     /**
      * ファイルパスです。
      */
@@ -124,7 +126,18 @@ interface data {
         [authorId: string]: ChannelInfo
     },
     ytIndex: {
-        videoIds: string[]
+        videoIds: {
+            [videoId: string]: {
+                title: string,
+                author: {
+                    id: string,
+                    name: string
+                }
+            }
+        },
+        authorIds: {
+            [authorId: string]: {}
+        }
     }
 }
 interface processJson {
@@ -134,10 +147,140 @@ interface processJson {
     }[]
 }
 
+namespace youtube {
+    enum VAType {
+        video,
+        audio
+    }
+
+    const codec = [
+        {
+            full: "h264.mp4",
+            codec: "h264",
+            ffmpegOption: [
+                "-c:v libx264"
+            ],
+            contentType: "video/mp4",
+            type: VAType.video
+        },
+        {
+            full: "h265.hevc",
+            codec: "h265",
+            ffmpegOption: [
+                "-c:v libx265"
+            ],
+            contentType: "video/hevc",
+            type: VAType.video
+        },
+        {
+            full: "vp9.webm",
+            codec: "vp9",
+            ffmpegOption: [
+                "-c:v libvpx-vp9"
+            ],
+            contentType: "video/webm",
+            type: VAType.video
+        },
+        {
+            full: "av1.webm",
+            codec: "av1",
+            ffmpegOption: [
+                "-c:v libaom-av1"
+            ],
+            contentType: "video/webm",
+            type: VAType.video
+        },
+        {
+            full: "aac.aac",
+            codec: "aac",
+            ffmpegOption: [
+                "-vn",
+                "-c:a aac"
+            ],
+            contentType: "audio/aac",
+            type: VAType.audio
+        },
+        {
+            full: "opus.opus",
+            codec: "opus",
+            ffmpegOption: [
+                "-vn",
+                "-c:a libopus"
+            ],
+            contentType: "audio/opus",
+            type: VAType.audio
+        }
+    ]
+    const ytdata: {
+        ytdlRawInfoData: {
+            [videoId: string]: ytdl.VideoDetails
+        },
+        ytchRawInfoData: {
+            [authorId: string]: ChannelInfo
+        },
+        ytIndex: {
+            videoIds: {
+                [videoId: string]: {
+                    title: string,
+                    author: {
+                        id: string,
+                        name: string
+                    }
+                }
+            },
+            authorIds: {
+                [authorId: string]: {}
+            }
+        }
+    } = {
+        ytdlRawInfoData: {},
+        ytchRawInfoData: {},
+        ytIndex: {
+            videoIds: {},
+            authorIds: {}
+        }
+    }
+    export class CachePass {
+        constructor(
+            ytdlRawInfoData: {
+                [videoId: string]: ytdl.VideoDetails
+            },
+            ytchRawInfoData: {
+                [authorId: string]: ChannelInfo
+            },
+            ytIndex: {
+                videoIds: {
+                    [videoId: string]: {
+                        title: string,
+                        author: {
+                            id: string,
+                            name: string
+                        }
+                    }
+                },
+                authorIds: {
+                    [authorId: string]: {}
+                }
+            }
+        ) {
+            ytdata.ytdlRawInfoData = ytdlRawInfoData
+            ytdata.ytchRawInfoData = ytchRawInfoData
+            ytdata.ytIndex = ytIndex
+        }
+        getAuthorImage(authorId: string, param: { size: number, ratio: number } | querystring.ParsedUrlQuery) {
+
+            return ""
+        }
+    }
+}
 //データ読み込み
 const data: data = JSON.parse(String(fs.readFileSync("data.json")))
 const processJson: processJson = JSON.parse(String(fs.readFileSync("processJson.json")))
 const savePass: string = JSON.parse(String(fs.readFileSync("dataPass.json"))).default
+
+//下のやつを使って、ytdl全般の処理をする
+//僕の推測では、これらすべては参照渡しのはずです。
+const cache = new youtube.CachePass(data.ytdlRawInfoData, data.ytchRawInfoData, data.ytIndex)
 
 app.get("*", async (req, res) => {
     const url = req.url.split("/") //階層の配列にします。(？)
@@ -158,7 +301,6 @@ app.get("*", async (req, res) => {
             settings.pass += url[i]
             if (i != (url.length - 1)) settings.pass += "/"
         }
-
         const extension = url[url.length - 1].split(".")[1]
         switch (extension) {
             case "html": {
@@ -186,32 +328,42 @@ app.get("*", async (req, res) => {
         settings.headers["Content-Type"] = contentType.jpeg
     } else if (url[1] == "ytauthorimage") {
         const authorId = url[url.length - 1]
-        settings.pass = savePass + "cache/YouTubeAuthorIcon/" + authorId + ".jpg"
-        if (param)
-            if (param.ratio && param.size)
-                settings.pass = savePass + "cache/YouTubeAuthorIconRatioResize/" + authorId + "-r" + param.ratio + "-" + param.size + ".jpg"
+        settings.pass = cache.getAuthorImage(authorId, param)
         settings.statusCode = 200
         settings.headers["Content-Type"] = contentType.jpeg
     }
     if (!fs.existsSync(settings.pass)) settings.statusCode = 400
-    res.writeHead(settings.statusCode, settings.headers)
     if (settings.statusCode != 400) {
         const length = fs.statSync(settings.pass).size
+        settings.range.start = 0
+        settings.range.end = length
         settings.headers["Content-Length"] = String(length)
+        settings.headers["Accept-Ranges"] = "bytes"
         if (req.headers.range) {
+            console.log("Range利用")
+            const chunkSize = 1e7
             const ranges = String(req.headers.range).split("-")
             if (ranges[0]) ranges[0] = ranges[0].replace(/\D/g, "")
             if (ranges[1]) ranges[1] = ranges[1].replace(/\D/g, "")
 
+            settings.range.start = Number(ranges[0]) //始まりの指定
+            settings.range.end = Number(ranges[1] || Math.min(settings.range.start + chunkSize, length - 1)) //終わりの指定
+            settings.headers["Content-Length"] = String(settings.range.end - settings.range.start + 1)
+            settings.headers["Content-Range"] = "bytes " + settings.range.start + "-" + settings.range.end + "/" + length
+            settings.statusCode = 206
         }
-        const Stream = fs.createReadStream(settings.pass)
+        res.writeHead(settings.statusCode, settings.headers)
+        const Stream = fs.createReadStream(settings.pass, (settings.range) ? settings.range : null)
         Stream.on("data", chunk => res.write(chunk))
         Stream.on("end", () => res.end())
         Stream.on("error", e => {
             settings.statusCode = 500
             res.sendStatus(settings.statusCode)
         })
-    } else res.end()
+    } else {
+        res.writeHead(settings.statusCode, settings.headers)
+        res.end()
+    }
     console.log("Get  " + settings.statusCode + ": ", req.url)
 })
 
