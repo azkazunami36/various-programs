@@ -45,7 +45,7 @@
     const { ytAuthorInfoGet } = require("./modules/ytAuthorInfoGet")
     const { ytVideoIdToAuthorInfoGet } = require("./modules/ytVideoIdToAuthorInfoGet")
     const { ytVideoGetErrorMessage } = require("./modules/ytVideoGetErrorMessage")
-    const { ytPassGet, sourceExist, youtubedl, passContentTypeGet } = require("./modules/ytPassGet")
+    const { ytPassGet, sourceExist, youtubedl, passContentTypeGet, deleteSource } = require("./modules/ytPassGet")
     const wait = util.promisify(setTimeout)
     /**
      * データを格納しています。
@@ -387,6 +387,27 @@
             res.header("Content-Type", "text/plain;charset=utf-8")
             res.end(JSON.stringify(Object.keys(dtbs.ytdlRawInfoData)))
 
+        } else if (req.url.match("/ytvideo-delete")) {
+            /**
+             * 一時的な削除指示です。
+             * あまり使わないように
+             */
+            let data
+            req.on("data", async chunk => {
+                if (data) data += chunk
+                if (!data) data = chunk
+            })
+            req.on("end", async () => {
+                console.log("動画の削除: " + data)
+                deleteSource(String(data))
+                if (dtbs.ytdlRawInfoData[String(data)]) {
+                    delete dtbs.ytdlRawInfoData[String(data)]
+                    delete dtbs.ytIndex.videoIds[String(data)]
+                    saveingJson()
+                    console.log(dtbs.ytdlRawInfoData[String(data)])
+                }
+                res.end()
+            })
         } else if (req.url.match("/discord-seting")) {
             let data = ""
             req.on("data", async chunk => data += chunk)

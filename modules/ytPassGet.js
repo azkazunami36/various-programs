@@ -333,6 +333,12 @@ const passContentTypeGet = async pass => {
     console.log(videoId, codec, extension)
     return (await codecMatchTest(codec)).contentType //取得されたコーデック名からContent-Typeを取得する
 }
+const deleteSource = async videoId => {
+    while (await sourceExist(videoId, "video"))
+        fs.unlinkSync(await sourceExist(videoId, "video"))
+    while (await sourceExist(videoId, "audio"))
+        fs.unlinkSync(await sourceExist(videoId, "audio"))
+}
 module.exports = {
     ytPassGet,
     youtubedl,
@@ -344,5 +350,6 @@ module.exports = {
     videoMarge,
     videocodec,
     audiocodec,
-    passContentTypeGet
+    passContentTypeGet,
+    deleteSource
 }

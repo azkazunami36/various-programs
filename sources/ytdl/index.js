@@ -231,7 +231,7 @@ class createVT {
                         },
                         {
                             name: "\"" + this._data.videoId + "\"を削除",
-                            id: "download",
+                            id: "deleteVideo",
                             data: {
                                 videoId: this._data.videoId
                             }
@@ -320,6 +320,7 @@ class createVT {
         }
     }
     update() {
+        this.element.videoLink.id = "video-" + this._data.videoId
         this.element.videoTitle.innerHTML = this._data.title
         this.element.videoAuthor.innerHTML = this._data.author.name
         this.element.authorIcon.src = "/ytauthorimage/" + this._data.author.id + "?size=32&ratio=" + this._data.ratio
@@ -421,6 +422,7 @@ async function contextmenu(e, context) {
                         )
                         break
                     case "clipboardVideoID": navigator.clipboard.writeText(menuData.data.videoId); break
+                    case "deleteVideo": deleteVideoPopup(menuData.data.videoId); break
                 }
                 remove()
             })
@@ -454,6 +456,127 @@ async function contextmenu(e, context) {
     }
     set(e, { x: true, y: true })
     if (false) addEventListener("mousemove", e => set(e, { x: false, y: false }))
+}
+async function deleteVideoPopup(videoId) {
+    if (!document.getElementById("deleteVideoPopup")) {
+        const popup = document.createElement("div")
+        document.body.appendChild(popup)
+        popup.id = "deleteVideoPopup"
+        Object.assign(popup.style, {
+            position: "absolute",
+            background: "rgba(0, 0, 0, 0.2)",
+            top: "0",
+            left: "0",
+            zIndex: "30",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            height: "100%"
+        })
+        const bodyPopup = document.createElement("div")
+        popup.appendChild(bodyPopup)
+        Object.assign(bodyPopup.style, {
+            maxWidth: "350px",
+            maxHeight: "150px",
+            background: "white",
+            borderRadius: "10px",
+            flexDirection: "column",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            height: "100%"
+        })
+        const titleBar = document.createElement("div")
+        bodyPopup.appendChild(titleBar)
+        Object.assign(titleBar.style, {
+            width: "100%",
+            height: "50%",
+            display: "flex"
+        })
+        const title = document.createElement("div")
+        titleBar.appendChild(title)
+        Object.assign(title.style, {
+            width: "calc(100% - 40px)",
+            fontSize: "20px",
+            fontWeight: "600",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+        })
+        title.innerHTML = "削除してもよろしいですか？"
+        const closeButoon = document.createElement("div")
+        titleBar.appendChild(closeButoon)
+        Object.assign(closeButoon.style, {
+            width: "40px",
+            height: "100%",
+            fontSize: "9px",
+            color: "white",
+            borderRadius: "5px",
+            cursor: "pointer",
+            background: "black",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+        })
+        closeButoon.innerHTML = "閉じる"
+        closeButoon.addEventListener("click", e => popup.style.display = "none")
+        const info = document.createElement("div")
+        bodyPopup.appendChild(info)
+        Object.assign(info.style, {
+            width: "80%",
+            height: "80%",
+            display: "flex",
+            justifyContent: "space-around"
+        })
+        info.id = "removePopupInfo"
+    }
+    const deleteVideoPopup = document.getElementById("deleteVideoPopup")
+    const info = document.getElementById("removePopupInfo")
+    info.innerHTML = ""
+
+    const Info = {
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-evenly",
+        flexDirection: "column"
+    }
+    const button = {
+        minWidth: "55px",
+        maxWidth: "115px",
+        maxHeight: "35px",
+        background: "rgb(100, 200, 255)",
+        borderRadius: "5px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "100%",
+        height: "100%"
+    }
+    const yes = document.createElement("div")
+    info.appendChild(yes)
+    Object.assign(yes.style, Info)
+    const yesButoon = document.createElement("a")
+    yes.appendChild(yesButoon)
+    Object.assign(yesButoon.style, button)
+    yesButoon.innerHTML = "はい"
+    yesButoon.addEventListener("click", e => {
+        httpDataRequest("ytvideo-delete", videoId)
+        document.getElementById("video-" + videoId).remove()
+        deleteVideoPopup.style.display = "none"
+    })
+    const no = document.createElement("div")
+    info.appendChild(no)
+    Object.assign(no.style, Info)
+    const noButoon = document.createElement("a")
+    no.appendChild(noButoon)
+    Object.assign(noButoon.style, button)
+    noButoon.innerHTML = "いいえ"
+    noButoon.addEventListener("click", e => deleteVideoPopup.style.display = "none")
+    deleteVideoPopup.style.display = "flex"
 }
 async function downloadPopup(videoId) {
     if (!document.getElementById("downloadPopup")) {
