@@ -1,65 +1,20 @@
 import express from "express"
-import fs, { stat } from "fs"
+import fs from "fs"
 import ytdl from "ytdl-core"
 import ytch from "yt-channel-info"
 import querystring from "querystring"
+import readline from "readline"
 
-//本体
-const app = express()
-app.listen(80, async () => console.log("サーバーが立ち上がりました。"))
-
-/**
- * コンテンツタイプ
- */
-enum contentType {
-    html = "text/html;charset=utf-8",
-    plain = "text/plain;charset=utf-8",
-    jpeg = "image/jpeg",
-    webm = "video/webm",
-    mp4 = "video/mp4",
-    aac = "audio/aac",
-    opus = "audio/opus"
+if (!fs.existsSync("passCache.json"))
+    throw "jsonファイル「passCache.json」を作成し、データを保存する場所を指定してください。「/pass/pass」という形で書き込んでください。Windowsの場合も「C:/User/pass」という形で書き込む必要があります。"
+if (!fs.existsSync(JSON.parse(String(fs.readFileSync("passCache.json"))).pass))
+    throw "データを保存するパス名が間違っています。jsonファイルを再設定をしてください。「/pass/pass」という形で書き込んでください。Windowsの場合も「C:/User/pass」という形で書き込む必要があります。"
+else {
+    const pass: string = JSON.parse(String(fs.readFileSync("passCache.json"))).pass + "/Various-Programs"
+    if (!fs.existsSync(pass)) fs.mkdirSync(pass)
 }
 
-/**
- * 送信する際に使用する値をここに格納します。
- */
-interface settings {
-    /**
-     * 送信時に使用するヘッダーです。
-     */
-    headers: {
-        "Content-Type"?: string,
-        "Content-Length"?: string,
-        "Accept-Ranges"?: string,
-        "Content-Range"?: string
-    },
-    /**
-     * ステータスコードです。
-     */
-    statusCode: 200 | 204 | 206 | 400 | 404 | 500,
-    /**
-     * ファイルパスです。
-     */
-    pass: string,
-    /**
-     * res.end()の中に入れるデータをここに格納します。
-     */
-    resData?: string,
-    /**
-     * ファイルの読み込む範囲を設定する際にここに情報を書き込みます。
-     */
-    range?: {
-        /**
-         * 範囲の最初を指定
-         */
-        start: number,
-        /**
-         * 範囲の最後を指定
-         */
-        end: number
-    }
-}
+const savePass: string = JSON.parse(String(fs.readFileSync("passCache.json"))).pass + "/Various-Programs/"
 
 namespace ytchInterface {
     interface RelatedChannel {
@@ -73,7 +28,7 @@ namespace ytchInterface {
         verified: boolean;
         officialArist: boolean;
     }
-    
+
     /**
      * ChannelInfo type returned by getChannelVideos and getChannelInfoMore
      */
@@ -106,13 +61,13 @@ namespace ytchInterface {
             secondaryLinks: ChannelLink[]
         }
     }
-    
+
     interface ChannelLink {
         url: string,
         icon: string,
         title: string
     }
-    
+
     /**
      * An Image which represents all banners and thumbnails
      */
@@ -121,35 +76,6 @@ namespace ytchInterface {
         height: number;
         width: number;
     }
-}
-
-interface data {
-    ytdlRawInfoData: {
-        [videoId: string]: ytdl.VideoDetails
-    },
-    ytchRawInfoData: {
-        [authorId: string]: ytchInterface.ChannelInfo
-    },
-    ytIndex: {
-        videoIds: {
-            [videoId: string]: {
-                title: string,
-                author: {
-                    id: string,
-                    name: string
-                }
-            }
-        },
-        authorIds: {
-            [authorId: string]: {}
-        }
-    }
-}
-interface processJson {
-    Apps: {
-        name: string,
-
-    }[]
 }
 
 namespace youtube {
@@ -216,14 +142,14 @@ namespace youtube {
             type: VAType.audio
         }
     ]
-    const ytdata: {
-        ytdlRawInfoData: {
+    export const ytcache: {
+        videoRawInfo: {
             [videoId: string]: ytdl.VideoDetails
         },
-        ytchRawInfoData: {
+        channelRawInfo: {
             [authorId: string]: ytchInterface.ChannelInfo
         },
-        ytIndex: {
+        index: {
             videoIds: {
                 [videoId: string]: {
                     title: string,
@@ -238,39 +164,20 @@ namespace youtube {
             }
         }
     } = {
-        ytdlRawInfoData: {},
-        ytchRawInfoData: {},
-        ytIndex: {
+        videoRawInfo: {},
+        channelRawInfo: {},
+        index: {
             videoIds: {},
             authorIds: {}
         }
     }
+    const videoIds: string[] = []
     export class CachePass {
-        constructor(
-            ytdlRawInfoData: {
-                [videoId: string]: ytdl.VideoDetails
-            },
-            ytchRawInfoData: {
-                [authorId: string]: ytchInterface.ChannelInfo
-            },
-            ytIndex: {
-                videoIds: {
-                    [videoId: string]: {
-                        title: string,
-                        author: {
-                            id: string,
-                            name: string
-                        }
-                    }
-                },
-                authorIds: {
-                    [authorId: string]: {}
-                }
-            }
-        ) {
-            ytdata.ytdlRawInfoData = ytdlRawInfoData
-            ytdata.ytchRawInfoData = ytchRawInfoData
-            ytdata.ytIndex = ytIndex
+        constructor() {
+
+            const videoId: string[] = JSON.parse(String(fs.readFileSync(savePass + "YouTube-Downloader.json")))
+            for (let i = 0; i != videoId.length; i++)
+                videoIds.push(videoId[i])
         }
         getAuthorImage(authorId: string, param: { size: number, ratio: number } | querystring.ParsedUrlQuery) {
 
@@ -278,121 +185,249 @@ namespace youtube {
         }
     }
 }
-//データ読み込み
-const data: data = JSON.parse(String(fs.readFileSync("data.json")))
-const processJson: processJson = JSON.parse(String(fs.readFileSync("processJson.json")))
-const savePass: string = JSON.parse(String(fs.readFileSync("dataPass.json"))).default
+
+namespace server {
+    /**
+     * 送信する際に使用する値をここに格納します。
+     */
+    interface settings {
+        /**
+         * 送信時に使用するヘッダーです。
+         */
+        headers: {
+            "Content-Type"?: string,
+            "Content-Length"?: string,
+            "Accept-Ranges"?: string,
+            "Content-Range"?: string
+        },
+        /**
+         * ステータスコードです。
+         */
+        statusCode: 200 | 204 | 206 | 400 | 404 | 500,
+        /**
+         * ファイルパスです。
+         */
+        pass: string,
+        /**
+         * res.end()の中に入れるデータをここに格納します。
+         */
+        resData?: string,
+        /**
+         * ファイルの読み込む範囲を設定する際にここに情報を書き込みます。
+         */
+        range?: {
+            /**
+             * 範囲の最初を指定
+             */
+            start: number,
+            /**
+             * 範囲の最後を指定
+             */
+            end: number
+        }
+    }
+    /**
+     * コンテンツタイプ
+     */
+    enum contentType {
+        html = "text/html;charset=utf-8",
+        plain = "text/plain;charset=utf-8",
+        jpeg = "image/jpeg",
+        webm = "video/webm",
+        mp4 = "video/mp4",
+        aac = "audio/aac",
+        opus = "audio/opus"
+    }
+    const processJson = {
+        "Apps": [
+            {
+                "name": "Virtual Desktop",
+                "id": "virtualdesktop",
+                "compact": "vd",
+                "iconURL": "",
+                "status": {
+                    "loaded": false,
+                    "viewed": false
+                }
+            },
+            {
+                "name": "YouTube Downloader",
+                "id": "youtubedownloader",
+                "compact": "ytdl",
+                "iconURL": "",
+                "status": {
+                    "loaded": false,
+                    "viewed": false
+                }
+            },
+            {
+                "name": "Discord Bot",
+                "id": "discordbot",
+                "compact": "ggbot",
+                "iconURL": "",
+                "status": {
+                    "loaded": false,
+                    "viewed": false
+                }
+            },
+            {
+                "name": "FFmpeg Converter",
+                "id": "ffmpegconverter",
+                "compact": "ffcvr",
+                "iconURL": "",
+                "status": {
+                    "loaded": false,
+                    "viewed": false
+                }
+            },
+            {
+                "name": "JSON Data Server",
+                "id": "jsondataserver",
+                "compact": "jsonds",
+                "iconURL": "",
+                "status": {
+                    "loaded": false,
+                    "viewed": false
+                }
+            },
+            {
+                "name": "File",
+                "id": "filelister",
+                "compact": "flst",
+                "iconURL": "",
+                "status": {
+                    "loaded": false,
+                    "viewed": false
+                }
+            },
+            {
+                "name": "Remote File Move",
+                "id": "remotefilemove",
+                "compact": "flmv",
+                "iconURL": "",
+                "status": {
+                    "loaded": false,
+                    "viewed": false
+                }
+            }
+        ]
+    }
+
+    //本体
+    const app = express()
+    app.listen(80, async () => console.log("サーバーが立ち上がりました。"))
+
+    app.get("*", async (req, res) => {
+        const url = req.url.split("/") //階層の配列にします。(？)
+        let paramString = url[url.length - 1].split("?")
+        let param: querystring.ParsedUrlQuery | null
+        if (paramString[1]) {
+            url[url.length - 1] = paramString[0]
+            param = querystring.parse(paramString[1])
+        }
+        const settings: settings = {
+            headers: {},
+            statusCode: 500,
+            pass: ""
+        }
+        if (!url[url.length - 1]) url[url.length - 1] = "index.html"
+        if (url[1] == "sources") {
+            for (let i: number = 1; i != url.length; i++) {
+                settings.pass += url[i]
+                if (i != (url.length - 1)) settings.pass += "/"
+            }
+            const extension = url[url.length - 1].split(".")[1]
+            switch (extension) {
+                case "html": {
+                    settings.headers["Content-Type"] = contentType.html
+                    break
+                }
+                default: {
+                    settings.headers["Content-Type"] = contentType.plain
+                    break
+                }
+            }
+            if (url[url.length - 1] == "watch") {
+                settings.pass = "sources/ytdl/playwith/index.html"
+                settings.headers["Content-Type"] = contentType.html
+                console.log("watchcc")
+            }
+            settings.statusCode = 200
+        } else if (url[1] == "ytimage") {
+            const videoId = url[url.length - 1]
+            settings.pass = savePass + "cache/YouTubeThumbnail/" + videoId + ".jpg"
+            if (param)
+                if (param.ratio && param.size)
+                    settings.pass = savePass + "cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
+            settings.statusCode = 200
+            settings.headers["Content-Type"] = contentType.jpeg
+        } else if (url[1] == "ytauthorimage") {
+            const authorId = url[url.length - 1]
+            settings.pass = cache.getAuthorImage(authorId, param)
+            settings.statusCode = 200
+            settings.headers["Content-Type"] = contentType.jpeg
+        }
+        if (!fs.existsSync(settings.pass)) settings.statusCode = 400
+        if (settings.statusCode != 400) {
+            const length = fs.statSync(settings.pass).size
+            settings.range.start = 0
+            settings.range.end = length
+            settings.headers["Content-Length"] = String(length)
+            settings.headers["Accept-Ranges"] = "bytes"
+            if (req.headers.range) {
+                console.log("Range利用")
+                const chunkSize = 1e7
+                const ranges = String(req.headers.range).split("-")
+                if (ranges[0]) ranges[0] = ranges[0].replace(/\D/g, "")
+                if (ranges[1]) ranges[1] = ranges[1].replace(/\D/g, "")
+
+                settings.range.start = Number(ranges[0]) //始まりの指定
+                settings.range.end = Number(ranges[1] || Math.min(settings.range.start + chunkSize, length - 1)) //終わりの指定
+                settings.headers["Content-Length"] = String(settings.range.end - settings.range.start + 1)
+                settings.headers["Content-Range"] = "bytes " + settings.range.start + "-" + settings.range.end + "/" + length
+                settings.statusCode = 206
+            }
+            res.writeHead(settings.statusCode, settings.headers)
+            const Stream = fs.createReadStream(settings.pass, (settings.range) ? settings.range : null)
+            Stream.on("data", chunk => res.write(chunk))
+            Stream.on("end", () => res.end())
+            Stream.on("error", e => {
+                settings.statusCode = 500
+                res.sendStatus(settings.statusCode)
+            })
+        } else {
+            res.writeHead(settings.statusCode, settings.headers)
+            res.end()
+        }
+        console.log("Get  " + settings.statusCode + ": ", req.url)
+    })
+
+    app.post("*", async (req, res) => {
+        const url = req.url.split("/")
+        const settings: settings = {
+            headers: {},
+            statusCode: 500,
+            pass: "",
+            resData: ""
+        }
+        settings.headers["Content-Type"] = contentType.plain
+        if (url[1] == "applcation-info") {
+            settings.statusCode = 200
+            settings.resData = JSON.stringify(processJson.Apps)
+        }
+        else if (url[1] == "ytdlRawInfoArray") {
+            settings.statusCode = 200
+            settings.resData = JSON.stringify(Object.keys(youtube.ytcache.videoRawInfo))
+        } else if (url[1] == "ytindex-list") {
+            settings.statusCode = 200
+            settings.resData = JSON.stringify(youtube.ytcache.index.videoIds)
+        }
+        console.log("Post " + settings.statusCode + ": " + req.url)
+        res.writeHead(settings.statusCode, settings.headers)
+        res.end(settings.resData)
+    })
+}
 
 //下のやつを使って、ytdl全般の処理をする
 //僕の推測では、これらすべては参照渡しのはずです。
-const cache = new youtube.CachePass(data.ytdlRawInfoData, data.ytchRawInfoData, data.ytIndex)
-
-app.get("*", async (req, res) => {
-    const url = req.url.split("/") //階層の配列にします。(？)
-    let paramString = url[url.length - 1].split("?")
-    let param: querystring.ParsedUrlQuery
-    if (paramString[1]) {
-        url[url.length - 1] = paramString[0]
-        param = querystring.parse(paramString[1])
-    }
-    const settings: settings = {
-        headers: {},
-        statusCode: 500,
-        pass: ""
-    }
-    if (!url[url.length - 1]) url[url.length - 1] = "index.html"
-    if (url[1] == "sources") {
-        for (let i: number = 1; i != url.length; i++) {
-            settings.pass += url[i]
-            if (i != (url.length - 1)) settings.pass += "/"
-        }
-        const extension = url[url.length - 1].split(".")[1]
-        switch (extension) {
-            case "html": {
-                settings.headers["Content-Type"] = contentType.html
-                break
-            }
-            default: {
-                settings.headers["Content-Type"] = contentType.plain
-                break
-            }
-        }
-        if (url[url.length - 1] == "watch") {
-            settings.pass = "sources/ytdl/playwith/index.html"
-            settings.headers["Content-Type"] = contentType.html
-            console.log("watchcc")
-        }
-        settings.statusCode = 200
-    } else if (url[1] == "ytimage") {
-        const videoId = url[url.length - 1]
-        settings.pass = savePass + "cache/YouTubeThumbnail/" + videoId + ".jpg"
-        if (param)
-            if (param.ratio && param.size)
-                settings.pass = savePass + "cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
-        settings.statusCode = 200
-        settings.headers["Content-Type"] = contentType.jpeg
-    } else if (url[1] == "ytauthorimage") {
-        const authorId = url[url.length - 1]
-        settings.pass = cache.getAuthorImage(authorId, param)
-        settings.statusCode = 200
-        settings.headers["Content-Type"] = contentType.jpeg
-    }
-    if (!fs.existsSync(settings.pass)) settings.statusCode = 400
-    if (settings.statusCode != 400) {
-        const length = fs.statSync(settings.pass).size
-        settings.range.start = 0
-        settings.range.end = length
-        settings.headers["Content-Length"] = String(length)
-        settings.headers["Accept-Ranges"] = "bytes"
-        if (req.headers.range) {
-            console.log("Range利用")
-            const chunkSize = 1e7
-            const ranges = String(req.headers.range).split("-")
-            if (ranges[0]) ranges[0] = ranges[0].replace(/\D/g, "")
-            if (ranges[1]) ranges[1] = ranges[1].replace(/\D/g, "")
-
-            settings.range.start = Number(ranges[0]) //始まりの指定
-            settings.range.end = Number(ranges[1] || Math.min(settings.range.start + chunkSize, length - 1)) //終わりの指定
-            settings.headers["Content-Length"] = String(settings.range.end - settings.range.start + 1)
-            settings.headers["Content-Range"] = "bytes " + settings.range.start + "-" + settings.range.end + "/" + length
-            settings.statusCode = 206
-        }
-        res.writeHead(settings.statusCode, settings.headers)
-        const Stream = fs.createReadStream(settings.pass, (settings.range) ? settings.range : null)
-        Stream.on("data", chunk => res.write(chunk))
-        Stream.on("end", () => res.end())
-        Stream.on("error", e => {
-            settings.statusCode = 500
-            res.sendStatus(settings.statusCode)
-        })
-    } else {
-        res.writeHead(settings.statusCode, settings.headers)
-        res.end()
-    }
-    console.log("Get  " + settings.statusCode + ": ", req.url)
-})
-
-app.post("*", async (req, res) => {
-    const url = req.url.split("/")
-    const settings: settings = {
-        headers: {},
-        statusCode: 500,
-        pass: "",
-        resData: ""
-    }
-    settings.headers["Content-Type"] = contentType.plain
-    if (url[1] == "applcation-info") {
-        settings.statusCode = 200
-        settings.resData = JSON.stringify(processJson.Apps)
-    }
-    else if (url[1] == "ytdlRawInfoArray") {
-        settings.statusCode = 200
-        settings.resData = JSON.stringify(Object.keys(data.ytdlRawInfoData))
-    } else if (url[1] == "ytindex-list") {
-        settings.statusCode = 200
-        settings.resData = JSON.stringify(data.ytIndex.videoIds)
-    }
-    console.log("Post " + settings.statusCode + ": " + req.url)
-    res.writeHead(settings.statusCode, settings.headers)
-    res.end(settings.resData)
-})
+const cache = new youtube.CachePass()

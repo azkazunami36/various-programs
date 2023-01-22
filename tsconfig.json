@@ -4,5 +4,6 @@
         "resolveJsonModule": true,
         "esModuleInterop": true,
         "baseUrl": "./",
+        "skipLibCheck": true
     },
 }
