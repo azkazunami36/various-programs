@@ -9,6 +9,14 @@ module.exports.ytIndexCreate = async (videoId, ytIndex, videoDetails) => {
     if (!ytIndex) return console.log("ytIndexがうまく受け取れません。: " + ytIndex)
     if (!ytIndex.videoIds) ytIndex.videoIds = {}
     if (!ytIndex.authorId) ytIndex.authorId = {}
+    if (!videoId) {
+        console.log("VideoIDが利用できません。")
+        return ytIndex
+    }
+    if (!videoDetails) {
+        console.log("このVideoDetailsデータは利用できません。: " + videoDetails)
+        return ytIndex
+    }
     let videoIdIndex = 0
     let authorIdIndex = 0
     if (!ytIndex.videoIds[videoId]) videoIdIndex++

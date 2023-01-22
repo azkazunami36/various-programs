@@ -4,9 +4,10 @@ const wait = require("util").promisify(setTimeout)
  * @param ytdlRawInfoData
  * @param ytIndex
  */
-module.exports.ytIndexReBuild = async (ytdlRawInfoData, ytIndex) => {
+module.exports.ytIndexReBuild = async (ytdlRawInfoData) => {
     const videoIds = Object.keys(ytdlRawInfoData)
-    for (let i = 0; i != videoIds.length; i++) 
+    let ytIndex = {}
+    for (let i = 0; i != videoIds.length; i++)
         ytIndex = await require("./ytIndexCreate").ytIndexCreate(videoIds[i], ytIndex, ytdlRawInfoData[videoIds[i]])
     console.log("再作成完了")
     return ytIndex
