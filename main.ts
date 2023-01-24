@@ -10,11 +10,18 @@ if (!fs.existsSync("passCache.json"))
 if (!fs.existsSync(JSON.parse(String(fs.readFileSync("passCache.json"))).pass))
     throw "データを保存するパス名が間違っています。jsonファイルを再設定をしてください。「/pass/pass」という形で書き込んでください。Windowsの場合も「C:/User/pass」という形で書き込む必要があります。"
 else {
-    const pass: string = JSON.parse(String(fs.readFileSync("passCache.json"))).pass + "/Various-Programs"
+    const pass: string = JSON.parse(String(fs.readFileSync("passCache.json"))).pass + "/Various-Programs-Data"
     if (!fs.existsSync(pass)) fs.mkdirSync(pass)
 }
 
-const savePass: string = JSON.parse(String(fs.readFileSync("passCache.json"))).pass + "/Various-Programs/"
+const savePass: string = JSON.parse(String(fs.readFileSync("passCache.json"))).pass + "/Various-Programs-Data/"
+
+const smartLog: {
+    title: string,
+    body: string,
+    id?: string,
+    data?: any
+}[] = []
 
 namespace ytchInterface {
     interface RelatedChannel {
@@ -142,14 +149,44 @@ namespace youtube {
             type: VAType.audio
         }
     ]
-    export const ytcache: {
+    interface cacheYTDL {
         videoRawInfo: {
-            [videoId: string]: ytdl.VideoDetails
+            [videoId: string | null]: {
+                history: {
+                    data: ytdl.VideoDetails | null,
+                    time: number
+                }[],
+                savedDataPass: {
+                    h264: string | null | false,
+                    h265: string | null | false,
+                    vp9: string | null | false,
+                    av1: string | null | false,
+                    aac: string | null | false,
+                    opus: string | null | false,
+                    converted: {
+                        mp4: {
+                            vcodec: string | null | false,
+                            acodec: string | null | false,
+                            pass: string | null | false
+                        },
+                        hevc: {
+                            vcodec: string | null | false,
+                            acodec: string | null | false,
+                            pass: string | null | false
+                        },
+                        webm: {
+                            vcodec: string | null | false,
+                            acodec: string | null | false,
+                            pass: string | null | false
+                        }
+                    }
+                }
+            }
         },
         channelRawInfo: {
-            [authorId: string]: ytchInterface.ChannelInfo
+            [authorId: string | null]: ytchInterface.ChannelInfo | null
         },
-        index: {
+        index?: {
             videoIds: {
                 [videoId: string]: {
                     title: string,
@@ -163,21 +200,35 @@ namespace youtube {
                 [authorId: string]: {}
             }
         }
-    } = {
-        videoRawInfo: {},
-        channelRawInfo: {},
-        index: {
-            videoIds: {},
-            authorIds: {}
-        }
     }
-    const videoIds: string[] = []
     export class CachePass {
+        ytcache: cacheYTDL = {
+            videoRawInfo: {},
+            channelRawInfo: {}
+        }
+        videoIds: string[] = []
         constructor() {
-
-            const videoId: string[] = JSON.parse(String(fs.readFileSync(savePass + "YouTube-Downloader.json")))
-            for (let i = 0; i != videoId.length; i++)
-                videoIds.push(videoId[i])
+            if (!fs.existsSync(savePass + "YouTube-Downloader.json")) {
+                fs.writeFileSync(savePass + "YouTube-Downloader.json", "{}")
+                smartLog.push({
+                    title: "YouTube-Downloader.jsonの作成",
+                    body: "JSONファイルが存在しなかったため、作成しました。",
+                    id: "filecreate"
+                })
+            }
+            this.videoIds = JSON.parse(String(fs.readFileSync(savePass + "YouTube-Downloader.json")))
+            if (!fs.existsSync(savePass + "YouTube-CacheData.json"))
+                fs.writeFileSync(savePass + "YouTube-CacheData.json", JSON.stringify(this.ytcache))
+            const data: cacheYTDL = JSON.parse(String(fs.readFileSync(savePass + "YouTube-CacheData.json")))
+            if (data.videoRawInfo) this.ytcache.videoRawInfo = data.videoRawInfo
+            if (data.channelRawInfo) this.ytcache.channelRawInfo = data.channelRawInfo
+        }
+        youtubedl(videoId: string, type: number) {
+            let starttime: number
+            const download = ytdl(videoId, { filter: ((type !== 1) ? "videoonly" : "audioonly"), quality: "highest" })
+            download.once("response", () => {
+                if (starttime === null) starttime = Date.now()
+            })
         }
         getAuthorImage(authorId: string, param: { size: number, ratio: number } | querystring.ParsedUrlQuery) {
 
@@ -313,8 +364,7 @@ namespace server {
         ]
     }
 
-    //本体
-    const app = express()
+    const app = express() //本体
     app.listen(80, async () => console.log("サーバーが立ち上がりました。"))
 
     app.get("*", async (req, res) => {
@@ -331,44 +381,31 @@ namespace server {
             pass: ""
         }
         if (!url[url.length - 1]) url[url.length - 1] = "index.html"
-        if (url[1] == "sources") {
+        if (url[1] === "sources") {
             for (let i: number = 1; i != url.length; i++) {
                 settings.pass += url[i]
-                if (i != (url.length - 1)) settings.pass += "/"
-            }
-            const extension = url[url.length - 1].split(".")[1]
-            switch (extension) {
-                case "html": {
-                    settings.headers["Content-Type"] = contentType.html
-                    break
-                }
-                default: {
-                    settings.headers["Content-Type"] = contentType.plain
-                    break
-                }
-            }
-            if (url[url.length - 1] == "watch") {
-                settings.pass = "sources/ytdl/playwith/index.html"
-                settings.headers["Content-Type"] = contentType.html
-                console.log("watchcc")
+                if (i !== (url.length - 1)) settings.pass += "/"
             }
             settings.statusCode = 200
-        } else if (url[1] == "ytimage") {
-            const videoId = url[url.length - 1]
-            settings.pass = savePass + "cache/YouTubeThumbnail/" + videoId + ".jpg"
-            if (param)
-                if (param.ratio && param.size)
-                    settings.pass = savePass + "cache/YouTubeThumbnailRatioResize/" + videoId + "-r" + param.ratio + "-" + param.size + ".jpg"
-            settings.statusCode = 200
-            settings.headers["Content-Type"] = contentType.jpeg
-        } else if (url[1] == "ytauthorimage") {
-            const authorId = url[url.length - 1]
-            settings.pass = cache.getAuthorImage(authorId, param)
-            settings.statusCode = 200
-            settings.headers["Content-Type"] = contentType.jpeg
+        } else if (url[1] === "serverdata") {
+            settings.pass += savePass
+            for (let i: number = 2; i != url.length; i++) {
+                settings.pass += url[i]
+                if (i !== (url.length - 1)) settings.pass += "/"
+            }
+        }
+        const extension = url[url.length - 1].split(".")[1]
+        switch (extension) {
+            case "html": settings.headers["Content-Type"] = contentType.html; break
+            case "jpg": settings.headers["Content-Type"] = contentType.jpeg; break
+            case "mp4": settings.headers["Content-Type"] = contentType.mp4; break
+            case "webm": settings.headers["Content-Type"] = contentType.webm; break
+            case "aac": settings.headers["Content-Type"] = contentType.aac; break
+            case "opus": settings.headers["Content-Type"] = contentType.opus; break
+            default: settings.headers["Content-Type"] = contentType.plain; break
         }
         if (!fs.existsSync(settings.pass)) settings.statusCode = 400
-        if (settings.statusCode != 400) {
+        if (settings.statusCode !== 400) {
             const length = fs.statSync(settings.pass).size
             settings.range.start = 0
             settings.range.end = length
@@ -403,7 +440,6 @@ namespace server {
     })
 
     app.post("*", async (req, res) => {
-        const url = req.url.split("/")
         const settings: settings = {
             headers: {},
             statusCode: 500,
@@ -411,17 +447,18 @@ namespace server {
             resData: ""
         }
         settings.headers["Content-Type"] = contentType.plain
-        if (url[1] == "applcation-info") {
-            settings.statusCode = 200
-            settings.resData = JSON.stringify(processJson.Apps)
-        }
-        else if (url[1] == "ytdlRawInfoArray") {
-            settings.statusCode = 200
-            settings.resData = JSON.stringify(Object.keys(youtube.ytcache.videoRawInfo))
-        } else if (url[1] == "ytindex-list") {
-            settings.statusCode = 200
-            settings.resData = JSON.stringify(youtube.ytcache.index.videoIds)
-        }
+        let dataTemp = ""
+        req.on("data", chunk => dataTemp += chunk)
+        req.on("end", () => {
+            const data: {
+                name: string,
+                sub: string,
+                data: any
+            } = JSON.parse(String(dataTemp))
+            if (data.name === "ytdl") {
+
+            }
+        })
         console.log("Post " + settings.statusCode + ": " + req.url)
         res.writeHead(settings.statusCode, settings.headers)
         res.end(settings.resData)
@@ -429,5 +466,4 @@ namespace server {
 }
 
 //下のやつを使って、ytdl全般の処理をする
-//僕の推測では、これらすべては参照渡しのはずです。
 const cache = new youtube.CachePass()
