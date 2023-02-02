@@ -47,7 +47,7 @@ async function ifScrollBottom() {
     const sTop = videoList.scrollTop //スクロールされている場所
     const cBottom = cHeight + sTop //下を基準にするため
     const sBottom = sHeight - cBottom //下から数えたスクロールされている場所
-    return statusData["videoRow"] * 200 + cHeight > sBottom
+    return statusData["videoRow"] * 400 + cHeight > sBottom
 }
 /**
  * 倍率状態を更新します。
@@ -77,16 +77,19 @@ async function updateState() {
     updateRatio()
     updateRow()
 }
+let ms = Date.now()
+const tick = pin => {
+    const time = Date.now()
+    console.log(time - ms, pin)
+    ms = time
+}
 /**
  * 動画を取得しリストに追加する関数
- * @param {boolean} g 読み込み中でも実行するか
  */
-async function videoLoad(g) {
-    //読み込み中で無視がfalseならリターン
-    if (statusData["videoloading"] && !g) return
+async function videoLoad() {
+    if (statusData["videoloading"]) return //読み込み中ならリターン
+    if (statusData["videoLoaded"] == statusData["videoIds"].length - 1) return
     statusData["videoloading"] = true //読み込み中
-    //ブラウザサイズからどれほど動画を並べられるか判断
-    updateRow()
     if (!statusData["videoIds"][0]) { //videoIdsが無かったらサーバーからデータを取得する
         statusData["ytIndex"] = JSON.parse(await httpDataRequest("ytindex-list"))
         statusData["videoIds"] = Object.keys(statusData["ytIndex"])
@@ -98,25 +101,27 @@ async function videoLoad(g) {
             console.log(statusData["videoIds"][i])
         }
     }
-    //表示済み数がVideoIDsと同じならリターン
-    if (statusData["videoLoaded"] == statusData["videoIds"].length - 1) return
-    for (let i = 0; i != statusData["videoRow"]; i++) {
-        if (statusData["videoLoaded"] == statusData["videoIds"].length - 1) return //読み込める動画が無くなるとリターン
-        statusData["videoLoaded"]++
-        const videoId = statusData["videoIds"][statusData["videoLoaded"]] //VideoID
-        updateRatio()
-        const video = new createVT(document.getElementById("VideoListCenter"))
-        video.setElement()
-        video.ratio = statusData["ratio"]
-        video.thumbnailWidth = statusData["thumbnailWidth"]
-        video.videoId = videoId
-        video.title = statusData["ytIndex"][videoId].title
-        video.author = statusData["ytIndex"][videoId].author
-        video.update()
+    updateRatio()
+    updateRow() //ブラウザサイズからどれほど動画を並べられるか判断
+    while (await ifScrollBottom()) { //一番下までスクロールされていない状態になるまでループ
+        if (statusData["videoLoaded"] == statusData["videoIds"].length - 1) break //読み込める動画が無くなるとブレーク
+        new Promise(async resolve => {
+            statusData["videoLoaded"]++
+            const video = new createVT(document.getElementById("VideoListCenter"))
+            video.setElement()
+            const videoId = statusData["videoIds"][statusData["videoLoaded"]] //VideoID
+            video.ratio = statusData["ratio"]
+            video.thumbnailWidth = statusData["thumbnailWidth"]
+            video.videoId = videoId
+            video.title = statusData["ytIndex"][videoId].title
+            video.author = statusData["ytIndex"][videoId].author
+            video.update()
+            resolve()
+        })
+        await wait(1)
     }
-    //もし処理中の隙に一番下までスクロールされていたらすぐに次の読み込みをする
-    if (await ifScrollBottom()) videoLoad(true)
-    else statusData["videoloading"] = false //出なければ読み込み終了
+    console.log("読み込み終了")
+    statusData["videoloading"] = false //読み込み終了
 }
 class createVT {
     _data = {
@@ -814,6 +819,7 @@ addEventListener("load", async () => {
                 const data = statusData["ytIndex"][videoId]
                 await ifString(data.title.match(searchStrings[m]), data.title)
                 await ifString(data.author.name.match(searchStrings[m]), data.author.name)
+                await ifString(videoId.match(searchStrings[m], videoId))
             }
         }
         const mtObj = Object.keys(matching) //マッチの優先度を記したデータ
