@@ -5,6 +5,33 @@ import ytch from "yt-channel-info"
 import querystring from "querystring"
 import readline from "readline"
 
+function addNestedProperties(mlist: string[], mdest: {}, write?: { name: string, data: any }) {
+    let dest: {} = mdest
+    let list: string[] = JSON.parse(JSON.stringify(mlist))
+    while (list.length !== 0) {
+        if (!(list[0] in dest)) dest[list[0]] = {}
+        dest = dest[list[0]]
+        list = list.slice(1)
+    }
+    if (write) dest[write.name] = write.data
+}
+let dest = {
+    data: {
+        video: {
+            pass: ""
+        }
+    }
+}
+console.dir(dest)
+addNestedProperties(["data", "audio"], dest, { name: "pass", data: "/Users/" })
+addNestedProperties(["data", "audio"], dest, { name: "data", data: "videos" })
+addNestedProperties(["data", "video"], dest, { name: "users", data: "kazun" })
+addNestedProperties(["data", "video"], dest)
+addNestedProperties(["data", "universal"], dest)
+addNestedProperties(["data", "video"], dest, { name: "pass", data: "やあ" })
+console.dir(dest)
+process.exit(0)
+
 const smartLog: {
     title: string,
     body: string,
@@ -270,7 +297,7 @@ namespace server {
 
     const memory: {
         savePass?: string | null
-    } = { }
+    } = {}
 
     const app = express() //本体
     app.listen(80, async () => console.log("サーバーが立ち上がりました。"))
@@ -365,4 +392,85 @@ namespace server {
         res.writeHead(settings.statusCode, settings.headers)
         res.end(settings.resData)
     })
+}
+/**
+ * データを管理する際に使用します。
+ * 動作が高速になるよう設計しています。
+ */
+namespace sourceManagement {
+    interface constructor {
+        /**
+         * データを管理する際に使用するフォルダを指定します。
+         * ¥には対応していません。必ず/を使用してください。
+         * いずれ対応しますが、予定はありません。
+         */
+        pass: string
+    }
+    interface pointsExp {
+        mark: string[],
+        extension?: string | null
+    }
+    function addNestedProperties(mlist: string[], mdest: {}, write?: { name: string, data: any }) {
+        let dest: {} = mdest
+        let list: string[] = JSON.parse(JSON.stringify(mlist))
+        while (list.length !== 0) {
+            if (!(list[0] in dest)) dest[list[0]] = {}
+            dest = dest[list[0]]
+            list = list.slice(1)
+        }
+        if (write) dest[write.name] = write.data
+    }
+    /**
+     * 主役です。
+     */
+    class sourceManager {
+        /**
+         * クラスが利用可能かを決定します。
+         * falseの場合は全ての要求をスルーします。
+         */
+        status = false
+        /**
+         * jsonやソースなどの保存先を格納します。
+         */
+        pass = ""
+        /**
+         * ソースの保存先を格納します。
+         */
+        points = {}
+        /**
+         * jsonテキストデータを格納します。
+         */
+        textData = {}
+        /**
+         * ソースの追加情報を格納します。
+         */
+        pointTags = {}
+        constructor(pass: string) {
+            let splited = pass.split("/")
+            let splitToPass = ""
+            for (let i = 0; i != splited.length; i++) {
+                if (splitToPass != "" && splited[i] != "") splitToPass += "/"
+                splitToPass += splited[i]
+            }
+            if (fs.existsSync(splitToPass)) {
+                this.pass = splitToPass //パス位置を設定します。
+                const jsonfile = ["passpoints", "textdata", "passtag"] //作成するjsonファイルの名前を格納します。
+                for (let i = 0; i != jsonfile.length; i++) {
+                    if (!fs.existsSync(this.pass + "/" + jsonfile[i] + ".json")) //jsonファイルがない場合
+                        fs.writeFileSync(this.pass + "/" + jsonfile[i] + ".json", "{}") //作成します
+                }
+                this.points = JSON.parse(String(fs.readFileSync(this.pass + "/passpoints.json"))) //データを読み込みます。
+                this.textData = JSON.parse(String(fs.readFileSync(this.pass + "/textdata.json"))) //省略
+                this.pointTags = JSON.parse(String(fs.readFileSync(this.pass + "/passtag.json")))
+                this.status = true //利用可能にします。
+            }
+        }
+        passCreate(request: pointsExp, data: { [_: string]: any } | null) {
+            let json: any = this.points
+            for (let i = 0; i != request.mark.length; i++) {
+                json = json[request.mark[i]]
+                if (!json) json = {}
+            }
+        }
+    }
 }
