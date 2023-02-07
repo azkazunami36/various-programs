@@ -416,36 +416,45 @@
                 if (request.token) {
                     procData.discordBot[request.token] = {}
                     const proc = procData.discordBot[request.token]
-                    if (request.init) proc.client = new Client({
-                        partials: [
-                            Partials.Channel,
-                            Partials.GuildMember,
-                            Partials.GuildScheduledEvent,
-                            Partials.Message,
-                            Partials.Reaction,
-                            Partials.ThreadMember,
-                            Partials.User
-                        ],
-                        intents: [
-                            GatewayIntentBits.DirectMessageReactions,
-                            GatewayIntentBits.DirectMessageTyping,
-                            GatewayIntentBits.DirectMessages,
-                            GatewayIntentBits.GuildBans,
-                            GatewayIntentBits.GuildEmojisAndStickers,
-                            GatewayIntentBits.GuildIntegrations,
-                            GatewayIntentBits.GuildInvites,
-                            GatewayIntentBits.GuildMembers,
-                            GatewayIntentBits.GuildMessageReactions,
-                            GatewayIntentBits.GuildMessageTyping,
-                            GatewayIntentBits.GuildMessages,
-                            GatewayIntentBits.GuildPresences,
-                            GatewayIntentBits.GuildScheduledEvents,
-                            GatewayIntentBits.GuildVoiceStates,
-                            GatewayIntentBits.GuildWebhooks,
-                            GatewayIntentBits.Guilds,
-                            GatewayIntentBits.MessageContent
-                        ]
-                    })
+                    if (request.init) {
+                        proc.client = new Client({
+                            partials: [
+                                Partials.Channel,
+                                Partials.GuildMember,
+                                Partials.GuildScheduledEvent,
+                                Partials.Message,
+                                Partials.Reaction,
+                                Partials.ThreadMember,
+                                Partials.User
+                            ],
+                            intents: [
+                                GatewayIntentBits.DirectMessageReactions,
+                                GatewayIntentBits.DirectMessageTyping,
+                                GatewayIntentBits.DirectMessages,
+                                GatewayIntentBits.GuildBans,
+                                GatewayIntentBits.GuildEmojisAndStickers,
+                                GatewayIntentBits.GuildIntegrations,
+                                GatewayIntentBits.GuildInvites,
+                                GatewayIntentBits.GuildMembers,
+                                GatewayIntentBits.GuildMessageReactions,
+                                GatewayIntentBits.GuildMessageTyping,
+                                GatewayIntentBits.GuildMessages,
+                                GatewayIntentBits.GuildPresences,
+                                GatewayIntentBits.GuildScheduledEvents,
+                                GatewayIntentBits.GuildVoiceStates,
+                                GatewayIntentBits.GuildWebhooks,
+                                GatewayIntentBits.Guilds,
+                                GatewayIntentBits.MessageContent
+                            ]
+                        })
+                        /**
+                         * @type {Client}
+                         */
+                        const client = proc.client
+                        client.on(Events.MessageCreate, message => {
+
+                        })
+                    }
                     /**
                      * @type {Client}
                      */
@@ -454,6 +463,9 @@
                 }
             })
         } else if (req.url.match("/discord-statusGet")) {
+        } else if (false) {
+        } else if (false) {
+        } else if (false) {
         } else if (false) {
         } else {
             res.status(404)
