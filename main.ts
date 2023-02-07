@@ -5,38 +5,34 @@ import ytch from "yt-channel-info"
 import querystring from "querystring"
 import readline from "readline"
 
-function addNestedProperties(mlist: string[], mdest: {}, write?: { name: string, data: any }) {
-    let dest: {} = mdest
-    let list: string[] = JSON.parse(JSON.stringify(mlist))
-    while (list.length !== 0) {
-        if (!(list[0] in dest)) dest[list[0]] = {}
-        dest = dest[list[0]]
-        list = list.slice(1)
-    }
-    if (write) dest[write.name] = write.data
-}
-let dest = {
-    data: {
-        video: {
-            pass: ""
-        }
-    }
-}
-console.dir(dest)
-addNestedProperties(["data", "audio"], dest, { name: "pass", data: "/Users/" })
-addNestedProperties(["data", "audio"], dest, { name: "data", data: "videos" })
-addNestedProperties(["data", "video"], dest, { name: "users", data: "kazun" })
-addNestedProperties(["data", "video"], dest)
-addNestedProperties(["data", "universal"], dest)
-addNestedProperties(["data", "video"], dest, { name: "pass", data: "やあ" })
-console.dir(dest)
-process.exit(0)
-
+/**
+ * 簡易的な保存できるログです。  
+ * Web上で状態を閲覧する際に使用してください。  
+ * .push()以外の方法でログデータを格納しないでください。
+ */
 const smartLog: {
+    /**
+     * ログですぐに見て欲しい内容を短く入力します。  
+     * 例: エラー: 動画が保存ができませんでした。
+     */
     title: string,
+    /**
+     * そのログの内容です。細かい説明を入力してください。  
+     * 例: ytdl関数内のfsで指定されたパス""に保管していたところ、エラーを返しました。  
+     * __ エラーメッセージ: 「」
+     */
     body: string,
+    /**
+     * グループ化したいログをIDをつけることで見やすくすることを目的としています。
+     * 
+     * ダウンロードの進行状況をログをして出力する際に、大量のメッセージで埋め尽くさないようにするのが目的です。
+     */
     id?: string,
-    data?: any
+    /**
+     * エラー内容のRAWデータをJSON形式で入力します。
+     * または、実行中のプロセスのJSON内容や文字列など、bodyでは治らないものを格納します。
+     */
+    data?: {}
 }[] = []
 
 namespace ytchInterface {
@@ -316,7 +312,7 @@ namespace server {
             pass: ""
         }
         if (!url[url.length - 1]) url[url.length - 1] = "index.html" //スラッシュより先がない場合は必然的にindex.htmlになる
-        if (url[1] === "sources") {
+        if (url[1] === "sourcesd") {
             for (let i: number = 1; i != url.length; i++) {
                 settings.pass += url[i]
                 if (i !== (url.length - 1)) settings.pass += "/"
@@ -407,9 +403,21 @@ namespace sourceManagement {
         pass: string
     }
     interface pointsExp {
+        /**
+         * 疑似のパスを指定します。
+         */
         mark: string[],
+        /**
+         * オプションで拡張子を決定できます。
+         * 
+         * 小数点は使用しなくて結構です。
+         */
         extension?: string | null
     }
+    /**
+     * teratail提供のjson操作関数
+     * 動的に書き換えが可能です。配列には非対応です。
+     */
     function addNestedProperties(mlist: string[], mdest: {}, write?: { name: string, data: any }) {
         let dest: {} = mdest
         let list: string[] = JSON.parse(JSON.stringify(mlist))
@@ -455,22 +463,33 @@ namespace sourceManagement {
             if (fs.existsSync(splitToPass)) {
                 this.pass = splitToPass //パス位置を設定します。
                 const jsonfile = ["passpoints", "textdata", "passtag"] //作成するjsonファイルの名前を格納します。
-                for (let i = 0; i != jsonfile.length; i++) {
+                for (let i = 0; i != jsonfile.length; i++) //jsonファイル名の数だけ
                     if (!fs.existsSync(this.pass + "/" + jsonfile[i] + ".json")) //jsonファイルがない場合
                         fs.writeFileSync(this.pass + "/" + jsonfile[i] + ".json", "{}") //作成します
-                }
-                this.points = JSON.parse(String(fs.readFileSync(this.pass + "/passpoints.json"))) //データを読み込みます。
-                this.textData = JSON.parse(String(fs.readFileSync(this.pass + "/textdata.json"))) //省略
-                this.pointTags = JSON.parse(String(fs.readFileSync(this.pass + "/passtag.json")))
+                const getJSON = (pass: string): {} => JSON.parse(String(fs.readFileSync(pass)))
+                this.points = getJSON(this.pass + "/passpoints.json") //データを読み込みます。
+                this.textData = getJSON(this.pass + "/textdata.json") //省略
+                this.pointTags = getJSON(this.pass + "/passtag.json")
+                if (this.pass + "/data") fs.mkdirSync(this.pass + "/data") //dataフォルダがないと作成
                 this.status = true //利用可能にします。
             }
         }
-        passCreate(request: pointsExp, data: { [_: string]: any } | null) {
-            let json: any = this.points
-            for (let i = 0; i != request.mark.length; i++) {
-                json = json[request.mark[i]]
-                if (!json) json = {}
-            }
+        passGet(request: pointsExp, data?: {}): string {
+            let dest: {} = this.points //参照渡し。JSONに書き込むために使う
+            let passString = "" //パス配列を全てここに集める
+            for (let i = 0; i !== request.mark.length; i++) { //パス配列の数だけループ
+                if (!(request.mark[i] in dest)) dest[request.mark[i]] = {} //パス名に合う配列が存在しない場合生成
+                dest = dest[request.mark[i]] //JSONの内部に入る
+                passString += request.mark[i] //パス名を追記する
+            } //ループを抜けるとdestにはパスの最先端を指定したJSONが参照される
+            /**
+             * 実際に配置するパスの名前を生成します。  
+             * [時間]-[パス配列の集合した文字列](拡張子の指定があると.[拡張子])
+             */
+            if (dest["filename"]) dest["filename"] = Date.now() + "-" + passString + Math.floor(Math.random() * 1e2) + request.extension ? "." + request.extension : ""
+            if (data) dest["data"] = Object.assign(dest["data"], data) //data内のデータを格納します。
+            if (this.pass + "/data") fs.mkdirSync(this.pass + "/data") //dataフォルダがないと作成
+            return this.pass + "/data/" + dest["filename"]
         }
     }
 }
