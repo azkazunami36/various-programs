@@ -102,10 +102,34 @@ const questions = text => {
         let convertPoint = 0
         const maxconvert = 20
         convert()
+        const inteval = setInterval(() => display, 8)
+        function display() {
+            const windowSize = process.stdout.getWindowSize()
+            const percent = convertPoint / processd.length
+            const oneDisplay = "変換中(" + convertPoint + "/" + processd.length + ") " +
+                (percent * 100).toFixed() + "%["
+            const twoDisplay = "]"
+            let progress = ""
+            let length = 0
+            for (let i = 0; i !== oneDisplay.length; i++)
+                oneDisplay[i].match(/[ -~]/) ? length += 1 : length += 2
+            for (let i = 0; i !== twoDisplay.length; i++)
+                twoDisplay[i].match(/[ -~]/) ? length += 1 : length += 2
+            const progressLength = windowSize[0] - 3 - length
+            const displayProgress = Number((percent * progressLength).toFixed())
+            for (let i = 0; i < displayProgress; i++) progress += "#"
+            for (let i = 0; i < progressLength - displayProgress; i++) progress += " "
+            const display = oneDisplay + progress + twoDisplay
+            readline.cursorTo(process.stdout, 0)
+            process.stdout.clearLine()
+            process.stdout.write(display)
+        }
+
         async function convert() {
             if (converting === maxconvert) return
             if (convertPoint === processd.length) {
-                if (converting === 0) console.log("変換が完了しました。")
+                if (converting === 0) console.log("\n変換が完了しました。")
+                clearInterval(inteval)
                 return
             }
             const i = convertPoint
@@ -125,7 +149,7 @@ const questions = text => {
                 (i + 1) + "_" + processd[i].extension + " - " + processd[i].filename,
                 i + 1,
             ][nameType] + ".png")
-            console.log("ファイル「" + fileName + "」を変換中 (" + (i + 1) + "/" + processd.length + ")")
+            display()
             convert()
             await new Promise(async resolve => {
                 const imageW = (await imageSize(processd[i].pass + fileName)).width
