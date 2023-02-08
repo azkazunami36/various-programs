@@ -97,68 +97,46 @@ const questions = text => {
         "命名方法: " + type[nameType]
     )
     const permission = await questions("上記のデータで実行してもよろしいですか？yと入力すると続行します。> ")
-    class convert {
-        /**
-         * @type {{filename: string, extension: string, pass: string, point: string[]}[]}
-         */
-        #queue = []
-        #converting = 0
-        maxconvert = 3
-        #imageNum = 0
-        imageSize = 240
-        #convertPoint = 0
-        outputPass = ""
-        constructor() { }
-        /**
-         * @param {{filename: string, extension: string, pass: string, point: string[]}} data 
-         */
-        add(data) {
-            this.#queue.push(data)
-            this.#imageNum++
-        }
-        async convert() {
-            if (this.#converting === this.maxconvert) return
-            if (this.#convertPoint === this.#queue.length) {
-                if (this.#converting === 0) console.log("変換が完了しました。")
+    if (permission === "y") {
+        let converting = 0
+        let convertPoint = 0
+        const maxconvert = 20
+        convert()
+        async function convert() {
+            if (converting === maxconvert) return
+            if (convertPoint === processd.length) {
+                if (converting === 0) console.log("変換が完了しました。")
                 return
             }
-            const i = this.#convertPoint
-            this.#convertPoint++
-            this.#converting++
-            const fileName = this.#queue[i].filename + "." + this.#queue[i].extension
+            const i = convertPoint
+            convertPoint++
+            converting++
+            const fileName = processd[i].filename + "." + processd[i].extension
             let outfolders = ""
-            const point = this.#queue[i].point
+            const point = processd[i].point
             for (let i = 0; i !== point.length; i++) {
                 outfolders += point[i] + "/"
-                if (!fs.existsSync(this.outputPass + outfolders)) fs.mkdirSync(this.outputPass + outfolders)
+                if (!fs.existsSync(outpass + outfolders)) fs.mkdirSync(outpass + outfolders)
             }
-            const Stream = fs.createWriteStream(this.outputPass + outfolders + [
-                this.#queue[i].filename,
-                (i + 1) + " - " + this.#queue[i].filename,
-                this.#queue[i].extension + " - " + this.#queue[i].filename,
-                (i + 1) + "_" + this.#queue[i].extension + " - " + this.#queue[i].filename,
+            const Stream = fs.createWriteStream(outpass + outfolders + [
+                processd[i].filename,
+                (i + 1) + " - " + processd[i].filename,
+                processd[i].extension + " - " + processd[i].filename,
+                (i + 1) + "_" + processd[i].extension + " - " + processd[i].filename,
                 i + 1,
             ][nameType] + ".png")
-            console.log("ファイル「" + fileName + "」を変換中 (" + (i + 1) + "/" + this.#imageNum + ")")
-            this.convert()
+            console.log("ファイル「" + fileName + "」を変換中 (" + (i + 1) + "/" + processd.length + ")")
+            convert()
             await new Promise(async resolve => {
-                const imageW = (await imageSize(this.#queue[i].pass + fileName)).width
-                sharp(this.#queue[i].pass + fileName)
-                    .resize((this.imageSize < imageW) ? this.imageSize : imageW)
+                const imageW = (await imageSize(processd[i].pass + fileName)).width
+                sharp(processd[i].pass + fileName)
+                    .resize((size < imageW) ? size : imageW)
                     .png()
                     .pipe(Stream)
                 Stream.on("finish", resolve)
             })
-            this.#converting--
-            this.convert()
+            converting--
+            convert()
         }
-    }
-    if (permission === "y") {
-        const converter = new convert()
-        converter.imageSize = size
-        converter.outputPass = outpass
-        converter.maxconvert = 20
-        for (let i = 0; i !== processd.length; i++) converter.add(processd[i])
-        converter.convert()
     }
 })()
