@@ -27,11 +27,13 @@ const questions = text => {
     const size = Number(await questions("変換したいサイズを指定してください。> "))
     if (!size) process.exit(0)
     let passtmp = await questions("画像が入っているフォルダを指定してください。> ")
+    while(passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
     let pass = ""
     passtmp = passtmp.split("/")
     for (let i = 0; i != passtmp.length; i++) pass += passtmp[i] + "/"
     if (!fs.existsSync(pass)) process.exit(0)
     let outpasstmp = await questions("変換した後の画像を保存する場所を指定してください。> ")
+    while(outpasstmp[outpasstmp.length - 1] === " ") outpasstmp = outpasstmp.slice(0, -1)
     outpasstmp = outpasstmp.split("/")
     let outpass = ""
     for (let i = 0; i !== outpasstmp.length; i++) outpass += outpasstmp[i] + "/"
@@ -45,7 +47,7 @@ const questions = text => {
     ]
     for (let i = 0; i !== type.length; i++) console.log("[" + (i + 1) + "] " + type[i])
     const nameType = Number(await questions("上記から命名方法を数字で選択してください。")) - 1
-    if (!nameType) process.exit(0)
+    if (!(nameType + 1) || type.length < (nameType + 1)) process.exit(0)
     const folderContain = await questions("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
 
     /**
@@ -101,8 +103,8 @@ const questions = text => {
         let converting = 0
         let convertPoint = 0
         const maxconvert = 20
+        const interval = setInterval(() => display, 8)
         convert()
-        const inteval = setInterval(() => display, 8)
         function display() {
             const windowSize = process.stdout.getWindowSize()
             const percent = convertPoint / processd.length
@@ -129,7 +131,7 @@ const questions = text => {
             if (converting === maxconvert) return
             if (convertPoint === processd.length) {
                 if (converting === 0) console.log("\n変換が完了しました。")
-                clearInterval(inteval)
+                clearInterval(interval)
                 return
             }
             const i = convertPoint
