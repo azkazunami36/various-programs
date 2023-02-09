@@ -7,66 +7,115 @@ import express from "express"
  */
 
 namespace sumtool {
-    export function times(seconds: number, option?: { days?: boolean }) {
-        const calcStartTime = Date.now()
-        let sec: number = 0, min: number = 0, hour: number = 0, days: number = 0
-        for (let i = 0; i < seconds; i++) {
-            sec++
-            if (sec === 60) {
-                sec = 0
-                min++
-                if (min === 60) {
-                    min = 0
-                    hour++
-                    if (option)
-                        if (option.days && hour === 24) {
-                            hour = 0
-                            days++
-                        }
-                }
+    export class time {
+        #sec = 0
+        #min = 0
+        #hour = 0
+        #hourRaw = 0
+        #days = 0
+        #daysRaw = 0
+        #year = 0
+        #convertTime = 0
+        constructor(seconds: number) {
+            this.count(seconds)
+        }
+        count(seconds: number) {
+            const time = Date.now()
+            const up = Math.sign(seconds)
+            let num = 0
+            if (up === 1) while (num < seconds) {
+                this.setting(true)
+                num++
+            }
+            if (up === -1) while (seconds < num) {
+                this.setting(false)
+                num--
+            }
+            this.#convertTime = Date.now() - time
+        }
+        setting(up: boolean) {
+            this.#sec += (up ? 1 : -1)
+            if (this.#sec === 60) {
+                this.#sec = 0
+                this.#min++
+            }
+            if (this.#sec === -1) {
+                this.#sec = 59
+                this.#min--
+            }
+            if (this.#min === 60) {
+                this.#min = 0
+                this.#hour++
+                this.#hourRaw++
+            }
+            if (this.#min === -1) {
+                this.#min = 50
+                this.#hour--
+                this.#hourRaw--
+            }
+            if (this.#hour === 24) {
+                this.#hour = 0
+                this.#days++
+                this.#daysRaw++
+            }
+            if (this.#hour === -1) {
+                this.#hour = 23
+                this.#days--
+                this.#daysRaw--
+            }
+            if (this.#days === 365) {
+                this.#days = 0
+                this.#year++
+            }
+            if (this.#days === -1) {
+                this.#days = 364
+                this.#year--
             }
         }
-        return {
-            sec, min, hour, days,
-            toString: (string?: { sec?: string, min?: string, hour?: string, days?: string }): string => {
-                let timeString = 0
-                const second = sec + (string ? (string.sec ? string.sec : null) : "秒")
-                const minute = min + (string ? (string.min ? string.min : null) : "分")
-                const hour1 = hour + (string ? (string.hour ? string.hour : null) : "時間")
-                const days1 = days + (string ? (string.days ? string.days : null) : "日")
-                if (min) timeString = 1
-                if (hour) timeString = 2
-                if (days) timeString = 3
-
-                return ((2 < timeString) ? days1 : "") +
-                    ((1 < timeString) ? hour1 : "") +
-                    ((0 < timeString) ? minute : "") +
-                    second
-            },
-            calcTime: (Date.now() - calcStartTime) / 1000
-        }
-    }
-    class time {
-        #sec: number = 0
-        #min
-        #hour
-        #days
-        constructor(seconds: number) {
-            let sec: number = 0, min: number = 0, hour: number = 0, days: number = 0
-            for (let i = 0; i < seconds; i++) {
-                sec++
-                if (sec === 60) {
-                    sec = 0
-                    min++
-                    if (min === 60) {
-                        min = 0
-                        hour++
-                        if (hour === 24) {
-                            hour = 0
-                            days++
-                        }
-                    }
+        toString(option?: { days?: boolean, year?: boolean, count?: { sec?: string, min?: string, hour?: string, days?: string, year: string } }) {
+            const outputRaw = {
+                days: false,
+                year: false
+            }
+            const counter = { sec: "秒", min: "分", hour: "時間", days: "日", year: "年" }
+            if (option) {
+                if (option.days) outputRaw.days = true
+                if (option.year) outputRaw.year = true, outputRaw.days = true
+                if (option.count) {
+                    const count = option.count
+                    if (count.year) counter.year = count.year
+                    if (count.days) counter.days = count.days
+                    if (count.hour) counter.hour = count.hour
+                    if (count.min) counter.min = count.min
+                    if (count.sec) counter.sec = count.sec
                 }
+            }
+            const sec = this.#sec
+            const min = this.#min
+            const hour = outputRaw.days ? this.#hour : this.#hourRaw
+            const days = outputRaw.year ? this.#days : this.#daysRaw
+            const year = this.#year
+            let timeString = 0
+            if (min) timeString = 1
+            if (hour) timeString = 2
+            if (outputRaw.days && days) timeString = 3
+            if (outputRaw.year && year) timeString = 4
+            return (3 < timeString ? year + counter.year : "") +
+                (2 < timeString ? days + counter.days : "") +
+                (1 < timeString ? hour + counter.hour : "") +
+                (0 < timeString ? min + counter.min : "") +
+                sec + counter.sec
+        }
+        toJSON() {
+            return {
+                sec: this.#sec,
+                min: this.#min,
+                hour:this.#hour,
+                hourRaw: this.#hourRaw,
+                days: this.#days,
+                daysRaw: this.#daysRaw,
+                year: this.#year,
+                convertTime: this.#convertTime
             }
         }
     }
@@ -81,6 +130,6 @@ namespace sumtool {
             "利用可能なプログラム: \n" +
             "[1] Image Resize"
         )
-        await question("実行したいプログラムを選択してください。")
+        const programChoice = Number(await question("実行したいプログラムを選択してください。"))
     }
 }
