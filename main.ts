@@ -1,5 +1,6 @@
 import readline from "readline"
-import express from "express"
+import express, { raw } from "express"
+import fs from "fs"
 /**
  * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
  * CUIでもGUIのような使い勝手の良さを実感してください。
@@ -7,20 +8,46 @@ import express from "express"
  */
 
 namespace sumtool {
+    interface tempTime {
+        sec: number,
+        secRaw: number
+        min: number,
+        minRaw: number,
+        hour: number,
+        hourRaw: number,
+        days: number,
+        daysRaw: number,
+        year: number,
+        convertTime: number
+    }
     export class time {
         #sec = 0
+        #secRaw = 0
         #min = 0
+        #minRaw = 0
         #hour = 0
         #hourRaw = 0
         #days = 0
         #daysRaw = 0
         #year = 0
         #convertTime = 0
-        constructor(seconds: number) {
+        constructor(seconds: number, rawData?: tempTime) {
             this.count(seconds)
+            if (rawData) {
+                this.#sec = rawData.sec,
+                    this.#secRaw = rawData.secRaw,
+                    this.#min = rawData.min,
+                    this.#minRaw = rawData.minRaw,
+                    this.#hour = rawData.hour,
+                    this.#hourRaw = rawData.hourRaw,
+                    this.#days = rawData.days,
+                    this.#daysRaw = rawData.daysRaw,
+                    this.#year = rawData.year,
+                    this.#convertTime = rawData.convertTime
+            }
         }
-        count(seconds: number) {
-            const time = Date.now()
+        count(seconds: number): time {
+            const converttime = Date.now()
             const up = Math.sign(seconds)
             let num = 0
             if (up === 1) while (num < seconds) {
@@ -31,17 +58,21 @@ namespace sumtool {
                 this.setting(false)
                 num--
             }
-            this.#convertTime = Date.now() - time
+            this.#convertTime = Date.now() - converttime
+            return new time(0, this.toJSON())
         }
         setting(up: boolean) {
             this.#sec += (up ? 1 : -1)
+            this.#secRaw += (up ? 1 : -1)
             if (this.#sec === 60) {
                 this.#sec = 0
                 this.#min++
+                this.#minRaw++
             }
             if (this.#sec === -1) {
                 this.#sec = 59
                 this.#min--
+                this.#minRaw--
             }
             if (this.#min === 60) {
                 this.#min = 0
@@ -71,6 +102,7 @@ namespace sumtool {
                 this.#days = 364
                 this.#year--
             }
+            return new time(0, this.toJSON())
         }
         toString(option?: { days?: boolean, year?: boolean, count?: { sec?: string, min?: string, hour?: string, days?: string, year: string } }) {
             const outputRaw = {
@@ -106,11 +138,13 @@ namespace sumtool {
                 (0 < timeString ? min + counter.min : "") +
                 sec + counter.sec
         }
-        toJSON() {
+        toJSON(): tempTime {
             return {
                 sec: this.#sec,
+                secRaw: this.#secRaw,
                 min: this.#min,
-                hour:this.#hour,
+                minRaw: this.#minRaw,
+                hour: this.#hour,
                 hourRaw: this.#hourRaw,
                 days: this.#days,
                 daysRaw: this.#daysRaw,
