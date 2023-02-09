@@ -153,6 +153,30 @@ namespace sumtool {
             }
         }
     }
+    interface passout extends fs.Stats {
+        pass: string
+    }
+    export async function passCheck(string: string): Promise<passout> {
+        const pass = (() => {
+            const passArray = string.split("/")
+            let passtmp = ""
+            for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
+            if (fs.existsSync(passtmp)) return passtmp
+            while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
+            if (fs.existsSync(passtmp)) return passtmp
+            passtmp = passtmp.replace(/\\ /i, " ")
+            if (fs.existsSync(passtmp)) return passtmp
+            
+        })()
+        return await new Promise(resolve => {
+            fs.stat(pass, (err, stats) => {
+                resolve({
+                    pass: pass,
+                    ...stats
+                })
+            })
+        })
+    }
     export async function question(text: string): Promise<string> {
         const iface =
             readline.createInterface({ input: process.stdin, output: process.stdout })
