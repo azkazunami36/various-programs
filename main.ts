@@ -46,7 +46,7 @@ namespace sumtool {
                     this.#convertTime = rawData.convertTime
             }
         }
-        count(seconds: number): time {
+        count(seconds: number) {
             const converttime = Date.now()
             const up = Math.sign(seconds)
             let num = 0
@@ -59,7 +59,6 @@ namespace sumtool {
                 num--
             }
             this.#convertTime = Date.now() - converttime
-            return new time(0, this.toJSON())
         }
         setting(up: boolean) {
             this.#sec += (up ? 1 : -1)
@@ -102,7 +101,6 @@ namespace sumtool {
                 this.#days = 364
                 this.#year--
             }
-            return new time(0, this.toJSON())
         }
         toString(option?: { days?: boolean, year?: boolean, count?: { sec?: string, min?: string, hour?: string, days?: string, year: string } }) {
             const outputRaw = {
