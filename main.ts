@@ -61,45 +61,50 @@ namespace sumtool {
             this.#convertTime = Date.now() - converttime
         }
         setting(up: boolean) {
-            this.#sec += (up ? 1 : -1)
-            this.#secRaw += (up ? 1 : -1)
-            if (this.#sec === 60) {
-                this.#sec = 0
-                this.#min++
-                this.#minRaw++
-            }
-            if (this.#sec === -1) {
-                this.#sec = 59
-                this.#min--
-                this.#minRaw--
-            }
-            if (this.#min === 60) {
-                this.#min = 0
-                this.#hour++
-                this.#hourRaw++
-            }
-            if (this.#min === -1) {
-                this.#min = 50
-                this.#hour--
-                this.#hourRaw--
-            }
-            if (this.#hour === 24) {
-                this.#hour = 0
-                this.#days++
-                this.#daysRaw++
-            }
-            if (this.#hour === -1) {
-                this.#hour = 23
-                this.#days--
-                this.#daysRaw--
-            }
-            if (this.#days === 365) {
-                this.#days = 0
-                this.#year++
-            }
-            if (this.#days === -1) {
-                this.#days = 364
-                this.#year--
+            if (up) {
+                this.#sec++
+                this.#secRaw++
+                if (this.#sec === 60) {
+                    this.#sec = 0
+                    this.#min++
+                    this.#minRaw++
+                } else return
+                if (this.#min === 60) {
+                    this.#min = 0
+                    this.#hour++
+                    this.#hourRaw++
+                } else return
+                if (this.#hour === 24) {
+                    this.#hour = 0
+                    this.#days++
+                    this.#daysRaw++
+                } else return
+                if (this.#days === 365) {
+                    this.#days = 0
+                    this.#year++
+                }
+            } else {
+                this.#sec--
+                this.#secRaw--
+                if (this.#sec === -1) {
+                    this.#sec = 59
+                    this.#min--
+                    this.#minRaw--
+                } else return
+                if (this.#min === -1) {
+                    this.#min = 50
+                    this.#hour--
+                    this.#hourRaw--
+                } else return
+                if (this.#hour === -1) {
+                    this.#hour = 23
+                    this.#days--
+                    this.#daysRaw--
+                } else return
+                if (this.#days === -1) {
+                    this.#days = 364
+                    this.#year--
+                }
             }
         }
         toString(option?: { days?: boolean, year?: boolean, count?: { sec?: string, min?: string, hour?: string, days?: string, year: string } }) {
@@ -151,19 +156,19 @@ namespace sumtool {
             }
         }
     }
-    interface passout extends fs.Stats {
-        pass: string
-    }
-    export async function passCheck(string: string): Promise<passout> {
-        const pass = (() => {
+    export async function passCheck(string: string): Promise<{ pass: string } & fs.Stats> {
+        const pass = await (async () => {
             const passArray = string.split("/")
             let passtmp = ""
             for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
-            if (fs.existsSync(passtmp)) return passtmp
+            if (!await new Promise(resolve => { fs.access(passtmp, err => resolve(err)) })) return passtmp
             while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
-            if (fs.existsSync(passtmp)) return passtmp
+            if (!await new Promise(resolve => { fs.access(passtmp, err => resolve(err)) })) return passtmp
             passtmp = passtmp.replace(/\\ /i, " ")
-            if (fs.existsSync(passtmp)) return passtmp
+            if (!await new Promise(resolve => { fs.access(passtmp, err => resolve(err)) })) return passtmp
+            fs.access(passtmp, param => {
+
+            })
             return null
         })()
         if (!pass) return null
