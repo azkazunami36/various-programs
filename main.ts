@@ -166,22 +166,17 @@ namespace sumtool {
             if (fs.existsSync(passtmp)) return passtmp
             passtmp = passtmp.replace(/\\ /i, " ")
             if (fs.existsSync(passtmp)) return passtmp
-            
+            return null
         })()
-        return await new Promise(resolve => {
-            fs.stat(pass, (err, stats) => {
-                resolve({
-                    pass: pass,
-                    ...stats
-                })
-            })
-        })
+        if (!pass) return null
+        const stats: fs.Stats = await new Promise(resolve => fs.stat(pass, (err, stats) => resolve(stats)))
+        return { pass: pass, ...stats }
     }
     export async function question(text: string): Promise<string> {
         const iface =
             readline.createInterface({ input: process.stdin, output: process.stdout })
         return await
-            new Promise((resolve => iface.question(text + "> ", answer => { iface.close(); resolve(answer) })))
+            new Promise(resolve => iface.question(text + "> ", answer => { iface.close(); resolve(answer) }))
     }
     export async function cuiIO() {
         console.log(
