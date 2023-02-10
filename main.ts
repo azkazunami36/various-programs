@@ -156,16 +156,17 @@ namespace sumtool {
             }
         }
     }
+    export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
     export async function passCheck(string: string): Promise<{ pass: string } & fs.Stats> {
         const pass = await (async () => {
             const passArray = string.split("/")
             let passtmp = ""
             for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
-            if (!await new Promise(resolve => { fs.access(passtmp, err => resolve(err)) })) return passtmp
+            if (!await exsits(passtmp)) return passtmp
             while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
-            if (!await new Promise(resolve => { fs.access(passtmp, err => resolve(err)) })) return passtmp
+            if (!await exsits(passtmp)) return passtmp
             passtmp = passtmp.replace(/\\ /i, " ")
-            if (!await new Promise(resolve => { fs.access(passtmp, err => resolve(err)) })) return passtmp
+            if (!await exsits(passtmp)) return passtmp
             fs.access(passtmp, param => {
 
             })
