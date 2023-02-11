@@ -1,5 +1,5 @@
 import readline from "readline"
-import express, { raw } from "express"
+import express from "express"
 import fs from "fs"
 /**
  * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
@@ -20,6 +20,17 @@ namespace sumtool {
         year: number,
         convertTime: number
     }
+    interface toStringOption { 
+        days?: boolean, 
+        year?: boolean, 
+        count?: { 
+            sec?: string, 
+            min?: string, 
+            hour?: string, 
+            days?: string, 
+            year?: string 
+        } 
+    }
     export class time {
         #sec = 0
         #secRaw = 0
@@ -31,8 +42,7 @@ namespace sumtool {
         #daysRaw = 0
         #year = 0
         #convertTime = 0
-        constructor(seconds: number, rawData?: tempTime) {
-            this.count(seconds)
+        constructor(rawData?: tempTime) {
             if (rawData) {
                 this.#sec = rawData.sec,
                     this.#secRaw = rawData.secRaw,
@@ -46,20 +56,32 @@ namespace sumtool {
                     this.#convertTime = rawData.convertTime
             }
         }
-        count(seconds: number) {
+        /**
+         * 入力した値分のms時間要します。
+         * ```typescript
+         * (async() => {
+         *     const time = new sumtool.time()
+         *     await time.count(1000) //１秒以上の計算を要します。
+         *     console.log(time.toString()) //16分40秒
+         * })()
+         * ```
+         */
+        async count(seconds: number) {
             const converttime = Date.now()
             const up = Math.sign(seconds)
             let num = 0
             if (up === 1) while (num < seconds) {
                 this.setting(true)
                 num++
+                await wait(1)
             }
             if (up === -1) while (seconds < num) {
                 this.setting(false)
                 num--
+                await wait(1)
             }
             this.#convertTime = Date.now() - converttime
-            return seconds
+            return { toJSON: this.toJSON, toString: this.toString }
         }
         setting(up: boolean) {
             if (up) {
@@ -109,11 +131,8 @@ namespace sumtool {
             }
             return up
         }
-        toString(option?: { days?: boolean, year?: boolean, count?: { sec?: string, min?: string, hour?: string, days?: string, year: string } }) {
-            const outputRaw = {
-                days: false,
-                year: false
-            }
+        toString(option?: toStringOption) {
+            const outputRaw = { days: false, year: false }
             const counter = { sec: "秒", min: "分", hour: "時間", days: "日", year: "年" }
             if (option) {
                 if (option.days) outputRaw.days = true
@@ -158,6 +177,7 @@ namespace sumtool {
             }
         }
     }
+    export async function wait(time: number) { await new Promise<void>(resolve => setTimeout(() => resolve(), time)) }
     export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
     export async function passCheck(string: string): Promise<{ pass: string } & fs.Stats> {
         const pass = await (async () => {
@@ -175,6 +195,11 @@ namespace sumtool {
         const stats: fs.Stats = await new Promise(resolve => fs.stat(pass, (err, stats) => resolve(stats)))
         return { pass: pass, ...stats }
     }
+    export async function choice(title: string, int: string, array: string[]): Promise<number> {
+        console.log(title + ": ")
+        for (let i = 0; i !== array.length; i++) console.log("[" + (i + 1) + "] " + array[i])
+        return Number(await question(int))
+    }
     export async function question(text: string): Promise<string> {
         const iface =
             readline.createInterface({ input: process.stdin, output: process.stdout })
@@ -182,10 +207,11 @@ namespace sumtool {
             new Promise(resolve => iface.question(text + "> ", answer => { iface.close(); resolve(answer) }))
     }
     export async function cuiIO() {
-        console.log(
-            "利用可能なプログラム: \n" +
-            "[1] Image Resize"
-        )
-        const programChoice = Number(await question("実行したいプログラムを選択してください。"))
+        const programChoice = await choice("利用可能なプログラム", "実行したいプログラムを選択してください。", ["Image Resize"])
+        switch (programChoice) {
+            case 1: {
+                break
+            }
+        }
     }
 }
