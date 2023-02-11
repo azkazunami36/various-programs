@@ -59,6 +59,7 @@ namespace sumtool {
                 num--
             }
             this.#convertTime = Date.now() - converttime
+            return seconds
         }
         setting(up: boolean) {
             if (up) {
@@ -92,7 +93,7 @@ namespace sumtool {
                     this.#minRaw--
                 } else return
                 if (this.#min === -1) {
-                    this.#min = 50
+                    this.#min = 59
                     this.#hour--
                     this.#hourRaw--
                 } else return
@@ -106,6 +107,7 @@ namespace sumtool {
                     this.#year--
                 }
             }
+            return up
         }
         toString(option?: { days?: boolean, year?: boolean, count?: { sec?: string, min?: string, hour?: string, days?: string, year: string } }) {
             const outputRaw = {
@@ -167,9 +169,6 @@ namespace sumtool {
             if (!await exsits(passtmp)) return passtmp
             passtmp = passtmp.replace(/\\ /i, " ")
             if (!await exsits(passtmp)) return passtmp
-            fs.access(passtmp, param => {
-
-            })
             return null
         })()
         if (!pass) return null
