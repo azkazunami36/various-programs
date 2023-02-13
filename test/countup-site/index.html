@@ -1,0 +1,283 @@
+<html lang="ja">
+
+<head>
+    <style>
+        body {
+            background-color: rgba(0, 0, 0, 0);
+            margin: 0px auto;
+            overflow: hidden;
+            overflow-y: scroll;
+            -ms-overflow-style: none;
+            /* IE, Edge 対応 */
+            scrollbar-width: none;
+            /* Firefox 対応 */
+            font-family: "keifont";
+        }
+
+        body::-webkit-scrollbar {
+            /* Chrome, Safari 対応 */
+            display: none;
+        }
+
+        #count,
+        #days,
+        #hour,
+        #min,
+        #sec {
+            display: flex;
+            justify-content: flex-end;
+            margin: 0;
+        }
+
+        #days,
+        #hour,
+        #min,
+        #sec {
+            width: auto;
+            border: 0;
+        }
+
+        p {
+            margin: 0;
+            font-size: 90px;
+            color: white;
+            text-align: end;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="count">
+        <p id="days"></p>
+        <p>:</p>
+        <p id="hour"></p>
+        <p>:</p>
+        <p id="min"></p>
+        <p>:</p>
+        <p id="sec"></p>
+    </div>
+    <p id="startTime" style="display:none"></p>
+</body>
+
+<script>
+    class time {
+        #sec = 0
+        #secRaw = 0
+        #min = 0
+        #minRaw = 0
+        #hour = 0
+        #hourRaw = 0
+        #days = 0
+        #daysRaw = 0
+        #year = 0
+        #convertTime = 0
+        constructor(rawData) {
+            if (rawData) {
+                this.#sec = rawData.sec,
+                    this.#secRaw = rawData.secRaw,
+                    this.#min = rawData.min,
+                    this.#minRaw = rawData.minRaw,
+                    this.#hour = rawData.hour,
+                    this.#hourRaw = rawData.hourRaw,
+                    this.#days = rawData.days,
+                    this.#daysRaw = rawData.daysRaw,
+                    this.#year = rawData.year,
+                    this.#convertTime = rawData.convertTime
+            }
+        }
+        /**
+         * 入力した値分のms時間要します。
+         * ```typescript
+         * (async() => {
+         *     const time = new sumtool.time()
+         *     await time.count(1000) //１秒以上の計算を要します。
+         *     console.log(time.toString()) //16分40秒
+         * })()
+         * ```
+         */
+        async count(seconds) {
+            const converttime = Date.now()
+            const up = Math.sign(seconds)
+            let num = 0
+            if (up === 1) while (num < seconds) {
+                this.setting(true)
+                num++
+            }
+            if (up === -1) while (seconds < num) {
+                this.setting(false)
+                num--
+            }
+            this.#convertTime = Date.now() - converttime
+            return { toJSON: this.toJSON, toString: this.toString }
+        }
+        setting(up) {
+            if (up) {
+                this.#sec++
+                this.#secRaw++
+                if (this.#sec === 60) {
+                    this.#sec = 0
+                    this.#min++
+                    this.#minRaw++
+                } else return
+                if (this.#min === 60) {
+                    this.#min = 0
+                    this.#hour++
+                    this.#hourRaw++
+                } else return
+                if (this.#hour === 24) {
+                    this.#hour = 0
+                    this.#days++
+                    this.#daysRaw++
+                } else return
+                if (this.#days === 365) {
+                    this.#days = 0
+                    this.#year++
+                }
+            } else {
+                this.#sec--
+                this.#secRaw--
+                if (this.#sec === -1) {
+                    this.#sec = 59
+                    this.#min--
+                    this.#minRaw--
+                } else return
+                if (this.#min === -1) {
+                    this.#min = 59
+                    this.#hour--
+                    this.#hourRaw--
+                } else return
+                if (this.#hour === -1) {
+                    this.#hour = 23
+                    this.#days--
+                    this.#daysRaw--
+                } else return
+                if (this.#days === -1) {
+                    this.#days = 364
+                    this.#year--
+                }
+            }
+            return up
+        }
+        toString(option) {
+            const outputRaw = { days: false, year: false }
+            const counter = { sec: "秒", min: "分", hour: "時間", days: "日", year: "年" }
+            if (option) {
+                if (option.days) outputRaw.days = true
+                if (option.year) outputRaw.year = true, outputRaw.days = true
+                if (option.count) {
+                    const count = option.count
+                    if (count.year) counter.year = count.year
+                    if (count.days) counter.days = count.days
+                    if (count.hour) counter.hour = count.hour
+                    if (count.min) counter.min = count.min
+                    if (count.sec) counter.sec = count.sec
+                }
+            }
+            const sec = this.#sec
+            const min = this.#min
+            const hour = outputRaw.days ? this.#hour : this.#hourRaw
+            const days = outputRaw.year ? this.#days : this.#daysRaw
+            const year = this.#year
+            let timeString = 0
+            if (min) timeString = 1
+            if (hour) timeString = 2
+            if (outputRaw.days && days) timeString = 3
+            if (outputRaw.year && year) timeString = 4
+            return (3 < timeString ? year + counter.year : "") +
+                (2 < timeString ? days + counter.days : "") +
+                (1 < timeString ? hour + counter.hour : "") +
+                (0 < timeString ? min + counter.min : "") +
+                sec + counter.sec
+        }
+        toJSON() {
+            return {
+                sec: this.#sec,
+                secRaw: this.#secRaw,
+                min: this.#min,
+                minRaw: this.#minRaw,
+                hour: this.#hour,
+                hourRaw: this.#hourRaw,
+                days: this.#days,
+                daysRaw: this.#daysRaw,
+                year: this.#year,
+                convertTime: this.#convertTime
+            }
+        }
+    }
+    const count = new time()
+    let startTime = Number((Date.now() / 1000).toFixed())
+    const params = new Proxy(new URLSearchParams(window.location.search), { get: (searchParams, prop) => searchParams.get(prop) })
+    if (params.time) startTime = Number(params.time)
+    const sec = document.getElementById("sec")
+    const min = document.getElementById("min")
+    const hour = document.getElementById("hour")
+    const days = document.getElementById("days")
+    const view = () => count.count(Number(((Date.now() / 1000).toFixed()) - startTime) - count.toJSON().secRaw).then(() => {
+        const json = count.toJSON()
+        sec.innerHTML = ("00" + json.sec.toFixed()).slice(-2)
+        min.innerHTML = ("00" + json.min.toFixed()).slice(-2)
+        hour.innerHTML = ("00" + json.hour.toFixed()).slice(-2)
+        days.innerHTML = ("00" + json.daysRaw.toFixed()).slice(-2)
+    })
+    setInterval(view, 500)
+    addEventListener("keydown", e => {
+        switch (e.key) {
+            case "w": {
+                startTime -= 1
+                view()
+                break
+            }
+            case "s": {
+                startTime += 1
+                view()
+                break
+            }
+            case "e": {
+                startTime -= 60
+                view()
+                break
+            }
+            case "d": {
+                startTime += 60
+                view()
+                break
+            }
+            case "r": {
+                startTime -= 3600
+                view()
+                break
+            }
+            case "f": {
+                startTime += 3600
+                view()
+                break
+            }
+            case "t": {
+                startTime -= 86400
+                view()
+                break
+            }
+            case "g": {
+                startTime += 86400
+                view()
+                break
+            }
+            case "q": {
+                const count = document.getElementById("count")
+                const st = document.getElementById("startTime")
+                if (count.style.display === "flex") {
+                    count.style.display = "none"
+                    st.style.display = "block"
+                    st.innerHTML = startTime
+                } else {
+                    count.style.display = "flex"
+                    st.style.display = "none"
+                }
+                break
+            }
+        }
+    })
+
+</script>
+
+</html>
