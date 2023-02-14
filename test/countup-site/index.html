@@ -19,25 +19,9 @@
             display: none;
         }
 
-        #count,
-        #days,
-        #hour,
-        #min,
-        #sec {
+        #count {
             display: flex;
             justify-content: flex-end;
-            margin: 0;
-        }
-
-        #days,
-        #hour,
-        #min,
-        #sec {
-            width: auto;
-            border: 0;
-        }
-
-        p {
             margin: 0;
             font-size: 90px;
             color: white;
@@ -47,15 +31,7 @@
 </head>
 
 <body>
-    <div id="count">
-        <p id="days"></p>
-        <p>:</p>
-        <p id="hour"></p>
-        <p>:</p>
-        <p id="min"></p>
-        <p>:</p>
-        <p id="sec"></p>
-    </div>
+    <div id="count"></div>
     <p id="startTime" style="display:none"></p>
 </body>
 
@@ -160,18 +136,22 @@
         }
         toString(option) {
             const outputRaw = { days: false, year: false }
+            const fill = {
+                fillnum: 1
+            }
             const counter = { sec: "秒", min: "分", hour: "時間", days: "日", year: "年" }
-            if (option) {
+            if (option !== undefined) {
                 if (option.days) outputRaw.days = true
                 if (option.year) outputRaw.year = true, outputRaw.days = true
-                if (option.count) {
+                if (option.count !== undefined) {
                     const count = option.count
-                    if (count.year) counter.year = count.year
-                    if (count.days) counter.days = count.days
-                    if (count.hour) counter.hour = count.hour
-                    if (count.min) counter.min = count.min
-                    if (count.sec) counter.sec = count.sec
+                    if (count.year !== undefined) counter.year = count.year
+                    if (count.days !== undefined) counter.days = count.days
+                    if (count.hour !== undefined) counter.hour = count.hour
+                    if (count.min !== undefined) counter.min = count.min
+                    if (count.sec !== undefined) counter.sec = count.sec
                 }
+                if (option.fill !== undefined) fill.fillnum = option.fill
             }
             const sec = this.#sec
             const min = this.#min
@@ -179,15 +159,16 @@
             const days = outputRaw.year ? this.#days : this.#daysRaw
             const year = this.#year
             let timeString = 0
-            if (min) timeString = 1
-            if (hour) timeString = 2
-            if (outputRaw.days && days) timeString = 3
-            if (outputRaw.year && year) timeString = 4
-            return (3 < timeString ? year + counter.year : "") +
-                (2 < timeString ? days + counter.days : "") +
-                (1 < timeString ? hour + counter.hour : "") +
-                (0 < timeString ? min + counter.min : "") +
-                sec + counter.sec
+            if (min !== 0) timeString = 1
+            if (hour !== 0) timeString = 2
+            if (outputRaw.days && days !== 0) timeString = 3
+            if (outputRaw.year && year !== 0) timeString = 4
+            if (option.timeString !== undefined) timeString = option.timeString
+            return (3 < timeString ? numfiller(year, fill.fillnum) + counter.year : "") +
+                (2 < timeString ? numfiller(days, fill.fillnum) + counter.days : "") +
+                (1 < timeString ? numfiller(hour, fill.fillnum) + counter.hour : "") +
+                (0 < timeString ? numfiller(min, fill.fillnum) + counter.min : "") +
+                numfiller(sec, fill.fillnum) + counter.sec
         }
         toJSON() {
             return {
@@ -204,20 +185,30 @@
             }
         }
     }
+    function numfiller(number, fillnum, option) {
+        let overflow = true
+        if (option !== undefined) {
+            if (option.overflow !== undefined) overflow = option.overflow
+        }
+        let fillString = ""
+        let fillNum = 0
+        const numRawLen = String(number).length
+        for (let i = 0; i !== ((overflow && numRawLen > fillnum) ? numRawLen : fillnum); i++) {
+            fillString += "0"
+            fillNum--
+        }
+        return (fillString + number.toFixed()).slice(fillNum)
+    }
     const count = new time()
     let startTime = Number((Date.now() / 1000).toFixed())
     const params = new Proxy(new URLSearchParams(window.location.search), { get: (searchParams, prop) => searchParams.get(prop) })
     if (params.time) startTime = Number(params.time)
-    const sec = document.getElementById("sec")
-    const min = document.getElementById("min")
-    const hour = document.getElementById("hour")
-    const days = document.getElementById("days")
+    const display = {
+        days: true,
+        year: false
+    }
     const view = () => count.count(Number(((Date.now() / 1000).toFixed()) - startTime) - count.toJSON().secRaw).then(() => {
-        const json = count.toJSON()
-        sec.innerHTML = ("00" + json.sec.toFixed()).slice(-2)
-        min.innerHTML = ("00" + json.min.toFixed()).slice(-2)
-        hour.innerHTML = ("00" + json.hour.toFixed()).slice(-2)
-        days.innerHTML = ("00" + json.daysRaw.toFixed()).slice(-2)
+        document.getElementById("count").innerHTML = count.toString({ fill: 2, count: { sec: "", min: ":", hour: ":", days: ":", year: ":" }, days: display.days, year: display.year })
     })
     setInterval(view, 500)
     addEventListener("keydown", e => {
@@ -273,6 +264,20 @@
                     count.style.display = "flex"
                     st.style.display = "none"
                 }
+                break
+            }
+            case "a": {
+                if (display.days) {
+                    if (display.year) {
+                        display.days = false
+                        display.year = false
+                    } else {
+                        display.year = true
+                    }
+                } else {
+                    display.days = true
+                }
+                view()
                 break
             }
         }

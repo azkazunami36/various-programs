@@ -20,16 +20,18 @@ namespace sumtool {
         year: number,
         convertTime: number
     }
-    interface toStringOption { 
-        days?: boolean, 
-        year?: boolean, 
-        count?: { 
-            sec?: string, 
-            min?: string, 
-            hour?: string, 
-            days?: string, 
-            year?: string 
-        } 
+    interface toStringOption {
+        days?: boolean,
+        year?: boolean,
+        count?: {
+            sec?: string,
+            min?: string,
+            hour?: string,
+            days?: string,
+            year?: string
+        }
+        fill?: number
+        timeString?: number
     }
     export class time {
         #sec = 0
@@ -133,18 +135,22 @@ namespace sumtool {
         }
         toString(option?: toStringOption) {
             const outputRaw = { days: false, year: false }
+            const fill = {
+                fillnum: 1
+            }
             const counter = { sec: "秒", min: "分", hour: "時間", days: "日", year: "年" }
-            if (option) {
+            if (option !== undefined) {
                 if (option.days) outputRaw.days = true
                 if (option.year) outputRaw.year = true, outputRaw.days = true
-                if (option.count) {
+                if (option.count !== undefined) {
                     const count = option.count
-                    if (count.year) counter.year = count.year
-                    if (count.days) counter.days = count.days
-                    if (count.hour) counter.hour = count.hour
-                    if (count.min) counter.min = count.min
-                    if (count.sec) counter.sec = count.sec
+                    if (count.year !== undefined) counter.year = count.year
+                    if (count.days !== undefined) counter.days = count.days
+                    if (count.hour !== undefined) counter.hour = count.hour
+                    if (count.min !== undefined) counter.min = count.min
+                    if (count.sec !== undefined) counter.sec = count.sec
                 }
+                if (option.fill !== undefined) fill.fillnum = option.fill
             }
             const sec = this.#sec
             const min = this.#min
@@ -152,15 +158,16 @@ namespace sumtool {
             const days = outputRaw.year ? this.#days : this.#daysRaw
             const year = this.#year
             let timeString = 0
-            if (min) timeString = 1
-            if (hour) timeString = 2
-            if (outputRaw.days && days) timeString = 3
-            if (outputRaw.year && year) timeString = 4
-            return (3 < timeString ? year + counter.year : "") +
-                (2 < timeString ? days + counter.days : "") +
-                (1 < timeString ? hour + counter.hour : "") +
-                (0 < timeString ? min + counter.min : "") +
-                sec + counter.sec
+            if (min !== 0) timeString = 1
+            if (hour !== 0) timeString = 2
+            if (outputRaw.days && days !== 0) timeString = 3
+            if (outputRaw.year && year !== 0) timeString = 4
+            if (option.timeString !== undefined) timeString = option.timeString
+            return (3 < timeString ? numfiller(year, fill.fillnum) + counter.year : "") +
+                (2 < timeString ? numfiller(days, fill.fillnum) + counter.days : "") +
+                (1 < timeString ? numfiller(hour, fill.fillnum) + counter.hour : "") +
+                (0 < timeString ? numfiller(min, fill.fillnum) + counter.min : "") +
+                numfiller(sec, fill.fillnum) + counter.sec
         }
         toJSON(): tempTime {
             return {
@@ -176,6 +183,20 @@ namespace sumtool {
                 convertTime: this.#convertTime
             }
         }
+    }
+    export function numfiller(number: number, fillnum: number, option?: { overflow?: boolean }): string {
+        let overflow = true
+        if (option !== undefined) {
+            if (option.overflow !== undefined) overflow = option.overflow
+        }
+        let fillString = ""
+        let fillNum = 0
+        const numRawLen = String(number).length
+        for (let i = 0; i !== ((overflow && numRawLen > fillnum) ? numRawLen : fillnum); i++) {
+            fillString += "0"
+            fillNum--
+        }
+        return (fillString + number.toFixed()).slice(fillNum)
     }
     export async function wait(time: number) { await new Promise<void>(resolve => setTimeout(() => resolve(), time)) }
     export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
