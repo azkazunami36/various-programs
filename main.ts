@@ -382,9 +382,418 @@ namespace sumtool {
             })
         }
     }
+    export function kanaConvert(string: string, convertTo: boolean) {
+        const array = [
+            {
+                "key": " ",
+                "kana": " "
+            },
+            {
+                "key": " ",
+                "kana": "　"
+            },
+            {
+                "key": "1",
+                "kana": "ぬ"
+            },
+            {
+                "key": "2",
+                "kana": "ふ"
+            },
+            {
+                "key": "3",
+                "kana": "あ"
+            },
+            {
+                "key": "4",
+                "kana": "う"
+            },
+            {
+                "key": "5",
+                "kana": "え"
+            },
+            {
+                "key": "6",
+                "kana": "お"
+            },
+            {
+                "key": "7",
+                "kana": "や"
+            },
+            {
+                "key": "8",
+                "kana": "ゆ"
+            },
+            {
+                "key": "9",
+                "kana": "よ"
+            },
+            {
+                "key": "0",
+                "kana": "わ"
+            },
+            {
+                "key": "-",
+                "kana": "ほ"
+            },
+            {
+                "key": "^",
+                "kana": "へ"
+            },
+            {
+                "key": "¥",
+                "kana": "ー"
+            },
+            {
+                "key": "q",
+                "kana": "た"
+            },
+            {
+                "key": "w",
+                "kana": "て"
+            },
+            {
+                "key": "e",
+                "kana": "い"
+            },
+            {
+                "key": "r",
+                "kana": "す"
+            },
+            {
+                "key": "t",
+                "kana": "か"
+            },
+            {
+                "key": "y",
+                "kana": "ん"
+            },
+            {
+                "key": "u",
+                "kana": "な"
+            },
+            {
+                "key": "i",
+                "kana": "に"
+            },
+            {
+                "key": "o",
+                "kana": "ら"
+            },
+            {
+                "key": "p",
+                "kana": "せ"
+            },
+            {
+                "key": "@",
+                "kana": "゛"
+            },
+            {
+                "key": "[",
+                "kana": "゜"
+            },
+            {
+                "key": "a",
+                "kana": "ち"
+            },
+            {
+                "key": "s",
+                "kana": "と"
+            },
+            {
+                "key": "d",
+                "kana": "し"
+            },
+            {
+                "key": "f",
+                "kana": "は"
+            },
+            {
+                "key": "g",
+                "kana": "き"
+            },
+            {
+                "key": "h",
+                "kana": "く"
+            },
+            {
+                "key": "j",
+                "kana": "ま"
+            },
+            {
+                "key": "k",
+                "kana": "の"
+            },
+            {
+                "key": "l",
+                "kana": "り"
+            },
+            {
+                "key": ";",
+                "kana": "れ"
+            },
+            {
+                "key": ":",
+                "kana": "け"
+            },
+            {
+                "key": "]",
+                "kana": "む"
+            },
+            {
+                "key": "z",
+                "kana": "つ"
+            },
+            {
+                "key": "x",
+                "kana": "さ"
+            },
+            {
+                "key": "c",
+                "kana": "そ"
+            },
+            {
+                "key": "v",
+                "kana": "ひ"
+            },
+            {
+                "key": "b",
+                "kana": "こ"
+            },
+            {
+                "key": "n",
+                "kana": "み"
+            },
+            {
+                "key": "m",
+                "kana": "も"
+            },
+            {
+                "key": ",",
+                "kana": "ね"
+            },
+            {
+                "key": ".",
+                "kana": "る"
+            },
+            {
+                "key": "/",
+                "kana": "め"
+            },
+            {
+                "key": "_",
+                "kana": "ろ"
+            },
+            {
+                "key": "!",
+                "kana": "ぬ"
+            },
+            {
+                "key": "\"",
+                "kana": "ふ"
+            },
+            {
+                "key": "#",
+                "kana": "ぁ"
+            },
+            {
+                "key": "$",
+                "kana": "ぅ"
+            },
+            {
+                "key": "%",
+                "kana": "ぇ"
+            },
+            {
+                "key": "&",
+                "kana": "ぉ"
+            },
+            {
+                "key": "'",
+                "kana": "ゃ"
+            },
+            {
+                "key": "(",
+                "kana": "ゅ"
+            },
+            {
+                "key": ")",
+                "kana": "ょ"
+            },
+            {
+                "key": "0",
+                "kana": "を"
+            },
+            {
+                "key": "=",
+                "kana": "ほ"
+            },
+            {
+                "key": "~",
+                "kana": "へ"
+            },
+            {
+                "key": "|",
+                "kana": "ー"
+            },
+            {
+                "key": "Q",
+                "kana": "た"
+            },
+            {
+                "key": "W",
+                "kana": "て"
+            },
+            {
+                "key": "E",
+                "kana": "ぃ"
+            },
+            {
+                "key": "R",
+                "kana": "す"
+            },
+            {
+                "key": "T",
+                "kana": "か"
+            },
+            {
+                "key": "Y",
+                "kana": "ん"
+            },
+            {
+                "key": "U",
+                "kana": "な"
+            },
+            {
+                "key": "I",
+                "kana": "に"
+            },
+            {
+                "key": "O",
+                "kana": "ら"
+            },
+            {
+                "key": "P",
+                "kana": "せ"
+            },
+            {
+                "key": "`",
+                "kana": "゛"
+            },
+            {
+                "key": "{",
+                "kana": "「"
+            },
+            {
+                "key": "A",
+                "kana": "ち"
+            },
+            {
+                "key": "S",
+                "kana": "と"
+            },
+            {
+                "key": "D",
+                "kana": "し"
+            },
+            {
+                "key": "F",
+                "kana": "は"
+            },
+            {
+                "key": "G",
+                "kana": "き"
+            },
+            {
+                "key": "H",
+                "kana": "く"
+            },
+            {
+                "key": "J",
+                "kana": "ま"
+            },
+            {
+                "key": "K",
+                "kana": "の"
+            },
+            {
+                "key": "L",
+                "kana": "り"
+            },
+            {
+                "key": "+",
+                "kana": "れ"
+            },
+            {
+                "key": "*",
+                "kana": "け"
+            },
+            {
+                "key": "}",
+                "kana": "」"
+            },
+            {
+                "key": "Z",
+                "kana": "っ"
+            },
+            {
+                "key": "X",
+                "kana": "さ"
+            },
+            {
+                "key": "C",
+                "kana": "そ"
+            },
+            {
+                "key": "V",
+                "kana": "ひ"
+            },
+            {
+                "key": "B",
+                "kana": "こ"
+            },
+            {
+                "key": "N",
+                "kana": "み"
+            },
+            {
+                "key": "M",
+                "kana": "も"
+            },
+            {
+                "key": "<",
+                "kana": "、"
+            },
+            {
+                "key": ">",
+                "kana": "。"
+            },
+            {
+                "key": "?",
+                "kana": "・"
+            },
+            {
+                "key": "_",
+                "kana": "ろ"
+            }
+        ]
+        const type = (convertTo) ? 1 : 0
+
+        let outText = ""
+        for (let i = 0; i !== string.length; i++) {
+            const e = (() => {
+                for (let e = 0; e !== array.length; e++)
+                    if (string[i] === array[e][["kana", "key"][type]]) return e
+                return null
+            })()
+            if (e !== null) outText += array[e][["key", "kana"][type]]
+            else outText += string[i]
+        }
+        return outText
+    }
     export async function cuiIO() {
         while (true) {
-            const programChoice = await choice("利用可能なプログラム", "実行したいプログラムを選択してください。", ["Image Resize"])
+            const programChoice = await choice("利用可能なプログラム", "実行したいプログラムを選択してください。", ["Image Resize", "QWERTY Kana Convert"])
             switch (programChoice) {
                 case 1: {
                     const imageSize = Number(await question("指定の画像サイズを入力してください。"))
@@ -421,13 +830,13 @@ namespace sumtool {
                         "変換先パス: " + afterPass.pass + "\n" +
                         "変換先サイズ(縦): " + imageSize + "\n" +
                         "変換するファイル数: " + fileList.length + "\n" +
-                        "命名方法: " + type[nameing]
+                        "命名方法: " + type[nameing - 1]
                     )
                     const permission = await booleanIO("上記のデータで実行してもよろしいですか？yと入力すると続行します。")
                     if (permission) {
                         const convert = new sharpConvert()
                         convert.afterPass = afterPass.pass
-                        convert.nameing = nameing
+                        convert.nameing = nameing - 1
                         convert.size = imageSize
                         convert.processd = fileList
                         convert.progress((now, total) => {
@@ -452,6 +861,10 @@ namespace sumtool {
                         })
                         await convert.convert()
                     }
+                    break
+                }
+                case 2: {
+                    console.log(kanaConvert(await question("変換元のテキストを入力してください。"), await booleanIO("QWERTYからかなに変換しますか？yで変換、nで逆変換します。")))
                     break
                 }
             }
