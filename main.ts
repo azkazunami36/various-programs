@@ -209,9 +209,10 @@ namespace sumtool {
     }
     export async function passCheck(string: string): Promise<{ pass: string } & fs.Stats> {
         const pass = await (async () => {
-            const passArray = string.split("/")
+            const passDeli = (string.match(":\\")) ? "\\" : "/"
+            const passArray = string.split(passDeli)
             let passtmp = ""
-            for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
+            for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? passDeli : "")
             if (await exsits(passtmp)) return passtmp
             while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
             if (await exsits(passtmp)) return passtmp
@@ -223,10 +224,10 @@ namespace sumtool {
         const stats: fs.Stats = await new Promise(resolve => fs.stat(pass, (err, stats) => resolve(stats)))
         return { pass: pass, ...stats }
     }
-    export async function choice(title: string, int: string, array: string[]): Promise<number | null> {
-        console.log(title + ": ")
+    export async function choice(array: string[], title?: string, questionText?: string): Promise<number | null> {
+        console.log((title ? title : "一覧") + ": ")
         for (let i = 0; i !== array.length; i++) console.log("[" + (i + 1) + "] " + array[i])
-        const request = Number(await question(int))
+        const request = Number(await question(questionText ? questionText : "上記から数字で選択してください。"))
         if (Number.isNaN(request)) return null
         if (request > array.length || request < 1) return null
         return request
@@ -792,8 +793,9 @@ namespace sumtool {
         return outText
     }
     export async function cuiIO() {
+        const cuiIOtmp = {}
         while (true) {
-            const programChoice = await choice("利用可能なプログラム", "実行したいプログラムを選択してください。", ["Image Resize", "QWERTY Kana Convert"])
+            const programChoice = await choice(["Image Resize", "QWERTY Kana Convert", "Discord Bot", "Time Class", "FFmpeg Converter"], "利用可能なプログラム", "実行したいプログラムを選択してください。")
             switch (programChoice) {
                 case 1: {
                     const imageSize = Number(await question("指定の画像サイズを入力してください。"))
@@ -818,7 +820,7 @@ namespace sumtool {
                         "[連番]_[元拡張子] - [ファイル名].png",
                         "[連番].png"
                     ]
-                    const nameing = await choice("命名方法", "上記から命名方法を選択してください。", type)
+                    const nameing = await choice(type, "命名方法", "上記から命名方法を選択してください。")
                     if (nameing === null) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
                         break
@@ -865,6 +867,45 @@ namespace sumtool {
                 }
                 case 2: {
                     console.log(kanaConvert(await question("変換元のテキストを入力してください。"), await booleanIO("QWERTYからかなに変換しますか？yで変換、nで逆変換します。")))
+                    break
+                }
+                case 3: {
+                    const botChoice = await choice(["簡易認証"], "bot一覧", "利用するbotを選択してください。")
+                    while (true) {
+                        const control = await choice(["起動/停止", "直前のログ", "終了"], "利用可能な操作一覧", "利用する機能を選択してください。")
+                        if (control === 3) break
+                    }
+                    break
+                }
+                case 4: {
+                    const rawtime = Number(await question("時間を指定してください。"))
+                    const count = new time()
+                    count.count(rawtime)
+                    const year = await booleanIO("年を含めて表示しますか？")
+                    const days = await booleanIO("日にちを含めて表示しますか？")
+                    const cou = {
+                        year: await question("年の数え方を入力してください。"),
+                        days: await question("日にちの数え方を入力してください。"),
+                        hour: await question("時間の数え方を入力してください。"),
+                        min: await question("分の数え方を入力してください。"),
+                        sec: await question("秒の数え方を入力してください。")
+                    }
+                    const fill = Number(await question("数字を埋める数を入力してください。"))
+                    console.log(count.toString({
+                        year: year,
+                        days: year ? false : days,
+                        count: {
+                            year: cou.year ? cou.year : undefined,
+                            days: cou.days ? cou.days : undefined,
+                            hour: cou.hour ? cou.hour : undefined,
+                            min: cou.min ? cou.min : undefined,
+                            sec: cou.sec ? cou.sec : undefined
+                        },
+                        fill: (Number.isNaN(fill)) ? undefined : fill
+                    }))
+                    break
+                }
+                case 5: {
                     break
                 }
             }
