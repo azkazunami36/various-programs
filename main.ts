@@ -214,6 +214,10 @@ namespace sumtool {
             let passtmp = ""
             for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? passDeli : "")
             if (await exsits(passtmp)) return passtmp
+            console.log(passtmp)
+            if (passtmp[0] === "\"" && passtmp[passtmp.length - 1] === "\"") passtmp.substring(1, passtmp.length - 2)
+            console.log(passtmp)
+            if (await exsits(passtmp)) return passtmp
             while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
             if (await exsits(passtmp)) return passtmp
             passtmp = passtmp.replace(/\\ /i, " ")
@@ -973,6 +977,13 @@ namespace sumtool {
                                     }
                                     cuiIOtmp.ffmpegconverter.presets.push(await ffmpegConverter.inputPreset())
                                 } else if (typeChoice === 2) {
+                                    if (!cuiIOtmp.ffmpegconverter) cuiIOtmp.ffmpegconverter = {
+                                        presets: []
+                                    }
+                                    if (!cuiIOtmp.ffmpegconverter.presets[0]) {
+                                        console.log("プリセットがありません。追加してからもう一度やり直してください。")
+                                        continue
+                                    }
                                     const presetChoice = await choice((() => {
                                         const presetNames: string[] = []
                                         cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
@@ -980,6 +991,11 @@ namespace sumtool {
                                         })
                                         return presetNames
                                     })(), "プリセット一覧", "編集するプリセットを選択してください。")
+                                    if (presetChoice === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        continue
+                                    }
+                                    
                                 } else if (typeChoice === 3) {
 
                                 } else if (typeChoice === 4) break
