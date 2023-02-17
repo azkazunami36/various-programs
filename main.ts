@@ -219,10 +219,12 @@ namespace sumtool {
             if (await exsits(passtmp)) return passtmp
             while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
             if (await exsits(passtmp)) return passtmp
-            passtmp = passtmp.replace(/\\ /i, " ")
+            passtmp = passtmp.replace(/\\ /g, " ")
             if (await exsits(passtmp)) return passtmp
+            console.log(passtmp)
             return null
         })()
+        console.log(pass)
         if (!pass) return null
         const stats: fs.Stats = await new Promise(resolve => fs.stat(pass, (err, stats) => resolve(stats)))
         return { pass: pass, ...stats }
@@ -396,10 +398,12 @@ namespace sumtool {
         async convert(savePass: string) {
             await new Promise<void>(resolve => {
                 this.#ffmpeg.addOptions(this.preset)
-                const Stream = fs.createWriteStream(savePass)
-                this.#ffmpeg.pipe(Stream)
+                this.#ffmpeg.save(savePass)
                 this.#ffmpeg.on("end", () => { resolve() })
             })
+        }
+        addInput(pass: string) {
+            this.#ffmpeg.addInput(pass)
         }
         static async inputPreset(): Promise<{ name: string, ext: string, tag: string[] }> {
             console.log("-からタグの入力を始めます。複数を１度に入力してはなりません。検知し警告します。\n空白で続行すると完了したことになります。")
@@ -879,7 +883,9 @@ namespace sumtool {
                         tag: [
                             "-vn",
                             "-af volume=30db",
-                            "-c:a libmp3lame"
+                            "-c:a libmp3lame",
+                            "-ar 44100",
+                            "-ab 128"
                         ]
                     }
                 ]
@@ -1042,7 +1048,7 @@ namespace sumtool {
                                     })(), "プリセット一覧", "使用するプリセットを選択してください。")
                                     console.log(
                                         "変換元: " + beforePass.pass + "\n" +
-                                        "変換先: " + afterPass.pass + "/" + filename + "." + cuiIOtmp.ffmpegconverter.presets[presetChoice].ext + "\n" +
+                                        "変換先: " + afterPass.pass + "/" + filename + "." + cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].ext + "\n" +
                                         "タグ: " + (() => {
                                             let tags = ""
                                             cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].tag.forEach(tag => tags += tag)
@@ -1052,8 +1058,10 @@ namespace sumtool {
                                     const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
                                     if (permission) {
                                         const convert = new ffmpegConverter()
-                                        convert.preset = ["-i " + beforePass.pass, ...cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].tag]
-                                        await convert.convert(afterPass.pass + "/" + filename + "." + cuiIOtmp.ffmpegconverter.presets[presetChoice].ext)
+                                        convert.addInput(beforePass.pass)
+                                        convert.preset = cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].tag
+                                        console.log(convert.preset)
+                                        await convert.convert(afterPass.pass + "/" + filename + "." + cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].ext)
                                         console.log("変換が完了しました！")
                                     }
                                     break
