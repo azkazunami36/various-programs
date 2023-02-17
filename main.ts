@@ -3,6 +3,7 @@ import express from "express"
 import fs from "fs"
 import imageSize from "image-size"
 import sharp from "sharp"
+import ffmpeg from "fluent-ffmpeg"
 /**
  * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
  * CUIでもGUIのような使い勝手の良さを実感してください。
@@ -248,6 +249,12 @@ namespace sumtool {
         return await
             new Promise(resolve => iface.question(text + "> ", answer => { iface.close(); resolve(answer) }))
     }
+    interface passInfo {
+        filename: string,
+        extension: string,
+        pass: string,
+        point: string[]
+    }
     export async function fileLister(pass: string, option?: { contain?: boolean, extensionFilter?: string[] }) {
         let contain = false
         let extensionFilter: string[] = []
@@ -255,12 +262,7 @@ namespace sumtool {
             if (option.contain) contain = true
             if (option.extensionFilter !== undefined) extensionFilter = option.extensionFilter
         }
-        const processd: {
-            filename: string,
-            extension: string,
-            pass: string,
-            point: string[]
-        }[] = []
+        const processd: passInfo[] = []
         const point: string[] = [] //パス場所を設定
         const filepoint: {
             [lpass: string]: {
@@ -360,7 +362,7 @@ namespace sumtool {
                     const point = this.processd[i].point
                     for (let i = 0; i !== point.length; i++) {
                         outfolders += point[i] + "/"
-                        if (!fs.existsSync(this.afterPass + "/" + outfolders)) fs.mkdirSync(this.afterPass + "/" + outfolders)
+                        if (!(await exsits(this.afterPass + "/" + outfolders))) fs.mkdirSync(this.afterPass + "/" + outfolders)
                     }
                     const Stream = fs.createWriteStream(this.afterPass + "/" + outfolders + [
                         this.processd[i].filename,
@@ -386,7 +388,19 @@ namespace sumtool {
         }
     }
     export class ffmpegConverter {
-        constructor() { }
+        #ffmpeg: ffmpeg.FfmpegCommand
+        constructor() {
+            this.#ffmpeg = ffmpeg()
+        }
+        preset: string[]
+        async convert(savePass: string) {
+            await new Promise<void>(resolve => {
+                this.#ffmpeg.addOptions(this.preset)
+                const Stream = fs.createWriteStream(savePass)
+                this.#ffmpeg.pipe(Stream)
+                this.#ffmpeg.on("end", () => { resolve() })
+            })
+        }
         static async inputPreset(): Promise<{ name: string, ext: string, tag: string[] }> {
             console.log("-からタグの入力を始めます。複数を１度に入力してはなりません。検知し警告します。\n空白で続行すると完了したことになります。")
             const presets: string[] = []
@@ -828,7 +842,49 @@ namespace sumtool {
                     tag: string[]
                 }[]
             }
-        } = {}
+        } = {
+            ffmpegconverter: {
+                presets: [
+                    {
+                        name: "h264(品質21-key120)-通常速度",
+                        ext: "mp4",
+                        tag: [
+                            "-c:v libx264",
+                            "-c:a aac",
+                            "-tag:v avc1",
+                            "-pix_fmt yuv420p",
+                            "-movflags +faststart",
+                            "-crf 21",
+                            "-g 120"
+                        ]
+                    },
+                    {
+                        name: "h264(品質21-key1)-高速処理",
+                        ext: "mp4",
+                        tag: [
+                            "-c:v libx264",
+                            "-c:a aac",
+                            "-tag:v avc1",
+                            "-pix_fmt yuv420p",
+                            "-preset ultrafast",
+                            "-tune fastdecode,zerolatency",
+                            "-movflags +faststart",
+                            "-crf 21",
+                            "-g 1"
+                        ]
+                    },
+                    {
+                        name: "mp3(128kbps)-30db音量上昇用",
+                        ext: "mp3",
+                        tag: [
+                            "-vn",
+                            "-af volume=30db",
+                            "-c:a libmp3lame"
+                        ]
+                    }
+                ]
+            }
+        }
         while (true) {
             const programList = ["Image Resize", "QWERTY Kana Convert", "Discord Bot", "Time Class", "FFmpeg Converter"]
             const programChoice = await choice(programList, "利用可能なプログラム", "実行したいプログラムを選択してください。")
@@ -966,12 +1022,47 @@ namespace sumtool {
                             }
                             switch (convertType) {
                                 case 1: {
+                                    const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
+                                    if (beforePass === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        break
+                                    }
+                                    const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+                                    if (afterPass === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        break
+                                    }
+                                    const filename = await question("書き出し先のファイル名を入力してください。")
+                                    const presetChoice = await choice((() => {
+                                        const presetNames: string[] = []
+                                        cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
+                                            presetNames.push(preset.name)
+                                        })
+                                        return presetNames
+                                    })(), "プリセット一覧", "使用するプリセットを選択してください。")
+                                    console.log(
+                                        "変換元: " + beforePass.pass + "\n" +
+                                        "変換先: " + afterPass.pass + "/" + filename + "." + cuiIOtmp.ffmpegconverter.presets[presetChoice].ext + "\n" +
+                                        "タグ: " + (() => {
+                                            let tags = ""
+                                            cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].tag.forEach(tag => tags += tag)
+                                            return tags
+                                        })()
+                                    )
+                                    const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
+                                    if (permission) {
+                                        const convert = new ffmpegConverter()
+                                        convert.preset = ["-i " + beforePass.pass, ...cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].tag]
+                                        await convert.convert(afterPass.pass + "/" + filename + "." + cuiIOtmp.ffmpegconverter.presets[presetChoice].ext)
+                                        console.log("変換が完了しました！")
+                                    }
                                     break
                                 }
                                 case 2: {
                                     break
                                 }
                             }
+                            break
                         }
                         case 2: {
                             while (true) {
@@ -1046,6 +1137,7 @@ namespace sumtool {
                                     })
                                 } else if (typeChoice === 4) break
                             }
+                            break
                         }
                     }
                     break
