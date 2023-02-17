@@ -391,8 +391,12 @@ namespace sumtool {
             console.log("-からタグの入力を始めます。複数を１度に入力してはなりません。検知し警告します。\n空白で続行すると完了したことになります。")
             const presets: string[] = []
             while (true) {
-                const string = await question("プリセット内容を入力してください。")
-                if (string === "") break
+                const string = await question("タグを入力してください。(" + presets.length + "個が登録済み)")
+                if (string === "") if (presets.length !== 0) break
+                else {
+                    if (await booleanIO("タグが１つも登録されていません。このままで予想外の動作をする可能性がありますがよろしいですか？")) break
+                    else continue
+                }
                 if (string[0] !== "-" && !(await booleanIO("最初にハイフンがありません。今後エラーになる恐れがありますが、よろしいですか？"))) continue
                 if (string.split("-").length > 2 && !(await booleanIO("ハイフンを２つ以上検知しました。今後エラーになる可能性が否めませんが、よろしいですか？"))) continue
                 presets.push(string)
@@ -826,7 +830,13 @@ namespace sumtool {
             }
         } = {}
         while (true) {
-            const programChoice = await choice(["Image Resize", "QWERTY Kana Convert", "Discord Bot", "Time Class", "FFmpeg Converter"], "利用可能なプログラム", "実行したいプログラムを選択してください。")
+            const programList = ["Image Resize", "QWERTY Kana Convert", "Discord Bot", "Time Class", "FFmpeg Converter"]
+            const programChoice = await choice(programList, "利用可能なプログラム", "実行したいプログラムを選択してください。")
+            if (programChoice === null) {
+                console.log("入力が間違っているようです。最初からやり直してください。")
+                continue
+            }
+            console.log(programList[programChoice - 1] + "を起動します。")
             switch (programChoice) {
                 case 1: {
                     const imageSize = Number(await question("指定の画像サイズを入力してください。"))
@@ -942,14 +952,14 @@ namespace sumtool {
                         "そのためプリセットデータは、nodeプロセスが終了された際に削除されます。ご了承ください。\n" +
                         "ctrl+c等で終了しない内はデータを利用することが可能です。\n"
                     )
-                    const convertChoice = await choice(["変換を開始する", "プリセットの作成・編集"], "機能一覧", "利用する機能を選択してください、")
+                    const convertChoice = await choice(["変換を開始する", "プリセットの作成・編集"], "FFmpeg Converter", "利用する機能を選択してください、")
                     if (convertChoice === null) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
                         break
                     }
                     switch (convertChoice) {
                         case 1: {
-                            const convertType = await choice(["パスを指定しプリセットで変換", "タグを手入力し、詳細な設定を自分で行う"], "変換の種類", "上記から変換の種類を選択してください。")
+                            const convertType = await choice(["パスを指定しプリセットで変換", "タグを手入力し、詳細な設定を自分で行う"], "変換の種類の一覧", "上記から変換の種類を選択してください。")
                             if (convertType === null) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 break
@@ -965,7 +975,7 @@ namespace sumtool {
                         }
                         case 2: {
                             while (true) {
-                                const typeChoice = await choice(["プリセット作成", "プリセット編集", "プリセット一覧を表示", "終了"])
+                                const typeChoice = await choice(["プリセット作成", "プリセット編集", "プリセット一覧を表示", "終了"], "プリセット作成・編集の一覧", "操作したい項目を選択してください。")
                                 if (typeChoice === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
                                     break
@@ -998,26 +1008,26 @@ namespace sumtool {
                                         case 1: {
                                             const tagChoice = await choice((() => {
                                                 const tags: string[] = []
-                                                cuiIOtmp.ffmpegconverter.presets[presetChoice].tag.forEach(tag => tags.push(tag))
+                                                cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
                                                 return tags
                                             })(), "タグ一覧", "編集するタグを選択してください。")
-                                            cuiIOtmp.ffmpegconverter.presets[presetChoice].tag[tagChoice] = await question("新しいタグ名を入力してください。エラー検知はしません。")
+                                            cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].tag[tagChoice - 1] = await question("新しいタグ名を入力してください。エラー検知はしません。")
                                             break
                                         }
                                         case 2: {
-                                            cuiIOtmp.ffmpegconverter.presets[presetChoice].name = await question("新しい名前を入力してください。")
+                                            cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].name = await question("新しい名前を入力してください。")
                                             break
                                         }
                                         case 3: {
-                                            const permission = booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
-                                            if (permission) cuiIOtmp.ffmpegconverter.presets.splice(presetChoice)
+                                            const permission = await booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
+                                            if (permission) cuiIOtmp.ffmpegconverter.presets.splice(presetChoice - 1)
                                         }
                                     }
 
                                 } else if (typeChoice === 3) {
                                     cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
                                         console.log(
-                                            "プリセット名: " + preset.name + 
+                                            "プリセット名: " + preset.name +
                                             "\nタグ: " + (() => {
                                                 let tags = ""
                                                 preset.tag.forEach(string => tags += string + " ")
@@ -1032,6 +1042,7 @@ namespace sumtool {
                     break
                 }
             }
+            console.log(programList[programChoice - 1] + "が終了しました。")
         }
     }
 }
