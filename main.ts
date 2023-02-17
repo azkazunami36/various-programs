@@ -993,9 +993,38 @@ namespace sumtool {
                                         console.log("入力が間違っているようです。最初からやり直してください。")
                                         continue
                                     }
-                                    
-                                } else if (typeChoice === 3) {
+                                    const funcChoice = await choice(["タグを修正", "プリセット名を変更", "プリセットを削除"], "機能一覧", "利用する機能を選択してください。")
+                                    switch (funcChoice) {
+                                        case 1: {
+                                            const tagChoice = await choice((() => {
+                                                const tags: string[] = []
+                                                cuiIOtmp.ffmpegconverter.presets[presetChoice].tag.forEach(tag => tags.push(tag))
+                                                return tags
+                                            })(), "タグ一覧", "編集するタグを選択してください。")
+                                            cuiIOtmp.ffmpegconverter.presets[presetChoice].tag[tagChoice] = await question("新しいタグ名を入力してください。エラー検知はしません。")
+                                            break
+                                        }
+                                        case 2: {
+                                            cuiIOtmp.ffmpegconverter.presets[presetChoice].name = await question("新しい名前を入力してください。")
+                                            break
+                                        }
+                                        case 3: {
+                                            const permission = booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
+                                            if (permission) cuiIOtmp.ffmpegconverter.presets.splice(presetChoice)
+                                        }
+                                    }
 
+                                } else if (typeChoice === 3) {
+                                    cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
+                                        console.log(
+                                            "プリセット名: " + preset.name + 
+                                            "\nタグ: " + (() => {
+                                                let tags = ""
+                                                preset.tag.forEach(string => tags += string + " ")
+                                                return tags
+                                            })()
+                                        )
+                                    })
                                 } else if (typeChoice === 4) break
                             }
                         }
