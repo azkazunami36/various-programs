@@ -881,8 +881,7 @@ namespace sumtool {
                         name: "mp3(128kbps)-30db音量上昇用",
                         ext: "mp3",
                         tag: [
-                            "-vn",
-                            "-af volume=30db",
+                            "-af volume=30dB",
                             "-c:a libmp3lame",
                             "-ar 44100",
                             "-ab 128"
