@@ -1003,7 +1003,7 @@ namespace sumtool {
                                         console.log("入力が間違っているようです。最初からやり直してください。")
                                         continue
                                     }
-                                    const funcChoice = await choice(["タグを修正", "プリセット名を変更", "プリセットを削除"], "機能一覧", "利用する機能を選択してください。")
+                                    const funcChoice = await choice(["タグを修正", "タグを削除", "プリセット名を変更", "プリセットを削除"], "機能一覧", "利用する機能を選択してください。")
                                     switch (funcChoice) {
                                         case 1: {
                                             const tagChoice = await choice((() => {
@@ -1015,10 +1015,19 @@ namespace sumtool {
                                             break
                                         }
                                         case 2: {
-                                            cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].name = await question("新しい名前を入力してください。")
+                                            const tagChoice = await choice((() => {
+                                                const tags: string[] = []
+                                                cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
+                                                return tags
+                                            })(), "タグ一覧", "削除するタグを選択してください。")
+                                            cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].tag.splice(tagChoice - 1)
                                             break
                                         }
                                         case 3: {
+                                            cuiIOtmp.ffmpegconverter.presets[presetChoice - 1].name = await question("新しい名前を入力してください。")
+                                            break
+                                        }
+                                        case 4: {
                                             const permission = await booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
                                             if (permission) cuiIOtmp.ffmpegconverter.presets.splice(presetChoice - 1)
                                         }
