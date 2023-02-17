@@ -383,6 +383,27 @@ namespace sumtool {
             })
         }
     }
+    export class ffmpegConverter {
+        constructor() { }
+        static async inputPreset(): Promise<{ name: string, ext: string, tag: string[] }> {
+            console.log("-からタグの入力を始めます。複数を１度に入力してはなりません。検知し警告します。\n空白で続行すると完了したことになります。")
+            const presets: string[] = []
+            while (true) {
+                const string = await question("プリセット内容を入力してください。")
+                if (string === "") break
+                if (string[0] !== "-" && !(await booleanIO("最初にハイフンがありません。今後エラーになる恐れがありますが、よろしいですか？"))) continue
+                if (string.split("-").length > 2 && !(await booleanIO("ハイフンを２つ以上検知しました。今後エラーになる可能性が否めませんが、よろしいですか？"))) continue
+                presets.push(string)
+            }
+            const extension = await question("保存時に使用する拡張子を入力してください。間違えると今後エラーを起こします。")
+            const name = await question("プリセット名を入力してください。名前は自由です。")
+            return {
+                name: name,
+                ext: extension,
+                tag: presets
+            }
+        }
+    }
     export function kanaConvert(string: string, convertTo: boolean) {
         const array = [
             {
@@ -793,7 +814,15 @@ namespace sumtool {
         return outText
     }
     export async function cuiIO() {
-        const cuiIOtmp = {}
+        const cuiIOtmp: {
+            ffmpegconverter?: {
+                presets?: {
+                    name: string,
+                    ext: string,
+                    tag: string[]
+                }[]
+            }
+        } = {}
         while (true) {
             const programChoice = await choice(["Image Resize", "QWERTY Kana Convert", "Discord Bot", "Time Class", "FFmpeg Converter"], "利用可能なプログラム", "実行したいプログラムを選択してください。")
             switch (programChoice) {
@@ -906,6 +935,57 @@ namespace sumtool {
                     break
                 }
                 case 5: {
+                    console.log(
+                        "FFmpeg Converterはまだデータ保存機能がありません。\n" +
+                        "そのためプリセットデータは、nodeプロセスが終了された際に削除されます。ご了承ください。\n" +
+                        "ctrl+c等で終了しない内はデータを利用することが可能です。\n"
+                    )
+                    const convertChoice = await choice(["変換を開始する", "プリセットの作成・編集"], "機能一覧", "利用する機能を選択してください、")
+                    if (convertChoice === null) {
+                        console.log("入力が間違っているようです。最初からやり直してください。")
+                        break
+                    }
+                    switch (convertChoice) {
+                        case 1: {
+                            const convertType = await choice(["パスを指定しプリセットで変換", "タグを手入力し、詳細な設定を自分で行う"], "変換の種類", "上記から変換の種類を選択してください。")
+                            if (convertType === null) {
+                                console.log("入力が間違っているようです。最初からやり直してください。")
+                                break
+                            }
+                            switch (convertType) {
+                                case 1: {
+                                    break
+                                }
+                                case 2: {
+                                    break
+                                }
+                            }
+                        }
+                        case 2: {
+                            while (true) {
+                                const typeChoice = await choice(["プリセット作成", "プリセット編集", "プリセット一覧を表示", "終了"])
+                                if (typeChoice === null) {
+                                    console.log("入力が間違っているようです。最初からやり直してください。")
+                                    break
+                                } else if (typeChoice === 1) {
+                                    if (!cuiIOtmp.ffmpegconverter) cuiIOtmp.ffmpegconverter = {
+                                        presets: []
+                                    }
+                                    cuiIOtmp.ffmpegconverter.presets.push(await ffmpegConverter.inputPreset())
+                                } else if (typeChoice === 2) {
+                                    const presetChoice = await choice((() => {
+                                        const presetNames: string[] = []
+                                        cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
+                                            presetNames.push(preset.name)
+                                        })
+                                        return presetNames
+                                    })(), "プリセット一覧", "編集するプリセットを選択してください。")
+                                } else if (typeChoice === 3) {
+
+                                } else if (typeChoice === 4) break
+                            }
+                        }
+                    }
                     break
                 }
             }
