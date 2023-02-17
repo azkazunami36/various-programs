@@ -29,6 +29,7 @@
     "ytdl-core": "^4.11.2"
   },
   "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.20",
     "@types/sharp": "^0.31.1"
   }
 }
