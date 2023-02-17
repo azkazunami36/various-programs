@@ -209,14 +209,12 @@ namespace sumtool {
     }
     export async function passCheck(string: string): Promise<{ pass: string } & fs.Stats> {
         const pass = await (async () => {
-            const passDeli = (string.match(":\\")) ? "\\" : "/"
+            const passDeli = (string.match(/:\\/)) ? "\\" : "/"
             const passArray = string.split(passDeli)
             let passtmp = ""
             for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? passDeli : "")
             if (await exsits(passtmp)) return passtmp
-            console.log(passtmp)
-            if (passtmp[0] === "\"" && passtmp[passtmp.length - 1] === "\"") passtmp.substring(1, passtmp.length - 2)
-            console.log(passtmp)
+            if (passtmp[0] === "\"" && passtmp[passtmp.length - 1] === "\"") passtmp = passtmp.substring(1, passtmp.length - 2)
             if (await exsits(passtmp)) return passtmp
             while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
             if (await exsits(passtmp)) return passtmp
