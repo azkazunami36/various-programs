@@ -405,7 +405,7 @@ namespace sumtool {
         addInput(pass: string) {
             this.#ffmpeg.addInput(pass)
         }
-        static async inputPreset(): Promise<{ name: string, ext: string, tag: string[] }> {
+        static async inputPreset(option?: { tagonly?: boolean }): Promise<{ name: string, ext: string, tag: string[] }> {
             console.log("-からタグの入力を始めます。複数を１度に入力してはなりません。検知し警告します。\n空白で続行すると完了したことになります。")
             const presets: string[] = []
             while (true) {
@@ -420,7 +420,7 @@ namespace sumtool {
                 presets.push(string)
             }
             const extension = await question("保存時に使用する拡張子を入力してください。間違えると今後エラーを起こします。")
-            const name = await question("プリセット名を入力してください。名前は自由です。")
+            const name = (option ? option.tagonly : false) ? null : await question("プリセット名を入力してください。名前は自由です。")
             return {
                 name: name,
                 ext: extension,
@@ -1066,6 +1066,36 @@ namespace sumtool {
                                     break
                                 }
                                 case 2: {
+                                    const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
+                                    if (beforePass === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        break
+                                    }
+                                    const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+                                    if (afterPass === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        break
+                                    }
+                                    const filename = await question("書き出し先のファイル名を入力してください。")
+                                    const preset = await ffmpegConverter.inputPreset({ tagonly: true })
+                                    console.log(
+                                        "変換元: " + beforePass.pass + "\n" +
+                                        "変換先: " + afterPass.pass + "/" + filename + "." + preset.ext + "\n" +
+                                        "タグ: " + (() => {
+                                            let tags = ""
+                                            preset.tag.forEach(tag => tags += tag)
+                                            return tags
+                                        })()
+                                    )
+                                    const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
+                                    if (permission) {
+                                        const convert = new ffmpegConverter()
+                                        convert.addInput(beforePass.pass)
+                                        convert.preset = preset.tag
+                                        console.log(convert.preset)
+                                        await convert.convert(afterPass.pass + "/" + filename + "." + preset.ext)
+                                        console.log("変換が完了しました！")
+                                    }
                                     break
                                 }
                             }
