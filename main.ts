@@ -1183,7 +1183,14 @@ namespace sumtool {
             console.log(programList[programChoice - 1] + "が終了しました。")
         }
     }
+    export class expressd {
+        constructor() {}
+        static async main(): Promise<void> {
+            
+        }
+    }
 }
 (async () => {
     sumtool.cuiIO()
+    sumtool.expressd.main()
 })()
