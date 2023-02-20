@@ -4,6 +4,7 @@ import fs from "fs"
 import imageSize from "image-size"
 import sharp from "sharp"
 import ffmpeg from "fluent-ffmpeg"
+import Discord from "discord.js"
 /**
  * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
  * CUIでもGUIのような使い勝手の良さを実感してください。
@@ -321,6 +322,55 @@ namespace sumtool {
             }
         }
         return processd
+    }
+    interface discordBotData {
+        client?: Discord.Client,
+        programs?: {
+            message?: {
+                [programName: string]: (message: Discord.Message) => void
+            },
+            interaction?: {
+                [programName: string]: (interaction: Discord.Interaction) => void
+            }
+        }
+    }
+    export class discordBots {
+        constructor() {}
+        static async inits(data: discordBotData) {
+            const { Client, GatewayIntentBits, Partials } = Discord
+            data.client = new Client({
+                intents: [
+                    GatewayIntentBits.AutoModerationConfiguration,
+                    GatewayIntentBits.AutoModerationExecution,
+                    GatewayIntentBits.DirectMessageReactions,
+                    GatewayIntentBits.DirectMessageTyping,
+                    GatewayIntentBits.DirectMessages,
+                    GatewayIntentBits.GuildBans,
+                    GatewayIntentBits.GuildEmojisAndStickers,
+                    GatewayIntentBits.GuildIntegrations,
+                    GatewayIntentBits.GuildInvites,
+                    GatewayIntentBits.GuildMembers,
+                    GatewayIntentBits.GuildMessageReactions,
+                    GatewayIntentBits.GuildMessageTyping,
+                    GatewayIntentBits.GuildMessages,
+                    GatewayIntentBits.GuildPresences,
+                    GatewayIntentBits.GuildScheduledEvents,
+                    GatewayIntentBits.GuildVoiceStates,
+                    GatewayIntentBits.GuildWebhooks,
+                    GatewayIntentBits.Guilds,
+                    GatewayIntentBits.MessageContent
+                ],
+                partials: [
+                    Partials.Channel,
+                    Partials.GuildMember,
+                    Partials.GuildScheduledEvent,
+                    Partials.Message,
+                    Partials.Reaction,
+                    Partials.ThreadMember,
+                    Partials.User
+                ]
+            })
+        }
     }
     export class sharpConvert {
         #converting = 0
@@ -845,6 +895,13 @@ namespace sumtool {
                     ext: string,
                     tag: string[]
                 }[]
+            },
+            discordJs?: {
+                bots?: {
+                    [botName: string]: {
+
+                    }
+                }
             }
         } = {
             ffmpegconverter: {
@@ -888,6 +945,11 @@ namespace sumtool {
                         ]
                     }
                 ]
+            },
+            discordJs: {
+                bots: {
+                    ["kannininshou"]: {}
+                }
             }
         }
         while (true) {
