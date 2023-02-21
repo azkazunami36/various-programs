@@ -7,9 +7,12 @@ const client = new Client({})
  */
 const commands = {}
 
-for (const filename of fs.readdirSync('./commands').filter(file => file.endsWith('.js'))) {//commandsフォルダ内のファイルを読み込み、jsファイルに絞る
+for (const filename of fs.readdirSync('./commands').filter(file => file.endsWith('.js'))) { //commandsフォルダ内のファイルを読み込み、jsファイルに絞る
+    /**
+     * @type {{config: {name: string}, function: (interaction: Interaction) => Promise<void>, ignore: boolean}}
+     */
     const command = require("./commands/" + filename)
-    commands[command.config.name] = command //コマンド名をオブジェクト名にします。
+    if (!command.ignore) commands[command.config.name] = command //コマンド名をオブジェクト名にします。
 }
 
 client.on(Events.ClientReady, () => {
