@@ -5,6 +5,7 @@ import imageSize from "image-size"
 import sharp from "sharp"
 import ffmpeg from "fluent-ffmpeg"
 import Discord from "discord.js"
+import net from "net"
 /**
  * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
  * CUIでもGUIのような使い勝手の良さを実感してください。
@@ -222,10 +223,8 @@ namespace sumtool {
             if (await exsits(passtmp)) return passtmp
             passtmp = passtmp.replace(/\\ /g, " ")
             if (await exsits(passtmp)) return passtmp
-            console.log(passtmp)
             return null
         })()
-        console.log(pass)
         if (!pass) return null
         const stats: fs.Stats = await new Promise(resolve => fs.stat(pass, (err, stats) => resolve(stats)))
         return { pass: pass, ...stats }
@@ -303,7 +302,7 @@ namespace sumtool {
                 const name = dirents[filepoint[lpass].point].name
                 if (!dirents[filepoint[lpass].point].isDirectory()) {
                     const namedot = name.split(".")
-                    const extension = namedot[namedot.length - 1];
+                    const extension = namedot[namedot.length - 1]
                     if ((() => {
                         if (extensionFilter[0]) {
                             for (let i = 0; i !== extensionFilter.length; i++)
@@ -335,7 +334,7 @@ namespace sumtool {
         }
     }
     export class discordBots {
-        constructor() {}
+        constructor() { }
         static async inits(data: discordBotData) {
             const { Client, GatewayIntentBits, Partials } = Discord
             data.client = new Client({
@@ -887,6 +886,99 @@ namespace sumtool {
         }
         return outText
     }
+    export class Bouyomi {
+        #client: net.Socket
+        #data: { speed: number, tone: number, volume: number, voice: number, port: number, url: string, code: "utf8" } = {
+            speed: -1,
+            tone: -1,
+            volume: -1,
+            voice: 0,
+            port: 50001,
+            url: "localhost",
+            code: "utf8"
+        }
+        #ready: () => void = () => { }
+        #error: (error: Error) => void = () => { }
+        #end: () => void = () => { }
+        ready(callback: () => void) { this.#ready = callback }
+        error(callback: (error: Error) => void) { this.#error = callback }
+        end(callback: () => void) { this.#end = callback }
+        constructor(data: { speed?: number, tone?: number, volume?: number, voice?: number, port?: number, address?: string, ccode?: "utf8" }) {
+            this.speed = data.speed ? data.speed : -1
+            this.tone = data.tone ? data.tone : -1
+            this.volume = data.volume ? data.volume : -1
+            this.voice = data.voice ? data.voice : 0
+            this.port = data.port ? data.port : 50001
+            this.address = data.address ? data.address : "localhost"
+            this.ccode = data.ccode ? data.ccode : "utf8"
+            this.#client = new net.Socket()
+            const client = this.#client
+            client.on("ready", () => this.#ready())
+            client.on("error", e => this.#error(e))
+            client.on("end", () => this.#end())
+        }
+        set speed(d) {
+            d = (d > 200) ? 200 : d
+            d = (d < -1) ? -1 : d
+            this.#data.speed = d
+        }
+        get speed() { return this.#data.speed }
+        set tone(d) {
+            d = (d > 200) ? 200 : d
+            d = (d < -1) ? -1 : d
+            this.#data.tone = d
+        }
+        get tone() { return this.#data.tone }
+        set volume(d) {
+            d = (d > 100) ? 100 : d
+            d = (d < -1) ? -1 : d
+            this.#data.volume = d
+        }
+        get volume() { return this.#data.volume }
+        set voice(d) {
+            d = (d < 0) ? 0 : d
+            this.#data.voice = d
+        }
+        get voice() { return this.#data.voice }
+        set port(d) {
+            d = (d > 65535) ? 65535 : d
+            d = (d < 0) ? 0 : d
+            this.#data.port = d
+        }
+        get port() { return this.#data.port }
+        set address(d) { this.#data.url = d }
+        get address() { return this.#data.url }
+        set ccode(d) { this.#data.code = d }
+        get ccode() { return this.#data.code }
+        send(msg: string) {
+            const client = this.#client
+            client.connect(this.#data.port, this.#data.url)
+            const Command = Buffer.alloc(2)
+            Command.writeInt16LE(1, 0)
+            client.write(Command)
+            const Speed = Buffer.alloc(2)
+            Speed.writeInt16LE(this.#data.speed, 0)
+            client.write(Speed)
+            const Tone = Buffer.alloc(2)
+            Tone.writeInt16LE(this.#data.tone, 0)
+            client.write(Tone)
+            const Volume = Buffer.alloc(2)
+            Volume.writeInt16LE(this.#data.volume, 0)
+            client.write(Volume)
+            const Voice = Buffer.alloc(2)
+            Voice.writeInt16LE(this.#data.voice, 0)
+            client.write(Voice)
+            const Code = Buffer.alloc(1)
+            Code.writeInt8(0, 0)
+            client.write(Code)
+            const Message = Buffer.from(msg, this.#data.code)
+            const Length = Buffer.alloc(4)
+            Length.writeInt32LE(Message.length, 0)
+            client.write(Length)
+            client.write(Message)
+            client.end()
+        }
+    }
     export async function cuiIO() {
         const cuiIOtmp: {
             ffmpegconverter?: {
@@ -901,6 +993,16 @@ namespace sumtool {
                     [botName: string]: {
 
                     }
+                }
+            },
+            bouyomi?: {
+                temp?: {
+                    speed: number,
+                    tone: number,
+                    volume: number,
+                    voice: number,
+                    address: string,
+                    port: number
                 }
             }
         } = {
@@ -950,10 +1052,11 @@ namespace sumtool {
                 bots: {
                     ["kannininshou"]: {}
                 }
-            }
+            },
+            bouyomi: {}
         }
         while (true) {
-            const programList = ["Image Resize", "QWERTY Kana Convert", "Discord Bot", "Time Class", "FFmpeg Converter"]
+            const programList = ["Image Resize", "QWERTY Kana Convert", "Discord Bot", "Time Class", "FFmpeg Converter", "棒読みちゃん読み上げ"]
             const programChoice = await choice(programList, "利用可能なプログラム", "実行したいプログラムを選択してください。")
             if (programChoice === null) {
                 console.log("入力が間違っているようです。最初からやり直してください。")
@@ -1241,14 +1344,46 @@ namespace sumtool {
                     }
                     break
                 }
+                case 6: {
+                    const msg = await question("読み上げたい内容を入力してください。")
+                    if (!cuiIOtmp.bouyomi.temp || !await booleanIO("前回のデータを再利用しますか？")) {
+                        const speed = Number(await question("読み上げ速度を入力してください。"))
+                        const tone = Number(await question("声の高さを入力してください。"))
+                        const volume = Number(await question("声の大きさを入力してください。"))
+                        const voice = Number(await question("声の種類を入力してください。"))
+                        const address = await question("送信先のアドレスを入力してください。空白でlocalhostです。")
+                        const port = Number(await question("ポートを入力してください。空白で50001です。"))
+                        cuiIOtmp.bouyomi.temp = {
+                            speed: speed ? speed : -1,
+                            tone: tone ? tone : -1,
+                            voice: voice ? voice : 0,
+                            volume: volume ? volume : -1,
+                            address: address ? address : "localhost",
+                            port: port ? port : 50001
+                        }
+                    }
+                    const client = new Bouyomi(cuiIOtmp.bouyomi.temp)
+                    await new Promise<void>(resolve => {
+                        client.ready(() => console.log("送信を開始します。"))
+                        client.error(e => {
+                            console.log("理由: " + e + "により通信エラーが発生しました。")
+                            resolve()
+                        })
+                        client.end(() => {
+                            console.log("送信が完了しました。")
+                            resolve()
+                        })
+                        client.send(msg)
+                    })
+                }
             }
             console.log(programList[programChoice - 1] + "が終了しました。")
         }
     }
     export class expressd {
-        constructor() {}
+        constructor() { }
         static async main(): Promise<void> {
-            
+
         }
     }
 }
