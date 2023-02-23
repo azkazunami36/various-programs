@@ -1063,29 +1063,22 @@ namespace sumtool {
             bouyomi: {}
         }
         while (true) {
-            const programList = ["Image Resize", "QWERTY Kana Convert", "Discord Bot", "Time Class", "FFmpeg Converter", "棒読みちゃん読み上げ"]
-            const programChoice = await choice(programList, "利用可能なプログラム", "実行したいプログラムを選択してください。")
-            if (programChoice === null) {
-                console.log("入力が間違っているようです。最初からやり直してください。")
-                continue
-            }
-            console.log(programList[programChoice - 1] + "を起動します。")
-            switch (programChoice) {
-                case 1: {
+            const programs: { [programName: string]: () => Promise<void> } = {
+                "Image Resize": async () => {
                     const imageSize = Number(await question("指定の画像サイズを入力してください。"))
                     if (Number.isNaN(imageSize)) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
-                        break
+                        return
                     }
                     const beforePass = await passCheck(await question("変換元の画像フォルダを指定してください。"))
                     if (beforePass === null) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
-                        break
+                        return
                     }
                     const afterPass = await passCheck(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
                     if (afterPass === null) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
-                        break
+                        return
                     }
                     const type = [
                         "[ファイル名].png",
@@ -1097,7 +1090,7 @@ namespace sumtool {
                     const nameing = await choice(type, "命名方法", "上記から命名方法を選択してください。")
                     if (nameing === null) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
-                        break
+                        return
                     }
                     const folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
                     const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
@@ -1137,21 +1130,16 @@ namespace sumtool {
                         })
                         await convert.convert()
                     }
-                    break
-                }
-                case 2: {
-                    console.log(kanaConvert(await question("変換元のテキストを入力してください。"), await booleanIO("QWERTYからかなに変換しますか？yで変換、nで逆変換します。")))
-                    break
-                }
-                case 3: {
+                },
+                "QWERTY Kana Convert": async () => console.log(kanaConvert(await question("変換元のテキストを入力してください。"), await booleanIO("QWERTYからかなに変換しますか？yで変換、nで逆変換します。"))),
+                "Discord Bot": async () => {
                     const botChoice = await choice(["簡易認証"], "bot一覧", "利用するbotを選択してください。")
                     while (true) {
                         const control = await choice(["起動/停止", "直前のログ", "終了"], "利用可能な操作一覧", "利用する機能を選択してください。")
                         if (control === 3) break
                     }
-                    break
-                }
-                case 4: {
+                },
+                "Time Class": async () => {
                     const rawtime = Number(await question("時間を指定してください。"))
                     const count = new time()
                     count.count(rawtime)
@@ -1177,9 +1165,8 @@ namespace sumtool {
                         },
                         fill: (Number.isNaN(fill)) ? undefined : fill
                     }))
-                    break
-                }
-                case 5: {
+                },
+                "FFmpeg Converter": async () => {
                     console.log(
                         "FFmpeg Converterはまだデータ保存機能がありません。\n" +
                         "そのためプリセットデータは、nodeプロセスが終了された際に削除されます。ご了承ください。\n" +
@@ -1188,7 +1175,7 @@ namespace sumtool {
                     const convertChoice = await choice(["変換を開始する", "プリセットの作成・編集"], "FFmpeg Converter", "利用する機能を選択してください、")
                     if (convertChoice === null) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
-                        break
+                        return
                     }
                     switch (convertChoice) {
                         case 1: {
@@ -1349,9 +1336,8 @@ namespace sumtool {
                             break
                         }
                     }
-                    break
-                }
-                case 6: {
+                },
+                "棒読みちゃん読み上げ": async () => {
                     const msg = await question("読み上げたい内容を入力してください。")
                     if (!cuiIOtmp.bouyomi.temp || !await booleanIO("前回のデータを再利用しますか？")) {
                         const speed = Number(await question("読み上げ速度を入力してください。"))
@@ -1384,7 +1370,19 @@ namespace sumtool {
                     })
                 }
             }
-            console.log(programList[programChoice - 1] + "が終了しました。")
+            const programChoice = await choice((() => {
+                const programList: string[] = []
+                for (const programName of Object.keys(programs)) programList.push(programName)
+                return programList
+            })(), "利用可能なプログラム", "実行したいプログラムを選択してください。")
+            if (programChoice === null) {
+                console.log("入力が間違っているようです。最初からやり直してください。")
+                continue
+            }
+            const choiceProgramName = Object.keys(programs)[programChoice - 1]
+            console.log(choiceProgramName + "を起動します。")
+            await programs[choiceProgramName]()
+            console.log(choiceProgramName + "が終了しました。")
         }
     }
     export class expressd {
