@@ -5,6 +5,7 @@
         "esModuleInterop": true,
         "baseUrl": "./",
         "skipLibCheck": true,
-        "target": "ESNext"
+        "target": "ESNext",
+        "noImplicitAny": true
     },
 }

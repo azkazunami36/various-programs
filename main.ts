@@ -38,6 +38,10 @@ namespace sumtool {
         fill?: number
         timeString?: number
     }
+    /**
+     * 秒単位のnumberを秒、分、時間、日、年に変換します。
+     * 現在はまだ高効率ではありません。
+     */
     export class time {
         #sec = 0
         #secRaw = 0
@@ -49,6 +53,9 @@ namespace sumtool {
         #daysRaw = 0
         #year = 0
         #convertTime = 0
+        /**
+         * timeクラスに前回のデータを引き継ぐ際に使用します。
+         */
         constructor(rawData?: tempTime) {
             if (rawData) {
                 this.#sec = rawData.sec,
@@ -878,10 +885,10 @@ namespace sumtool {
         for (let i = 0; i !== string.length; i++) {
             const e = (() => {
                 for (let e = 0; e !== array.length; e++)
-                    if (string[i] === array[e][["kana", "key"][type]]) return e
+                    if (string[i] === array[e][((type === 1) ? "key" : "kana")]) return e
                 return null
             })()
-            if (e !== null) outText += array[e][["key", "kana"][type]]
+            if (e !== null) outText += array[e][((type === 1) ? "kana" : "key")]
             else outText += string[i]
         }
         return outText
@@ -1388,6 +1395,6 @@ namespace sumtool {
     }
 }
 (async () => {
-    sumtool.cuiIO()
-    sumtool.expressd.main()
+    sumtool.cuiIO() //コンソール画面で直接操作するためのプログラムです。
+    sumtool.expressd.main() //ブラウザ等から直感的に操作するためのプログラムです。
 })()
