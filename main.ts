@@ -901,6 +901,14 @@ namespace sumtool {
         }
         return outText
     }
+    interface bouyomiStatus {
+        speed?: number
+        tone?: number
+        volume?: number
+        voice?: number
+        address?: string
+        port?: number
+    }
     export class Bouyomi {
         #client: net.Socket
         #data: { speed: number, tone: number, volume: number, voice: number, port: number, url: string, code: "utf8" } = {
@@ -1011,14 +1019,7 @@ namespace sumtool {
                 }
             },
             bouyomi?: {
-                temp?: {
-                    speed: number,
-                    tone: number,
-                    volume: number,
-                    voice: number,
-                    address: string,
-                    port: number
-                }
+                temp?: bouyomiStatus
             }
         } = {
             ffmpegconverter: {
@@ -1097,7 +1098,7 @@ namespace sumtool {
             presetChoice?: number,
             presetNames?: string[],
             permission?: boolean,
-            convert?: ffmpegConverter,
+            convert?: ffmpegConverter | sharpConvert,
             preset?: {
                 name: string,
                 tag: string[],
@@ -1105,8 +1106,22 @@ namespace sumtool {
             },
             typeChoice?: number,
             funcChoice?: number,
-            tagChoice?: number
-        } = {}
+            tagChoice?: number,
+            display?: string,
+            windowSize?: number[],
+            percent?: number,
+            folderContain?: boolean,
+            nameing?: number,
+            fileList?: passInfo[],
+            oneDisplay?: string,
+            twoDisplay?: string,
+            progressLength?: number,
+            displayProgress?: number,
+            progress?: string,
+            length?: number,
+            msg?: string,
+            client?: Bouyomi
+        } & bouyomiStatus = {}
         const programs: { [programName: string]: () => Promise<void> } = {
             "Image Resize": async () => {
                 temp.imageSize = Number(await question("指定の画像サイズを入力してください。"))
@@ -1124,48 +1139,48 @@ namespace sumtool {
                     console.log("入力が間違っているようです。最初からやり直してください。")
                     return
                 }
-                const nameing = await choice(sharpConvert.type, "命名方法", "上記から命名方法を選択してください。")
-                if (nameing === null) {
+                temp.nameing = await choice(sharpConvert.type, "命名方法", "上記から命名方法を選択してください。")
+                if (temp.nameing === null) {
                     console.log("入力が間違っているようです。最初からやり直してください。")
                     return
                 }
-                const folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
-                const fileList = await fileLister(temp.beforePass.pass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
+                temp.folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
+                temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
                 console.log(
                     "変換元パス: " + temp.beforePass.pass + "\n" +
                     "変換先パス: " + temp.afterPass.pass + "\n" +
                     "変換先サイズ(縦): " + temp.imageSize + "\n" +
-                    "変換するファイル数: " + fileList.length + "\n" +
-                    "命名方法: " + sharpConvert.type[nameing - 1]
+                    "変換するファイル数: " + temp.fileList.length + "\n" +
+                    "命名方法: " + sharpConvert.type[temp.nameing - 1]
                 )
-                const permission = await booleanIO("上記のデータで実行してもよろしいですか？yと入力すると続行します。")
-                if (permission) {
-                    const convert = new sharpConvert()
-                    convert.afterPass = temp.afterPass.pass
-                    convert.nameing = nameing - 1
-                    convert.size = temp.imageSize
-                    convert.processd = fileList
-                    convert.progress((now, total) => {
-                        const windowSize = process.stdout.getWindowSize()
-                        const percent = now / total
-                        const oneDisplay = "変換中(" + now + "/" + total + ") " +
-                            (percent * 100).toFixed() + "%["
-                        const twoDisplay = "]"
-                        let progress = ""
-                        let length = textLength(oneDisplay) + textLength(twoDisplay)
-                        const progressLength = windowSize[0] - 3 - length
-                        const displayProgress = Number((percent * progressLength).toFixed())
-                        for (let i = 0; i < displayProgress; i++) progress += "#"
-                        for (let i = 0; i < progressLength - displayProgress; i++) progress += " "
-                        const display = oneDisplay + progress + twoDisplay
+                temp.permission = await booleanIO("上記のデータで実行してもよろしいですか？yと入力すると続行します。")
+                if (temp.permission) {
+                    temp.convert = new sharpConvert()
+                    temp.convert.afterPass = temp.afterPass.pass
+                    temp.convert.nameing = temp.nameing - 1
+                    temp.convert.size = temp.imageSize
+                    temp.convert.processd = temp.fileList
+                    temp.convert.progress((now, total) => {
+                        temp.windowSize = process.stdout.getWindowSize()
+                        temp.percent = now / total
+                        temp.oneDisplay = "変換中(" + now + "/" + total + ") " +
+                            (temp.percent * 100).toFixed() + "%["
+                        temp.twoDisplay = "]"
+                        temp.progress = ""
+                        temp.length = textLength(temp.oneDisplay) + textLength(temp.twoDisplay)
+                        temp.progressLength = temp.windowSize[0] - 3 - length
+                        temp.displayProgress = Number((temp.percent * temp.progressLength).toFixed())
+                        for (let i = 0; i < temp.displayProgress; i++) temp.progress += "#"
+                        for (let i = 0; i < temp.progressLength - temp.displayProgress; i++) temp.progress += " "
+                        temp.display = temp.oneDisplay + temp.progress + temp.twoDisplay
                         readline.cursorTo(process.stdout, 0)
                         process.stdout.clearLine(0)
-                        process.stdout.write(display)
+                        process.stdout.write(temp.display)
                     })
-                    convert.end(() => {
+                    temp.convert.end(() => {
                         console.log("\n変換が完了しました。")
                     })
-                    await convert.convert()
+                    await temp.convert.convert()
                 }
             },
             "QWERTY Kana Convert": async () => console.log(kanaConvert(await question("変換元のテキストを入力してください。"), await booleanIO("QWERTYからかなに変換しますか？yで変換、nで逆変換します。"))),
@@ -1216,7 +1231,7 @@ namespace sumtool {
                 }
                 switch (temp.convertChoice) {
                     case 1: {
-                        temp.convertType = await choice(["パスを指定しプリセットで変換", "タグを手入力し、詳細な設定を自分で行う"], "変換の種類の一覧", "上記から変換の種類を選択してください。")
+                        temp.convertType = await choice(["パスを指定しプリセットで変換", "タグを手入力し、詳細な設定を自分で行う", "複数ファイルを一括変換"], "変換の種類の一覧", "上記から変換の種類を選択してください。")
                         if (temp.convertType === null) {
                             console.log("入力が間違っているようです。最初からやり直してください。")
                             break
@@ -1291,6 +1306,57 @@ namespace sumtool {
                                     console.log(temp.convert.preset)
                                     await temp.convert.convert(temp.afterPass.pass + "/" + temp.filename + "." + temp.preset.ext)
                                     console.log("変換が完了しました！")
+                                }
+                                break
+                            }
+                            case 3: {
+                                temp.beforePass = await passCheck(await question("変換元の画像フォルダを指定してください。"))
+                                if (temp.beforePass === null) {
+                                    console.log("入力が間違っているようです。最初からやり直してください。")
+                                    return
+                                }
+                                temp.afterPass = await passCheck(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
+                                if (temp.afterPass === null) {
+                                    console.log("入力が間違っているようです。最初からやり直してください。")
+                                    return
+                                }
+                                temp.folderContain = await booleanIO("フォルダ内にあるフォルダも動画変換に含めますか？yで同意します。")
+                                temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
+                                temp.presetChoice = await choice((() => {
+                                    let presetNames: string[] = []
+                                    cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
+                                        presetNames.push(preset.name)
+                                    })
+                                    return presetNames
+                                })(), "プリセット一覧", "使用するプリセットを選択してください。")
+                                console.log(
+                                    "変換元: " + temp.beforePass.pass + "\n" +
+                                    "変換先: " + temp.afterPass.pass + "/" + temp.filename + "." + cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].ext + "\n" +
+                                    "タグ: " + (() => {
+                                        let tags = ""
+                                        cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.forEach(tag => tags += tag)
+                                        return tags
+                                    })() +
+                                    "変換するファイル数: " + temp.fileList.length
+                                )
+                                temp.permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
+                                if (temp.permission) {
+                                    for (let i = 0; i != temp.fileList.length; i++) {
+                                        temp.convert = new ffmpegConverter()
+                                        temp.convert.addInput(temp.fileList[i].pass + "." + temp.fileList[i].filename)
+                                        temp.convert.preset = temp.preset.tag
+
+                                        await temp.convert.convert(temp.afterPass.pass + "/" + (await (async () => {
+                                            let outfolders = ""
+                                            const point = this.processd[i].point
+                                            for (let i = 0; i !== point.length; i++) {
+                                                outfolders += point[i] + "/"
+                                                if (!(await exsits(this.afterPass + "/" + outfolders))) await mkdir(this.afterPass + "/" + outfolders)
+                                            }
+                                            return outfolders
+                                        })()) + temp.fileList[i].filename + "." + cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].ext)
+                                        temp.fileList[i]
+                                    }
                                 }
                                 break
                             }
@@ -1375,35 +1441,35 @@ namespace sumtool {
                 }
             },
             "棒読みちゃん読み上げ": async () => {
-                const msg = await question("読み上げたい内容を入力してください。")
+                temp.msg = await question("読み上げたい内容を入力してください。")
                 if (!cuiIOtmp.bouyomi.temp || !await booleanIO("前回のデータを再利用しますか？")) {
-                    const speed = Number(await question("読み上げ速度を入力してください。"))
-                    const tone = Number(await question("声の高さを入力してください。"))
-                    const volume = Number(await question("声の大きさを入力してください。"))
-                    const voice = Number(await question("声の種類を入力してください。"))
-                    const address = await question("送信先のアドレスを入力してください。空白でlocalhostです。")
-                    const port = Number(await question("ポートを入力してください。空白で50001です。"))
+                    temp.speed = Number(await question("読み上げ速度を入力してください。"))
+                    temp.tone = Number(await question("声の高さを入力してください。"))
+                    temp.volume = Number(await question("声の大きさを入力してください。"))
+                    temp.voice = Number(await question("声の種類を入力してください。"))
+                    temp.address = await question("送信先のアドレスを入力してください。空白でlocalhostです。")
+                    temp.port = Number(await question("ポートを入力してください。空白で50001です。"))
                     cuiIOtmp.bouyomi.temp = {
-                        speed: speed ? speed : -1,
-                        tone: tone ? tone : -1,
-                        voice: voice ? voice : 0,
-                        volume: volume ? volume : -1,
-                        address: address ? address : "localhost",
-                        port: port ? port : 50001
+                        speed: temp.speed ? temp.speed : -1,
+                        tone: temp.tone ? temp.tone : -1,
+                        voice: temp.voice ? temp.voice : 0,
+                        volume: temp.volume ? temp.volume : -1,
+                        address: temp.address ? temp.address : "localhost",
+                        port: temp.port ? temp.port : 50001
                     }
                 }
-                const client = new Bouyomi(cuiIOtmp.bouyomi.temp)
+                temp.client = new Bouyomi(cuiIOtmp.bouyomi.temp)
                 await new Promise<void>(resolve => {
-                    client.ready(() => console.log("送信を開始します。"))
-                    client.error(e => {
+                    temp.client.ready(() => console.log("送信を開始します。"))
+                    temp.client.error(e => {
                         console.log("理由: " + e + "により通信エラーが発生しました。")
                         resolve()
                     })
-                    client.end(() => {
+                    temp.client.end(() => {
                         console.log("送信が完了しました。")
                         resolve()
                     })
-                    client.send(msg)
+                    temp.client.send(temp.msg)
                 })
             }
         }
