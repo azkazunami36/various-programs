@@ -1144,8 +1144,8 @@ namespace sumtool {
                     console.log("入力が間違っているようです。最初からやり直してください。")
                     return
                 }
-                temp.folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
-                temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v"] })
+                temp.folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
+                temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
                 console.log(
                     "変換元パス: " + temp.beforePass.pass + "\n" +
                     "変換先パス: " + temp.afterPass.pass + "\n" +
@@ -1310,7 +1310,7 @@ namespace sumtool {
                                 break
                             }
                             case 3: {
-                                temp.beforePass = await passCheck(await question("変換元の画像フォルダを指定してください。"))
+                                temp.beforePass = await passCheck(await question("変換元のフォルダを指定してください。"))
                                 if (temp.beforePass === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
                                     return
@@ -1320,8 +1320,8 @@ namespace sumtool {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
                                     return
                                 }
-                                temp.folderContain = await booleanIO("フォルダ内にあるフォルダも動画変換に含めますか？yで同意します。")
-                                temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
+                                temp.folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
+                                temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v"] })
                                 temp.presetChoice = await choice((() => {
                                     let presetNames: string[] = []
                                     cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
@@ -1331,10 +1331,10 @@ namespace sumtool {
                                 })(), "プリセット一覧", "使用するプリセットを選択してください。")
                                 console.log(
                                     "変換元: " + temp.beforePass.pass + "\n" +
-                                    "変換先: " + temp.afterPass.pass + "/" + temp.filename + "." + cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].ext + "\n" +
+                                    "変換先: " + temp.afterPass.pass + "\n" +
                                     "タグ: " + (() => {
                                         let tags = ""
-                                        cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.forEach(tag => tags += tag)
+                                        cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.forEach(tag => tags += tag + " ")
                                         return tags
                                     })() +
                                     "変換するファイル数: " + temp.fileList.length
