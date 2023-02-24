@@ -1144,8 +1144,8 @@ namespace sumtool {
                     console.log("入力が間違っているようです。最初からやり直してください。")
                     return
                 }
-                temp.folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
-                temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
+                temp.folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
+                temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v"] })
                 console.log(
                     "変換元パス: " + temp.beforePass.pass + "\n" +
                     "変換先パス: " + temp.afterPass.pass + "\n" +
