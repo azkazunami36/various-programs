@@ -212,6 +212,7 @@ namespace sumtool {
     }
     export async function wait(time: number) { await new Promise<void>(resolve => setTimeout(() => resolve(), time)) }
     export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
+    export async function mkdir(pass: string): Promise<boolean> { return await new Promise<boolean>(resolve => fs.mkdir(pass, err => resolve(err === null))) }
     export function textLength(string: string) {
         let length = 0
         for (let i = 0; i !== string.length; i++) string[i].match(/[ -~]/) ? length += 1 : length += 2
@@ -420,7 +421,7 @@ namespace sumtool {
                     const point = this.processd[i].point
                     for (let i = 0; i !== point.length; i++) {
                         outfolders += point[i] + "/"
-                        if (!(await exsits(this.afterPass + "/" + outfolders))) fs.mkdirSync(this.afterPass + "/" + outfolders)
+                        if (!(await exsits(this.afterPass + "/" + outfolders))) await mkdir(this.afterPass + "/" + outfolders)
                     }
                     const Stream = fs.createWriteStream(this.afterPass + "/" + outfolders + [
                         this.processd[i].filename,
