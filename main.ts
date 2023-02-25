@@ -6,6 +6,7 @@ import sharp from "sharp"
 import ffmpeg from "fluent-ffmpeg"
 import Discord from "discord.js"
 import net from "net"
+import EventEmitter from "events"
 /**
  * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
  * CUIでもGUIのような使い勝手の良さを実感してください。
@@ -223,7 +224,7 @@ namespace sumtool {
             const passDeli = (string.match(/:\\/)) ? "\\" : "/"
             const passArray = string.split(passDeli)
             let passtmp = ""
-            for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? passDeli : "")
+            for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
             if (await exsits(passtmp)) return passtmp
             if (passtmp[0] === "\"" && passtmp[passtmp.length - 1] === "\"") passtmp = passtmp.substring(1, passtmp.length - 2)
             if (await exsits(passtmp)) return passtmp
@@ -313,11 +314,12 @@ namespace sumtool {
                     const extension = namedot[namedot.length - 1]
                     if ((() => {
                         if (extensionFilter[0]) {
-                            for (let i = 0; i !== extensionFilter.length; i++)
-                                if (extensionFilter[i].match(new RegExp(extension, "i"))) return true
-                                else return false
+                            for (let i = 0; i !== extensionFilter.length; i++) {
+                                if (extensionFilter[i] === extension) return true
+                            }
                         }
                         else return true
+                        return false
                     })()) processd.push({
                         filename: name.slice(0, -(extension.length + 1)),
                         extension: extension,
@@ -379,7 +381,11 @@ namespace sumtool {
             })
         }
     }
-    export class sharpConvert {
+    interface sharpConvertEvents {
+        end: []
+        progress: [now: number, total: number]
+    }
+    export class sharpConvert extends EventEmitter {
         #converting = 0
         #convertPoint = 0
         afterPass = ""
@@ -394,19 +400,16 @@ namespace sumtool {
         #maxconvert = 20
         #interval: NodeJS.Timer
         constructor() {
-            this.#interval = setInterval(() => this.#progressCallback(this.#convertPoint, this.processd.length), 100)
+            super()
+            this.#interval = setInterval(() => this.emit("progress", this.#convertPoint, this.processd.length), 100)
         }
-        #progressCallback: (now: number, total: number) => void = () => { }
-        progress(callback: (now: number, total: number) => void) { this.#progressCallback = callback }
-        #end: () => void = () => { }
-        end(callback: () => void) { this.#end = callback }
         async convert() {
             await new Promise<void>(resolve => {
                 const convert = async () => {
                     if (this.#converting === this.#maxconvert) return
                     if (this.#convertPoint === this.processd.length) {
                         if (this.#converting === 0) {
-                            this.#end()
+                            this.emit("end")
                             resolve()
                         }
                         clearInterval(this.#interval)
@@ -430,7 +433,7 @@ namespace sumtool {
                         (i + 1) + "_" + this.processd[i].extension + " - " + this.processd[i].filename,
                         i + 1,
                     ][this.nameing] + ".png")
-                    this.#progressCallback(this.#convertPoint, this.processd.length)
+                    this.emit("progress", this.#convertPoint, this.processd.length)
                     await new Promise(async resolve => {
                         const imageW = imageSize(this.processd[i].pass + fileName).width
                         sharp(this.processd[i].pass + fileName)
@@ -453,10 +456,11 @@ namespace sumtool {
             "[連番].png"
         ]
     }
-    export class ffmpegConverter {
+    export class ffmpegConverter extends EventEmitter {
         #ffmpeg: ffmpeg.FfmpegCommand
-        constructor() {
-            this.#ffmpeg = ffmpeg()
+        constructor(pass: string) {
+            super()
+            this.#ffmpeg = ffmpeg(pass)
         }
         preset: string[]
         async convert(savePass: string) {
@@ -464,6 +468,9 @@ namespace sumtool {
                 this.#ffmpeg.addOptions(this.preset)
                 this.#ffmpeg.save(savePass)
                 this.#ffmpeg.on("end", () => { resolve() })
+                this.#ffmpeg.on('progress', function(progress) {
+                    console.log(progress);
+                });
             })
         }
         addInput(pass: string) {
@@ -1002,6 +1009,73 @@ namespace sumtool {
             client.end()
         }
     }
+    export class progress {
+        #viewed: boolean = false
+        /**
+         * 現在の進行度または最大より小さい値を入力します。
+         */
+        now: number = 0
+        /**
+         * 100%を計算するために、最大値または合計値をここに入力します。
+         */
+        total: number = 0
+        /**
+         * プログレスバー更新間隔をms秒で入力します。
+         */
+        interval: number = 100
+        /**
+         * プログレスバーの左に説明を入れます。
+         */
+        viewStr: string = "進行中..."
+        /**
+         * プログレスバーに更なる小さな進行を表すためのものです。
+         * メインのnow:2,total:4だとして、このエリアでのnow:3,total:6はnow:2.5,total:4となります。
+         */
+        relativePercent: {
+            now: number,
+            total: number
+        } = {
+            now: 0,
+            total: 0
+        }
+        /**
+         * プログレスバーの表示を開始します。
+         */
+        view() {
+            if (!this.#viewed) this.#viewed = true
+            this.#view()
+        }
+        /**
+         * プログレスバーの表示をするかを設定します。
+         * trueを設定すると自動で表示を開始します。
+         */
+        set viewed(type: boolean) {
+            this.#viewed = type
+            if (this.#viewed) this.#view
+        }
+        async #view() {
+            if (!this.#viewed) return
+            const windowSize = process.stdout.getWindowSize()
+            const percent = this.now / this.total
+            const miniPercent = this.relativePercent.now / this.relativePercent.total
+            const oneDisplay = this.viewStr + "(" + this.now + "/" + this.total + ") " +
+                (percent * 100).toFixed() + "%["
+            const twoDisplay = "]"
+            let progress = ""
+            const length = textLength(oneDisplay) + textLength(twoDisplay)
+            const progressLength = windowSize[0] - 3 - length
+            const displayProgress = Number((percent * progressLength).toFixed())
+            const miniDisplayProgress = Number(((miniPercent / this.total) * progressLength).toFixed())
+            for (let i = 0; i < (displayProgress + miniDisplayProgress); i++) progress += "#"
+            for (let i = 0; i < progressLength - (displayProgress + miniDisplayProgress); i++) progress += " "
+            const display = oneDisplay + progress + twoDisplay
+            readline.cursorTo(process.stdout, 0)
+            process.stdout.clearLine(0)
+            process.stdout.write(display)
+            await wait(this.interval)
+            this.#view()
+        }
+    }
     export async function cuiIO() {
         const cuiIOtmp: {
             ffmpegconverter?: {
@@ -1120,7 +1194,8 @@ namespace sumtool {
             progress?: string,
             length?: number,
             msg?: string,
-            client?: Bouyomi
+            client?: Bouyomi,
+            progressd?: progress
         } & bouyomiStatus = {}
         const programs: { [programName: string]: () => Promise<void> } = {
             "Image Resize": async () => {
@@ -1160,24 +1235,16 @@ namespace sumtool {
                     temp.convert.nameing = temp.nameing - 1
                     temp.convert.size = temp.imageSize
                     temp.convert.processd = temp.fileList
-                    temp.convert.progress((now, total) => {
-                        temp.windowSize = process.stdout.getWindowSize()
-                        temp.percent = now / total
-                        temp.oneDisplay = "変換中(" + now + "/" + total + ") " +
-                            (temp.percent * 100).toFixed() + "%["
-                        temp.twoDisplay = "]"
-                        temp.progress = ""
-                        temp.length = textLength(temp.oneDisplay) + textLength(temp.twoDisplay)
-                        temp.progressLength = temp.windowSize[0] - 3 - length
-                        temp.displayProgress = Number((temp.percent * temp.progressLength).toFixed())
-                        for (let i = 0; i < temp.displayProgress; i++) temp.progress += "#"
-                        for (let i = 0; i < temp.progressLength - temp.displayProgress; i++) temp.progress += " "
-                        temp.display = temp.oneDisplay + temp.progress + temp.twoDisplay
-                        readline.cursorTo(process.stdout, 0)
-                        process.stdout.clearLine(0)
-                        process.stdout.write(temp.display)
+                    temp.progressd = new progress()
+                    temp.progressd.viewStr = "変換中"
+                    temp.progressd.view()
+                    temp.convert.on("progress", (now, total) => {
+                        temp.progressd.now = now
+                        temp.progressd.total = total
                     })
-                    temp.convert.end(() => {
+                    temp.convert.on("end", () => {
+                        temp.progressd.view()
+                        temp.progressd.viewed = false
                         console.log("\n変換が完了しました。")
                     })
                     await temp.convert.convert()
@@ -1267,8 +1334,7 @@ namespace sumtool {
                                 )
                                 temp.permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
                                 if (temp.permission) {
-                                    temp.convert = new ffmpegConverter()
-                                    temp.convert.addInput(temp.beforePass.pass)
+                                    temp.convert = new ffmpegConverter(temp.beforePass.pass)
                                     temp.convert.preset = cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag
                                     console.log(temp.convert.preset)
                                     await temp.convert.convert(temp.afterPass.pass + "/" + temp.filename + "." + cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].ext)
@@ -1300,8 +1366,7 @@ namespace sumtool {
                                 )
                                 temp.permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
                                 if (temp.permission) {
-                                    temp.convert = new ffmpegConverter()
-                                    temp.convert.addInput(temp.beforePass.pass)
+                                    temp.convert = new ffmpegConverter(temp.beforePass.pass)
                                     temp.convert.preset = temp.preset.tag
                                     console.log(temp.convert.preset)
                                     await temp.convert.convert(temp.afterPass.pass + "/" + temp.filename + "." + temp.preset.ext)
@@ -1310,15 +1375,15 @@ namespace sumtool {
                                 break
                             }
                             case 3: {
-                                temp.beforePass = await passCheck(await question("変換元のフォルダを指定してください。"))
+                                temp.beforePass = await passCheck(await question("元のフォルダパスを入力してください。"))
                                 if (temp.beforePass === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
-                                    return
+                                    break
                                 }
-                                temp.afterPass = await passCheck(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
+                                temp.afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
                                 if (temp.afterPass === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
-                                    return
+                                    break
                                 }
                                 temp.folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
                                 temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v"] })
@@ -1336,27 +1401,34 @@ namespace sumtool {
                                         let tags = ""
                                         cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.forEach(tag => tags += tag + " ")
                                         return tags
-                                    })() +
+                                    })() + "\n" +
                                     "変換するファイル数: " + temp.fileList.length
                                 )
                                 temp.permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
                                 if (temp.permission) {
+                                    temp.progressd = new progress()
+                                    temp.progressd.viewStr = "変換中"
+                                    temp.progressd.view()
+                                    temp.progressd.total = temp.fileList.length
                                     for (let i = 0; i != temp.fileList.length; i++) {
-                                        temp.convert = new ffmpegConverter()
-                                        temp.convert.addInput(temp.fileList[i].pass + "." + temp.fileList[i].filename)
-                                        temp.convert.preset = temp.preset.tag
+                                        temp.progressd.now = i
+                                        temp.convert = new ffmpegConverter(temp.fileList[i].pass + temp.fileList[i].filename + "." + temp.fileList[i].extension)
+                                        temp.convert.preset = cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag
 
                                         await temp.convert.convert(temp.afterPass.pass + "/" + (await (async () => {
                                             let outfolders = ""
-                                            const point = this.processd[i].point
+                                            const point = temp.fileList[i].point
                                             for (let i = 0; i !== point.length; i++) {
                                                 outfolders += point[i] + "/"
-                                                if (!(await exsits(this.afterPass + "/" + outfolders))) await mkdir(this.afterPass + "/" + outfolders)
+                                                if (!(await exsits(temp.afterPass.pass + "/" + outfolders))) await mkdir(temp.afterPass.pass + "/" + outfolders)
                                             }
                                             return outfolders
                                         })()) + temp.fileList[i].filename + "." + cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].ext)
                                         temp.fileList[i]
                                     }
+                                    temp.progressd.now = temp.fileList.length
+                                    temp.progressd.view()
+                                    temp.progressd.viewed = false
                                 }
                                 break
                             }
