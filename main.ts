@@ -6,6 +6,7 @@ import sharp from "sharp"
 import ffmpeg from "fluent-ffmpeg"
 import Discord from "discord.js"
 import net from "net"
+import crypto from "crypto"
 import EventEmitter from "events"
 /**
  * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
@@ -894,7 +895,7 @@ namespace sumtool {
                 "kana": "ろ"
             }
         ]
-        const type = (convertTo) ? 1 : 0
+        const type = convertTo ? 1 : 0
 
         let outText = ""
         for (let i = 0; i !== string.length; i++) {
@@ -1554,14 +1555,67 @@ namespace sumtool {
                     })
                     temp.client.send(temp.msg)
                 })
+            },
+            "Various Programsの状態・設定": async () => {
+                const programs: { [programName: string]: () => Promise<void> } = {
+                    "プロセスのメモリ使用率": async () => {
+                        console.log("メモリ使用率(bytes): " + process.memoryUsage.rss())
+                    },
+                    "cuiIOデータをRaw表示": async () => {
+                        const tmp = JSON.parse(JSON.stringify(cuiIOtmp))
+                        delete tmp.cache
+                        console.log(
+                            "cuiIOtmpに入った不必要なデータは削除されています。\n" +
+                            JSON.stringify(tmp, (k, v) => { return v }, "  ")
+                        )
+                    }
+                }
+                const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
+                if (programChoice === null) {
+                    console.log("入力が間違っているようです。最初からやり直してください。")
+                    return
+                }
+                const choiceProgramName = Object.keys(programs)[programChoice - 1]
+                await programs[choiceProgramName]()
+            },
+            "Cryptoによる暗号化": async () => {
+                const algorithm = "aes-256-cbc"
+                const data = await question("使用する文字列を入力してください。")
+                const password = await question("パスワードを入力してください。")
+                async function scrypt(password: crypto.BinaryLike, salt: crypto.BinaryLike, keylen: number): Promise<Buffer> {
+                    return await new Promise<Buffer>(resolve => { crypto.scrypt(password, salt, keylen, (err, derivedKey) => resolve(derivedKey)) })
+                }
+                const key = await scrypt(password, data, 32)
+                const iv = crypto.randomBytes(16)
+
+                const programs: { [programName: string]: () => Promise<void> } = {
+                    "暗号化": async () => {
+                        const cipher = crypto.createCipheriv(algorithm, key, iv)
+                        const crypted = cipher.update("ここに暗号化する文字列", 'utf-8', 'hex')
+                        const crypted_text = crypted + cipher.final('hex')
+
+                        console.log(crypted_text)
+                    },
+                    "復号化": async () => {
+                        const decipher = crypto.createDecipher(algorithm, "ここにパスワード")
+                        const decrypted = decipher.update("ここに復号化する文字列", 'hex', 'utf-8')
+                        const decrypted_text = decrypted + decipher.final('utf-8')
+
+                        console.log(decrypted_text)
+                    }
+                }
+                const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
+                if (programChoice === null) {
+                    console.log("入力が間違っているようです。最初からやり直してください。")
+                    return
+                }
+                const choiceProgramName = Object.keys(programs)[programChoice - 1]
+                await programs[choiceProgramName]()
             }
         }
+        console.log(process.env.npm_package_name + " v" + process.env.npm_package_version)
         while (true) {
-            const programChoice = await choice((() => {
-                const programList: string[] = []
-                for (const programName of Object.keys(programs)) programList.push(programName)
-                return programList
-            })(), "利用可能なプログラム", "実行したいプログラムを選択してください。")
+            const programChoice = await choice(Object.keys(programs), "利用可能なプログラム", "実行したいプログラムを選択してください。")
             if (programChoice === null) {
                 console.log("入力が間違っているようです。最初からやり直してください。")
                 continue
@@ -1586,6 +1640,7 @@ namespace sumtool {
     }
 }
 (async () => {
+    console.log(process.env)
     sumtool.cuiIO() //コンソール画面で直接操作するためのプログラムです。
     sumtool.expressd.main() //ブラウザ等から直感的に操作するためのプログラムです。
 })()
