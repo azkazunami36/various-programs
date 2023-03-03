@@ -1,6 +1,6 @@
 {
-  "name": "sumwave-variousprograms",
-  "version": "0.0.0",
+  "name": "various-programs",
+  "version": "0.0.2",
   "dependencies": {
     "@discordjs/opus": "^0.8.0",
     "@discordjs/voice": "^0.14.0",
