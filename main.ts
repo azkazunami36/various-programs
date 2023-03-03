@@ -226,7 +226,7 @@ namespace sumtool {
             let passtmp = ""
             for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
             if (await exsits(passtmp)) return passtmp
-            if (passtmp[0] === "\"" && passtmp[passtmp.length - 1] === "\"") passtmp = passtmp.substring(1, passtmp.length - 2)
+            if (passtmp[0] === "\"" && passtmp[passtmp.length - 1] === "\"") passtmp = passtmp.substring(1, passtmp.length - 1)
             if (await exsits(passtmp)) return passtmp
             while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
             if (await exsits(passtmp)) return passtmp
@@ -1106,7 +1106,6 @@ namespace sumtool {
                             "-c:a aac",
                             "-tag:v avc1",
                             "-pix_fmt yuv420p",
-                            "-movflags +faststart",
                             "-crf 21",
                             "-g 120"
                         ]
@@ -1121,9 +1120,21 @@ namespace sumtool {
                             "-pix_fmt yuv420p",
                             "-preset ultrafast",
                             "-tune fastdecode,zerolatency",
-                            "-movflags +faststart",
                             "-crf 21",
                             "-g 1"
+                        ]
+                    },
+                    {
+                        name: "h264(リサイズ960x540-品質31-key240)-通常処理",
+                        ext: "mp4",
+                        tag: [
+                            "-c:v libx264",
+                            "-c:a aac",
+                            "-tag:v avc1",
+                            "-vf scale=960x540",
+                            "-pix_fmt yuv420p",
+                            "-crf 31",
+                            "-g 240"
                         ]
                     },
                     {
@@ -1328,7 +1339,7 @@ namespace sumtool {
                                     "変換先: " + temp.afterPass.pass + "/" + temp.filename + "." + cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].ext + "\n" +
                                     "タグ: " + (() => {
                                         let tags = ""
-                                        cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.forEach(tag => tags += tag)
+                                        cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.forEach(tag => tags += tag + " ")
                                         return tags
                                     })()
                                 )
@@ -1360,7 +1371,7 @@ namespace sumtool {
                                     "変換先: " + temp.afterPass.pass + "/" + temp.filename + "." + temp.preset.ext + "\n" +
                                     "タグ: " + (() => {
                                         let tags = ""
-                                        temp.preset.tag.forEach(tag => tags += tag)
+                                        temp.preset.tag.forEach(tag => tags += tag + " ")
                                         return tags
                                     })()
                                 )
