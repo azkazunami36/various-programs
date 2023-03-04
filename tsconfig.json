@@ -4,6 +4,8 @@
         "resolveJsonModule": true,
         "esModuleInterop": true,
         "baseUrl": "./",
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "target": "ESNext",
+        "noImplicitAny": true
     },
 }

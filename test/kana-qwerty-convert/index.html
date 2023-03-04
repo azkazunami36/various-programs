@@ -1,0 +1,439 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>かな-QWERTY変換</title>
+    <script>
+        addEventListener("load", () => {
+            const input = document.getElementsByTagName("input")[0]
+            const output = document.getElementById("output")
+            const inputText = input.value
+            const list = [
+                {
+                    "key": " ",
+                    "kana": " "
+                },
+                {
+                    "key": " ",
+                    "kana": "　"
+                },
+                {
+                    "key": "1",
+                    "kana": "ぬ"
+                },
+                {
+                    "key": "2",
+                    "kana": "ふ"
+                },
+                {
+                    "key": "3",
+                    "kana": "あ"
+                },
+                {
+                    "key": "4",
+                    "kana": "う"
+                },
+                {
+                    "key": "5",
+                    "kana": "え"
+                },
+                {
+                    "key": "6",
+                    "kana": "お"
+                },
+                {
+                    "key": "7",
+                    "kana": "や"
+                },
+                {
+                    "key": "8",
+                    "kana": "ゆ"
+                },
+                {
+                    "key": "9",
+                    "kana": "よ"
+                },
+                {
+                    "key": "0",
+                    "kana": "わ"
+                },
+                {
+                    "key": "-",
+                    "kana": "ほ"
+                },
+                {
+                    "key": "^",
+                    "kana": "へ"
+                },
+                {
+                    "key": "¥",
+                    "kana": "ー"
+                },
+                {
+                    "key": "q",
+                    "kana": "た"
+                },
+                {
+                    "key": "w",
+                    "kana": "て"
+                },
+                {
+                    "key": "e",
+                    "kana": "い"
+                },
+                {
+                    "key": "r",
+                    "kana": "す"
+                },
+                {
+                    "key": "t",
+                    "kana": "か"
+                },
+                {
+                    "key": "y",
+                    "kana": "ん"
+                },
+                {
+                    "key": "u",
+                    "kana": "な"
+                },
+                {
+                    "key": "i",
+                    "kana": "に"
+                },
+                {
+                    "key": "o",
+                    "kana": "ら"
+                },
+                {
+                    "key": "p",
+                    "kana": "せ"
+                },
+                {
+                    "key": "@",
+                    "kana": "゛"
+                },
+                {
+                    "key": "[",
+                    "kana": "゜"
+                },
+                {
+                    "key": "a",
+                    "kana": "ち"
+                },
+                {
+                    "key": "s",
+                    "kana": "と"
+                },
+                {
+                    "key": "d",
+                    "kana": "し"
+                },
+                {
+                    "key": "f",
+                    "kana": "は"
+                },
+                {
+                    "key": "g",
+                    "kana": "き"
+                },
+                {
+                    "key": "h",
+                    "kana": "く"
+                },
+                {
+                    "key": "j",
+                    "kana": "ま"
+                },
+                {
+                    "key": "k",
+                    "kana": "の"
+                },
+                {
+                    "key": "l",
+                    "kana": "り"
+                },
+                {
+                    "key": ";",
+                    "kana": "れ"
+                },
+                {
+                    "key": ":",
+                    "kana": "け"
+                },
+                {
+                    "key": "]",
+                    "kana": "む"
+                },
+                {
+                    "key": "z",
+                    "kana": "つ"
+                },
+                {
+                    "key": "x",
+                    "kana": "さ"
+                },
+                {
+                    "key": "c",
+                    "kana": "そ"
+                },
+                {
+                    "key": "v",
+                    "kana": "ひ"
+                },
+                {
+                    "key": "b",
+                    "kana": "こ"
+                },
+                {
+                    "key": "n",
+                    "kana": "み"
+                },
+                {
+                    "key": "m",
+                    "kana": "も"
+                },
+                {
+                    "key": ",",
+                    "kana": "ね"
+                },
+                {
+                    "key": ".",
+                    "kana": "る"
+                },
+                {
+                    "key": "/",
+                    "kana": "め"
+                },
+                {
+                    "key": "_",
+                    "kana": "ろ"
+                },
+                {
+                    "key": "!",
+                    "kana": "ぬ"
+                },
+                {
+                    "key": "\"",
+                    "kana": "ふ"
+                },
+                {
+                    "key": "#",
+                    "kana": "ぁ"
+                },
+                {
+                    "key": "$",
+                    "kana": "ぅ"
+                },
+                {
+                    "key": "%",
+                    "kana": "ぇ"
+                },
+                {
+                    "key": "&",
+                    "kana": "ぉ"
+                },
+                {
+                    "key": "'",
+                    "kana": "ゃ"
+                },
+                {
+                    "key": "(",
+                    "kana": "ゅ"
+                },
+                {
+                    "key": ")",
+                    "kana": "ょ"
+                },
+                {
+                    "key": "0",
+                    "kana": "を"
+                },
+                {
+                    "key": "=",
+                    "kana": "ほ"
+                },
+                {
+                    "key": "~",
+                    "kana": "へ"
+                },
+                {
+                    "key": "|",
+                    "kana": "ー"
+                },
+                {
+                    "key": "Q",
+                    "kana": "た"
+                },
+                {
+                    "key": "W",
+                    "kana": "て"
+                },
+                {
+                    "key": "E",
+                    "kana": "ぃ"
+                },
+                {
+                    "key": "R",
+                    "kana": "す"
+                },
+                {
+                    "key": "T",
+                    "kana": "か"
+                },
+                {
+                    "key": "Y",
+                    "kana": "ん"
+                },
+                {
+                    "key": "U",
+                    "kana": "な"
+                },
+                {
+                    "key": "I",
+                    "kana": "に"
+                },
+                {
+                    "key": "O",
+                    "kana": "ら"
+                },
+                {
+                    "key": "P",
+                    "kana": "せ"
+                },
+                {
+                    "key": "`",
+                    "kana": "゛"
+                },
+                {
+                    "key": "{",
+                    "kana": "「"
+                },
+                {
+                    "key": "A",
+                    "kana": "ち"
+                },
+                {
+                    "key": "S",
+                    "kana": "と"
+                },
+                {
+                    "key": "D",
+                    "kana": "し"
+                },
+                {
+                    "key": "F",
+                    "kana": "は"
+                },
+                {
+                    "key": "G",
+                    "kana": "き"
+                },
+                {
+                    "key": "H",
+                    "kana": "く"
+                },
+                {
+                    "key": "J",
+                    "kana": "ま"
+                },
+                {
+                    "key": "K",
+                    "kana": "の"
+                },
+                {
+                    "key": "L",
+                    "kana": "り"
+                },
+                {
+                    "key": "+",
+                    "kana": "れ"
+                },
+                {
+                    "key": "*",
+                    "kana": "け"
+                },
+                {
+                    "key": "}",
+                    "kana": "」"
+                },
+                {
+                    "key": "Z",
+                    "kana": "っ"
+                },
+                {
+                    "key": "X",
+                    "kana": "さ"
+                },
+                {
+                    "key": "C",
+                    "kana": "そ"
+                },
+                {
+                    "key": "V",
+                    "kana": "ひ"
+                },
+                {
+                    "key": "B",
+                    "kana": "こ"
+                },
+                {
+                    "key": "N",
+                    "kana": "み"
+                },
+                {
+                    "key": "M",
+                    "kana": "も"
+                },
+                {
+                    "key": "<",
+                    "kana": "、"
+                },
+                {
+                    "key": ">",
+                    "kana": "。"
+                },
+                {
+                    "key": "?",
+                    "kana": "・"
+                },
+                {
+                    "key": "_",
+                    "kana": "ろ"
+                }
+            ]
+
+            let type = 0
+            addEventListener("keydown", e => {
+                if (e.key === "Tab") {
+                    e.preventDefault()
+                    if (type) type = 0
+                    else type = 1
+                    let tmp = input.value
+                    input.value = output.innerHTML
+                    output.innerHTML = tmp
+                }
+            })
+            input.addEventListener("input", e => {
+                let outText = ""
+                for (let i = 0; i !== input.value.length; i++) {
+                    const e = (() => {
+                        for (let e = 0; e !== list.length; e++)
+                            if (input.value[i] === list[e][["kana", "key"][type]]) return e
+                        return null
+                    })()
+                    if (e !== null) outText += list[e][["key", "kana"][type]]
+                    else outText += input.value[i]
+                }
+                output.innerHTML = outText
+            })
+        })
+    </script>
+</head>
+
+<body>
+    <input type="text">
+    <div id="output"></div>
+</body>
+
+</html>
