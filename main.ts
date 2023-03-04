@@ -315,11 +315,9 @@ namespace sumtool {
                     const extension = namedot[namedot.length - 1]
                     if ((() => {
                         if (extensionFilter[0]) {
-                            for (let i = 0; i !== extensionFilter.length; i++) {
-                                if (extensionFilter[i] === extension) return true
-                            }
-                        }
-                        else return true
+                            for (let i = 0; i !== extensionFilter.length; i++)
+                                if (extensionFilter[i].match(new RegExp(extension, "i"))) return true
+                        } else return true
                         return false
                     })()) processd.push({
                         filename: name.slice(0, -(extension.length + 1)),
@@ -469,7 +467,7 @@ namespace sumtool {
                 this.#ffmpeg.addOptions(this.preset)
                 this.#ffmpeg.save(savePass)
                 this.#ffmpeg.on("end", () => { resolve() })
-                this.#ffmpeg.on('progress', function(progress) {
+                this.#ffmpeg.on('progress', function (progress) {
                     console.log(progress);
                 });
             })
@@ -1036,9 +1034,9 @@ namespace sumtool {
             now: number,
             total: number
         } = {
-            now: 0,
-            total: 0
-        }
+                now: 0,
+                total: 0
+            }
         /**
          * プログレスバーの表示を開始します。
          */
