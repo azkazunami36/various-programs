@@ -1,6 +1,6 @@
 import readline from "readline"
 import express from "express"
-import fs from "fs"
+import fs, { write } from "fs"
 import imageSize from "image-size"
 import sharp from "sharp"
 import ffmpeg from "fluent-ffmpeg"
@@ -215,6 +215,8 @@ namespace sumtool {
     export async function wait(time: number) { await new Promise<void>(resolve => setTimeout(() => resolve(), time)) }
     export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
     export async function mkdir(pass: string): Promise<boolean> { return await new Promise<boolean>(resolve => fs.mkdir(pass, err => resolve(err === null))) }
+    export async function readFile(pass: string): Promise<Buffer> { return await new Promise<Buffer>(resolve => fs.readFile(pass, (err, data) => resolve(data))) }
+    export async function writeFile(pass: string, data: string): Promise<void> { return await new Promise<void>(resolve => fs.writeFile(pass, data, () => resolve())) }
     export function textLength(string: string) {
         let length = 0
         for (let i = 0; i !== string.length; i++) string[i].match(/[ -~]/) ? length += 1 : length += 2
@@ -381,8 +383,11 @@ namespace sumtool {
         }
     }
     interface sharpConvertEvents {
-        end: []
-        progress: [now: number, total: number]
+        end: void,
+        progress: { now: number, total: number }
+    }
+    export declare interface sharpConvert {
+        on<K extends keyof sharpConvertEvents>(s: K, listener: (v: sharpConvertEvents[K]) => any): this;
     }
     export class sharpConvert extends EventEmitter {
         #converting = 0
@@ -915,7 +920,15 @@ namespace sumtool {
         address?: string
         port?: number
     }
-    export class Bouyomi {
+    interface BouyomiEvents {
+        ready: void,
+        error: Error,
+        end: void
+    }
+    export declare interface Bouyomi {
+        on<K extends keyof BouyomiEvents>(s: K, listener: (v: BouyomiEvents[K]) => any): this;
+    }
+    export class Bouyomi extends EventEmitter {
         #client: net.Socket
         #data: { speed: number, tone: number, volume: number, voice: number, port: number, url: string, code: "utf8" } = {
             speed: -1,
@@ -926,13 +939,8 @@ namespace sumtool {
             url: "localhost",
             code: "utf8"
         }
-        #ready: () => void = () => { }
-        #error: (error: Error) => void = () => { }
-        #end: () => void = () => { }
-        ready(callback: () => void) { this.#ready = callback }
-        error(callback: (error: Error) => void) { this.#error = callback }
-        end(callback: () => void) { this.#end = callback }
         constructor(data: { speed?: number, tone?: number, volume?: number, voice?: number, port?: number, address?: string, ccode?: "utf8" }) {
+            super()
             this.speed = data.speed ? data.speed : -1
             this.tone = data.tone ? data.tone : -1
             this.volume = data.volume ? data.volume : -1
@@ -942,9 +950,9 @@ namespace sumtool {
             this.ccode = data.ccode ? data.ccode : "utf8"
             this.#client = new net.Socket()
             const client = this.#client
-            client.on("ready", () => this.#ready())
-            client.on("error", e => this.#error(e))
-            client.on("end", () => this.#end())
+            client.on("ready", () => this.emit("ready"))
+            client.on("error", e => this.emit("error", e))
+            client.on("end", () => this.emit("end"))
         }
         set speed(d) {
             d = (d > 200) ? 200 : d
@@ -1073,6 +1081,83 @@ namespace sumtool {
             process.stdout.write(display)
             await wait(this.interval)
             this.#view()
+        }
+    }
+    interface dataiofiles {
+        [fileName: string]: dataiofile
+    }
+    interface dataiofile {
+        attribute: {
+            directory: boolean
+        }
+        data: dataiofiles,
+        pass: string,
+        smalldata?: {}
+    }
+    interface dataIOEvents { ready: void }
+    export declare interface dataIO {
+        on<K extends keyof dataIOEvents>(s: K, listener: (v: dataIOEvents[K]) => any): this;
+    }
+    export class dataIO extends EventEmitter {
+        #operation = false
+        #pass: string
+        #name: string
+        #jsonPass: string
+        #folderPass: string
+        json: {}
+        #passIndex: dataiofiles
+        constructor(pass: string, programName: string) {
+            super()
+            passCheck(pass).then(async data => {
+                if (data) this.#pass = data.pass
+                else throw new Error("パスが間違っています。")
+                this.#name = programName
+                this.#jsonPass = this.#pass + "/" + this.#name + ".json"
+                this.#folderPass = this.#pass + "/" + this.#name
+                const initValue = JSON.stringify({ json: {}, passIndex: {} })
+                if (!await exsits(this.#jsonPass)) await writeFile(this.#jsonPass, initValue)
+                if (!await exsits(this.#folderPass)) await mkdir(this.#folderPass)
+                const rawJSON: {
+                    json: {},
+                    passIndex: dataiofiles
+                } = await JSON.parse(String(await readFile(this.#jsonPass)))
+                this.json = rawJSON.json
+                this.#passIndex = rawJSON.passIndex
+                this.#operation = true
+                this.emit("ready")
+            })
+        }
+        get operation() { return this.#operation }
+        async passGet(pass: string[], name: string, extension?: string): Promise<string> {
+            if (!this.#operation) return null
+            let obj: dataiofiles = this.#passIndex
+            for (let i = 0; i !== pass.length; i++) {
+                if (!obj[pass[i]]) obj[pass[i]] = {
+                    attribute: {
+                        directory: true
+                    },
+                    pass: null,
+                    data: {}
+                }
+                if (obj[pass[i]].attribute.directory) obj = obj[pass[i]].data
+                else {
+                    const error = new Error()
+                    error.message = "JSONによる擬似パス内階層にアクセス中に例外「ファイル内フォルダにアクセス」が発生しました。"
+                    error.name = "JSON擬似パスエラー"
+                    throw error
+                }
+            }
+            if (!obj[name]) obj[name] = {
+                attribute: {
+                    directory: false
+                },
+                pass: this.#folderPass + "/" + name + "-" + Date.now() + "-" + pass.join("") + "-" + Math.floor(Math.random() * 99) + (extension ? "." + extension : ""),
+                data: {}
+            }
+            return obj[name].pass
+        }
+        async save() {
+            await writeFile(this.#jsonPass, JSON.stringify({ json: this.json, passIndex: this.#passIndex }))
         }
     }
     export async function cuiIO() {
@@ -1249,7 +1334,8 @@ namespace sumtool {
                     temp.progressd = new progress()
                     temp.progressd.viewStr = "変換中"
                     temp.progressd.view()
-                    temp.convert.on("progress", (now, total) => {
+                    temp.convert.on("progress", stats => {
+                        const { now, total } = stats
                         temp.progressd.now = now
                         temp.progressd.total = total
                     })
@@ -1543,12 +1629,12 @@ namespace sumtool {
                 }
                 temp.client = new Bouyomi(cuiIOtmp.bouyomi.temp)
                 await new Promise<void>(resolve => {
-                    temp.client.ready(() => console.log("送信を開始します。"))
-                    temp.client.error(e => {
+                    temp.client.on("ready", () => console.log("送信を開始します。"))
+                    temp.client.on("error", e => {
                         console.log("理由: " + e + "により通信エラーが発生しました。")
                         resolve()
                     })
-                    temp.client.end(() => {
+                    temp.client.on("end", () => {
                         console.log("送信が完了しました。")
                         resolve()
                     })
@@ -1671,7 +1757,6 @@ namespace sumtool {
     }
 }
 (async () => {
-    console.log(process.env)
     sumtool.cuiIO() //コンソール画面で直接操作するためのプログラムです。
     sumtool.expressd.main() //ブラウザ等から直感的に操作するためのプログラムです。
 })()
