@@ -1,6 +1,6 @@
 import readline from "readline"
 import express from "express"
-import fs from "fs"
+import fs, { write } from "fs"
 import imageSize from "image-size"
 import sharp from "sharp"
 import ffmpeg from "fluent-ffmpeg"
@@ -8,6 +8,7 @@ import Discord from "discord.js"
 import net from "net"
 import crypto from "crypto"
 import EventEmitter from "events"
+import ytdl from "ytdl-core"
 /**
  * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
  * CUIでもGUIのような使い勝手の良さを実感してください。
@@ -215,6 +216,8 @@ namespace sumtool {
     export async function wait(time: number) { await new Promise<void>(resolve => setTimeout(() => resolve(), time)) }
     export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
     export async function mkdir(pass: string): Promise<boolean> { return await new Promise<boolean>(resolve => fs.mkdir(pass, err => resolve(err === null))) }
+    export async function readFile(pass: string): Promise<Buffer> { return await new Promise<Buffer>(resolve => fs.readFile(pass, (err, data) => resolve(data))) }
+    export async function writeFile(pass: string, data: string): Promise<void> { return await new Promise<void>(resolve => fs.writeFile(pass, data, () => resolve())) }
     export function textLength(string: string) {
         let length = 0
         for (let i = 0; i !== string.length; i++) string[i].match(/[ -~]/) ? length += 1 : length += 2
@@ -381,8 +384,12 @@ namespace sumtool {
         }
     }
     interface sharpConvertEvents {
-        end: []
+        end: [void],
         progress: [now: number, total: number]
+    }
+    export declare interface sharpConvert {
+        on<K extends keyof sharpConvertEvents>(s: K, listener: (...args: sharpConvertEvents[K]) => any): this
+        emit<K extends keyof sharpConvertEvents>(eventName: K, ...args: sharpConvertEvents[K]): boolean
     }
     export class sharpConvert extends EventEmitter {
         #converting = 0
@@ -408,7 +415,7 @@ namespace sumtool {
                     if (this.#converting === this.#maxconvert) return
                     if (this.#convertPoint === this.processd.length) {
                         if (this.#converting === 0) {
-                            this.emit("end")
+                            this.emit("end", null)
                             resolve()
                         }
                         clearInterval(this.#interval)
@@ -915,7 +922,16 @@ namespace sumtool {
         address?: string
         port?: number
     }
-    export class Bouyomi {
+    interface BouyomiEvents {
+        ready: [void],
+        error: [Error],
+        end: [void]
+    }
+    export declare interface Bouyomi {
+        on<K extends keyof BouyomiEvents>(s: K, listener: (...args: BouyomiEvents[K]) => any): this
+        emit<K extends keyof BouyomiEvents>(eventName: K, ...args: BouyomiEvents[K]): boolean
+    }
+    export class Bouyomi extends EventEmitter {
         #client: net.Socket
         #data: { speed: number, tone: number, volume: number, voice: number, port: number, url: string, code: "utf8" } = {
             speed: -1,
@@ -926,13 +942,8 @@ namespace sumtool {
             url: "localhost",
             code: "utf8"
         }
-        #ready: () => void = () => { }
-        #error: (error: Error) => void = () => { }
-        #end: () => void = () => { }
-        ready(callback: () => void) { this.#ready = callback }
-        error(callback: (error: Error) => void) { this.#error = callback }
-        end(callback: () => void) { this.#end = callback }
         constructor(data: { speed?: number, tone?: number, volume?: number, voice?: number, port?: number, address?: string, ccode?: "utf8" }) {
+            super()
             this.speed = data.speed ? data.speed : -1
             this.tone = data.tone ? data.tone : -1
             this.volume = data.volume ? data.volume : -1
@@ -942,9 +953,9 @@ namespace sumtool {
             this.ccode = data.ccode ? data.ccode : "utf8"
             this.#client = new net.Socket()
             const client = this.#client
-            client.on("ready", () => this.#ready())
-            client.on("error", e => this.#error(e))
-            client.on("end", () => this.#end())
+            client.on("ready", () => this.emit("ready", null))
+            client.on("error", e => this.emit("error", e))
+            client.on("end", () => this.emit("end", null))
         }
         set speed(d) {
             d = (d > 200) ? 200 : d
@@ -1075,28 +1086,228 @@ namespace sumtool {
             this.#view()
         }
     }
+    interface dataiofiles {
+        [fileName: string]: dataiofile
+    }
+    interface dataiofile {
+        attribute: {
+            directory: boolean
+        }
+        data: dataiofiles,
+        pass: string,
+        smalldata?: {}
+    }
+    interface dataIOEvents { ready: [void] }
+    export declare interface dataIO {
+        on<K extends keyof dataIOEvents>(s: K, listener: (...args: dataIOEvents[K]) => any): this
+        emit<K extends keyof dataIOEvents>(eventName: K, ...args: dataIOEvents[K]): boolean
+    }
+    export class dataIO extends EventEmitter {
+        #operation = false
+        #pass: string
+        #name: string
+        #jsonPass: string
+        #folderPass: string
+        json: any
+        #passIndex: dataiofiles
+        constructor(pass: string, programName: string) {
+            super()
+            passCheck(pass).then(async data => {
+                if (data) this.#pass = data.pass
+                else throw new Error("パスが間違っています。")
+                if (programName === "dataIO") throw new Error("dataIOを利用することは出来ません")
+                this.#name = programName
+                if (!await exsits(this.#pass + "/dataIO.json")) await writeFile(this.#pass + "/dataIO.json", "[]")
+                const dataIOIndex: { [programName: string]: any } = JSON.parse(String(await readFile(this.#pass + "/dataIO.json")))
+                if (!dataIOIndex[programName]) dataIOIndex[programName] = true
+                await writeFile(this.#pass + "/dataIO.json", JSON.stringify(dataIOIndex))
+                this.#jsonPass = this.#pass + "/" + this.#name + ".json"
+                this.#folderPass = this.#pass + "/" + this.#name
+                const initValue = JSON.stringify({ json: {}, passIndex: {} })
+                if (!await exsits(this.#jsonPass)) await writeFile(this.#jsonPass, initValue)
+                if (!await exsits(this.#folderPass)) await mkdir(this.#folderPass)
+                const rawJSON: {
+                    json: {},
+                    passIndex: dataiofiles
+                } = await JSON.parse(String(await readFile(this.#jsonPass)))
+                this.json = rawJSON.json
+                this.#passIndex = rawJSON.passIndex
+                this.#operation = true
+                this.emit("ready", null)
+            })
+        }
+        static async initer(programName: string): Promise<dataIO> {
+            if (programName === "dataIO") {
+                console.log("クラス名と同じ名前を使用しないでください。\nこの名前は内部で予約されています。")
+                return null
+            }
+            if (!await exsits("passCache.json")) {
+                console.log("passCache.jsonが存在しないため、プログラムを続行することが出来ません。\n設定を行ってください。")
+                return null
+            }
+            const io = new dataIO(JSON.parse(String(await readFile("passCache.json"))), programName)
+            await new Promise<void>(resolve => io.on("ready", () => resolve()))
+            return io
+        }
+        get operation() { return this.#operation }
+        async passGet(pass: string[], name: string, option?: { extension?: string }): Promise<string> {
+            if (!this.#operation) return null
+            let extension: string
+            if (option) {
+                if (option.extension) extension = option.extension
+            }
+            let obj: dataiofiles = this.#passIndex
+            for (let i = 0; i !== pass.length; i++) {
+                if (!obj[pass[i]]) obj[pass[i]] = {
+                    attribute: { directory: true },
+                    pass: null,
+                    data: {}
+                }
+                if (obj[pass[i]].attribute.directory) obj = obj[pass[i]].data
+                else {
+                    const error = new Error()
+                    error.message = "JSONによる擬似パス内階層にアクセス中に例外「ファイル内フォルダにアクセス」が発生しました。"
+                    error.name = "JSON擬似パスエラー"
+                    throw error
+                }
+            }
+            if (!obj[name]) obj[name] = {
+                attribute: { directory: false },
+                pass: this.#folderPass + "/" + name + "-" + Date.now() + "-" + pass.join("") + "-" + Math.floor(Math.random() * 99) + (extension ? "." + extension : ""),
+                data: {}
+            }
+            return obj[name].pass
+        }
+        async save() {
+            await writeFile(this.#jsonPass, JSON.stringify({ json: this.json, passIndex: this.#passIndex }))
+        }
+    }
+    interface youtubeDownloaderEvents { ready: [void] }
+    export declare interface youtubeDownloader {
+        on<K extends keyof youtubeDownloaderEvents>(s: K, listener: (...args: youtubeDownloaderEvents[K]) => any): this
+        emit<K extends keyof youtubeDownloaderEvents>(eventName: K, ...args: youtubeDownloaderEvents[K]): boolean
+    }
+    export class youtubeDownloader extends EventEmitter {
+        data: dataIO
+        constructor() {
+            super()
+            this.pconst().then(() => this.emit("ready", null))
+        }
+        private async pconst() {
+            this.data = await dataIO.initer("youtube-downloader")
+        }
+        async videoDataGet(videoId: string, type: "videoonly" | "audioonly") {
+            const youtubedl = ytdl(videoId, { filter: type, quality: "highest" })
+        }
+    }
     export async function cuiIO() {
         const cuiIOtmp: {
-            ffmpegconverter?: {
-                presets?: {
-                    name: string,
-                    ext: string,
-                    tag: string[]
-                }[]
-            },
             discordJs?: {
                 bots?: {
                     [botName: string]: {
 
                     }
                 }
-            },
-            bouyomi?: {
-                temp?: bouyomiStatus
             }
         } = {
-            ffmpegconverter: {
-                presets: [
+            discordJs: {
+                bots: {
+                    ["kannininshou"]: {}
+                }
+            }
+        }
+        const programs: { [programName: string]: () => Promise<void> } = {
+            "Image Resize": async () => {
+                const imageSize = Number(await question("指定の画像サイズを入力してください。"))
+                if (Number.isNaN(imageSize)) {
+                    console.log("入力が間違っているようです。最初からやり直してください。")
+                    return
+                }
+                const beforePass = await passCheck(await question("変換元の画像フォルダを指定してください。"))
+                if (beforePass === null) {
+                    console.log("入力が間違っているようです。最初からやり直してください。")
+                    return
+                }
+                const afterPass = await passCheck(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
+                if (afterPass === null) {
+                    console.log("入力が間違っているようです。最初からやり直してください。")
+                    return
+                }
+                const nameing = await choice(sharpConvert.type, "命名方法", "上記から命名方法を選択してください。")
+                if (nameing === null) {
+                    console.log("入力が間違っているようです。最初からやり直してください。")
+                    return
+                }
+                const folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
+                const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
+                console.log(
+                    "変換元パス: " + beforePass.pass + "\n" +
+                    "変換先パス: " + afterPass.pass + "\n" +
+                    "変換先サイズ(縦): " + imageSize + "\n" +
+                    "変換するファイル数: " + fileList.length + "\n" +
+                    "命名方法: " + sharpConvert.type[nameing - 1]
+                )
+                const permission = await booleanIO("上記のデータで実行してもよろしいですか？yと入力すると続行します。")
+                if (permission) {
+                    const convert = new sharpConvert()
+                    convert.afterPass = afterPass.pass
+                    convert.nameing = nameing - 1
+                    convert.size = imageSize
+                    convert.processd = fileList
+                    const progressd = new progress()
+                    progressd.viewStr = "変換中"
+                    progressd.view()
+                    convert.on("progress", (now, total) => {
+                        progressd.now = now
+                        progressd.total = total
+                    })
+                    convert.on("end", () => {
+                        progressd.view()
+                        progressd.viewed = false
+                        console.log("\n変換が完了しました。")
+                    })
+                    await convert.convert()
+                }
+            },
+            "QWERTY Kana Convert": async () => console.log(kanaConvert(await question("変換元のテキストを入力してください。"), await booleanIO("QWERTYからかなに変換しますか？yで変換、nで逆変換します。"))),
+            "Discord Bot": async () => {
+                const botChoice = await choice(["簡易認証"], "bot一覧", "利用するbotを選択してください。")
+                while (true) {
+                    const control = await choice(["起動/停止", "直前のログ", "終了"], "利用可能な操作一覧", "利用する機能を選択してください。")
+                    if (control === 3) break
+                }
+            },
+            "Time Class": async () => {
+                const rawtime = Number(await question("時間を指定してください。"))
+                const count = new time()
+                count.count(rawtime)
+                const year = await booleanIO("年を含めて表示しますか？")
+                const days = await booleanIO("日にちを含めて表示しますか？")
+                const cou = {
+                    year: await question("年の数え方を入力してください。"),
+                    days: await question("日にちの数え方を入力してください。"),
+                    hour: await question("時間の数え方を入力してください。"),
+                    min: await question("分の数え方を入力してください。"),
+                    sec: await question("秒の数え方を入力してください。")
+                }
+                const fill = Number(await question("数字を埋める数を入力してください。"))
+                console.log(count.toString({
+                    year: year,
+                    days: year ? false : days,
+                    count: {
+                        year: cou.year ? cou.year : undefined,
+                        days: cou.days ? cou.days : undefined,
+                        hour: cou.hour ? cou.hour : undefined,
+                        min: cou.min ? cou.min : undefined,
+                        sec: cou.sec ? cou.sec : undefined
+                    },
+                    fill: (Number.isNaN(fill)) ? undefined : fill
+                }))
+            },
+            "FFmpeg Converter": async () => {
+                const data = await dataIO.initer("ffmpeg-converter")
+                if (data === null) return
+                if (!data.json.presets) data.json.presets = [
                     {
                         name: "h264(品質21-key120)-通常速度",
                         ext: "mp4",
@@ -1147,298 +1358,148 @@ namespace sumtool {
                         ]
                     }
                 ]
-            },
-            discordJs: {
-                bots: {
-                    ["kannininshou"]: {}
-                }
-            },
-            bouyomi: {}
-        }
-        /**
-         * メモリを使用した後、必ずnullや{}に戻し解放するためのものです。
-         */
-        let temp: {
-            imageSize?: number,
-            beforePass?: { pass: string } & fs.Stats,
-            afterPass?: { pass: string } & fs.Stats,
-            botChoice?: number,
-            control?: number,
-            rawtime?: number,
-            count?: time,
-            year?: boolean,
-            days?: boolean,
-            cou?: {
-                year: string,
-                days: string,
-                hour: string,
-                min: string,
-                sec: string
-            },
-            fill?: number,
-            convertChoice?: number,
-            convertType?: number,
-            filename?: string,
-            presetChoice?: number,
-            presetNames?: string[],
-            permission?: boolean,
-            convert?: ffmpegConverter | sharpConvert,
-            preset?: {
-                name: string,
-                tag: string[],
-                ext: string
-            },
-            typeChoice?: number,
-            funcChoice?: number,
-            tagChoice?: number,
-            display?: string,
-            windowSize?: number[],
-            percent?: number,
-            folderContain?: boolean,
-            nameing?: number,
-            fileList?: passInfo[],
-            oneDisplay?: string,
-            twoDisplay?: string,
-            progressLength?: number,
-            displayProgress?: number,
-            progress?: string,
-            length?: number,
-            msg?: string,
-            client?: Bouyomi,
-            progressd?: progress
-        } & bouyomiStatus = {}
-        const programs: { [programName: string]: () => Promise<void> } = {
-            "Image Resize": async () => {
-                temp.imageSize = Number(await question("指定の画像サイズを入力してください。"))
-                if (Number.isNaN(imageSize)) {
+                const presets: {
+                    name: string,
+                    ext: string,
+                    tag: string[]
+                }[] = data.json.presets
+                const convertChoice = await choice(["変換を開始する", "プリセットの作成・編集"], "FFmpeg Converter", "利用する機能を選択してください、")
+                if (convertChoice === null) {
                     console.log("入力が間違っているようです。最初からやり直してください。")
                     return
                 }
-                temp.beforePass = await passCheck(await question("変換元の画像フォルダを指定してください。"))
-                if (temp.beforePass === null) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                temp.afterPass = await passCheck(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
-                if (temp.afterPass === null) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                temp.nameing = await choice(sharpConvert.type, "命名方法", "上記から命名方法を選択してください。")
-                if (temp.nameing === null) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                temp.folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
-                temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
-                console.log(
-                    "変換元パス: " + temp.beforePass.pass + "\n" +
-                    "変換先パス: " + temp.afterPass.pass + "\n" +
-                    "変換先サイズ(縦): " + temp.imageSize + "\n" +
-                    "変換するファイル数: " + temp.fileList.length + "\n" +
-                    "命名方法: " + sharpConvert.type[temp.nameing - 1]
-                )
-                temp.permission = await booleanIO("上記のデータで実行してもよろしいですか？yと入力すると続行します。")
-                if (temp.permission) {
-                    temp.convert = new sharpConvert()
-                    temp.convert.afterPass = temp.afterPass.pass
-                    temp.convert.nameing = temp.nameing - 1
-                    temp.convert.size = temp.imageSize
-                    temp.convert.processd = temp.fileList
-                    temp.progressd = new progress()
-                    temp.progressd.viewStr = "変換中"
-                    temp.progressd.view()
-                    temp.convert.on("progress", (now, total) => {
-                        temp.progressd.now = now
-                        temp.progressd.total = total
-                    })
-                    temp.convert.on("end", () => {
-                        temp.progressd.view()
-                        temp.progressd.viewed = false
-                        console.log("\n変換が完了しました。")
-                    })
-                    await temp.convert.convert()
-                }
-            },
-            "QWERTY Kana Convert": async () => console.log(kanaConvert(await question("変換元のテキストを入力してください。"), await booleanIO("QWERTYからかなに変換しますか？yで変換、nで逆変換します。"))),
-            "Discord Bot": async () => {
-                temp.botChoice = await choice(["簡易認証"], "bot一覧", "利用するbotを選択してください。")
-                while (true) {
-                    temp.control = await choice(["起動/停止", "直前のログ", "終了"], "利用可能な操作一覧", "利用する機能を選択してください。")
-                    if (temp.control === 3) break
-                }
-            },
-            "Time Class": async () => {
-                temp.rawtime = Number(await question("時間を指定してください。"))
-                temp.count = new time()
-                temp.count.count(temp.rawtime)
-                temp.year = await booleanIO("年を含めて表示しますか？")
-                temp.days = await booleanIO("日にちを含めて表示しますか？")
-                temp.cou = {
-                    year: await question("年の数え方を入力してください。"),
-                    days: await question("日にちの数え方を入力してください。"),
-                    hour: await question("時間の数え方を入力してください。"),
-                    min: await question("分の数え方を入力してください。"),
-                    sec: await question("秒の数え方を入力してください。")
-                }
-                temp.fill = Number(await question("数字を埋める数を入力してください。"))
-                console.log(temp.count.toString({
-                    year: temp.year,
-                    days: temp.year ? false : temp.days,
-                    count: {
-                        year: temp.cou.year ? temp.cou.year : undefined,
-                        days: temp.cou.days ? temp.cou.days : undefined,
-                        hour: temp.cou.hour ? temp.cou.hour : undefined,
-                        min: temp.cou.min ? temp.cou.min : undefined,
-                        sec: temp.cou.sec ? temp.cou.sec : undefined
-                    },
-                    fill: (Number.isNaN(temp.fill)) ? undefined : temp.fill
-                }))
-            },
-            "FFmpeg Converter": async () => {
-                console.log(
-                    "FFmpeg Converterはまだデータ保存機能がありません。\n" +
-                    "そのためプリセットデータは、nodeプロセスが終了された際に削除されます。ご了承ください。\n" +
-                    "ctrl+c等で終了しない内はデータを利用することが可能です。\n"
-                )
-                temp.convertChoice = await choice(["変換を開始する", "プリセットの作成・編集"], "FFmpeg Converter", "利用する機能を選択してください、")
-                if (temp.convertChoice === null) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                switch (temp.convertChoice) {
+                switch (convertChoice) {
                     case 1: {
-                        temp.convertType = await choice(["パスを指定しプリセットで変換", "タグを手入力し、詳細な設定を自分で行う", "複数ファイルを一括変換"], "変換の種類の一覧", "上記から変換の種類を選択してください。")
-                        if (temp.convertType === null) {
+                        const convertType = await choice(["パスを指定しプリセットで変換", "タグを手入力し、詳細な設定を自分で行う", "複数ファイルを一括変換"], "変換の種類の一覧", "上記から変換の種類を選択してください。")
+                        if (convertType === null) {
                             console.log("入力が間違っているようです。最初からやり直してください。")
                             break
                         }
-                        switch (temp.convertType) {
+                        switch (convertType) {
                             case 1: {
-                                temp.beforePass = await passCheck(await question("元のソースパスを入力してください。"))
-                                if (temp.beforePass === null) {
+                                const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
+                                if (beforePass === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
                                     break
                                 }
-                                temp.afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
-                                if (temp.afterPass === null) {
+                                const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+                                if (afterPass === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
                                     break
                                 }
-                                temp.filename = await question("書き出し先のファイル名を入力してください。")
-                                temp.presetChoice = await choice((() => {
+                                const filename = await question("書き出し先のファイル名を入力してください。")
+                                const presetChoice = await choice((() => {
                                     let presetNames: string[] = []
-                                    cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
+                                    presets.forEach(preset => {
                                         presetNames.push(preset.name)
                                     })
                                     return presetNames
                                 })(), "プリセット一覧", "使用するプリセットを選択してください。")
                                 console.log(
-                                    "変換元: " + temp.beforePass.pass + "\n" +
-                                    "変換先: " + temp.afterPass.pass + "/" + temp.filename + "." + cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].ext + "\n" +
+                                    "変換元: " + beforePass.pass + "\n" +
+                                    "変換先: " + afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext + "\n" +
                                     "タグ: " + (() => {
                                         let tags = ""
-                                        cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.forEach(tag => tags += tag + " ")
+                                        presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
                                         return tags
                                     })()
                                 )
-                                temp.permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
-                                if (temp.permission) {
-                                    temp.convert = new ffmpegConverter(temp.beforePass.pass)
-                                    temp.convert.preset = cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag
-                                    console.log(temp.convert.preset)
-                                    await temp.convert.convert(temp.afterPass.pass + "/" + temp.filename + "." + cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].ext)
+                                const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
+                                if (permission) {
+                                    const convert = new ffmpegConverter(beforePass.pass)
+                                    convert.preset = presets[presetChoice - 1].tag
+                                    console.log(convert.preset)
+                                    await convert.convert(afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext)
                                     console.log("変換が完了しました！")
                                 }
                                 break
                             }
                             case 2: {
-                                temp.beforePass = await passCheck(await question("元のソースパスを入力してください。"))
-                                if (temp.beforePass === null) {
+                                const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
+                                if (beforePass === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
                                     break
                                 }
-                                temp.afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
-                                if (temp.afterPass === null) {
+                                const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+                                if (afterPass === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
                                     break
                                 }
-                                temp.filename = await question("書き出し先のファイル名を入力してください。")
-                                temp.preset = await ffmpegConverter.inputPreset({ tagonly: true })
+                                const filename = await question("書き出し先のファイル名を入力してください。")
+                                const preset = await ffmpegConverter.inputPreset({ tagonly: true })
                                 console.log(
-                                    "変換元: " + temp.beforePass.pass + "\n" +
-                                    "変換先: " + temp.afterPass.pass + "/" + temp.filename + "." + temp.preset.ext + "\n" +
+                                    "変換元: " + beforePass.pass + "\n" +
+                                    "変換先: " + afterPass.pass + "/" + filename + "." + preset.ext + "\n" +
                                     "タグ: " + (() => {
                                         let tags = ""
-                                        temp.preset.tag.forEach(tag => tags += tag + " ")
+                                        preset.tag.forEach(tag => tags += tag + " ")
                                         return tags
                                     })()
                                 )
-                                temp.permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
-                                if (temp.permission) {
-                                    temp.convert = new ffmpegConverter(temp.beforePass.pass)
-                                    temp.convert.preset = temp.preset.tag
-                                    console.log(temp.convert.preset)
-                                    await temp.convert.convert(temp.afterPass.pass + "/" + temp.filename + "." + temp.preset.ext)
+                                const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
+                                if (permission) {
+                                    const convert = new ffmpegConverter(beforePass.pass)
+                                    convert.preset = preset.tag
+                                    console.log(convert.preset)
+                                    await convert.convert(afterPass.pass + "/" + filename + "." + preset.ext)
                                     console.log("変換が完了しました！")
                                 }
                                 break
                             }
                             case 3: {
-                                temp.beforePass = await passCheck(await question("元のフォルダパスを入力してください。"))
-                                if (temp.beforePass === null) {
+                                const beforePass = await passCheck(await question("元のフォルダパスを入力してください。"))
+                                if (beforePass === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
                                     break
                                 }
-                                temp.afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
-                                if (temp.afterPass === null) {
+                                const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+                                if (afterPass === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
                                     break
                                 }
-                                temp.folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
-                                temp.fileList = await fileLister(temp.beforePass.pass, { contain: temp.folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v"] })
-                                temp.presetChoice = await choice((() => {
+                                const folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
+                                const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v"] })
+                                const presetChoice = await choice((() => {
                                     let presetNames: string[] = []
-                                    cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
+                                    presets.forEach(preset => {
                                         presetNames.push(preset.name)
                                     })
                                     return presetNames
                                 })(), "プリセット一覧", "使用するプリセットを選択してください。")
                                 console.log(
-                                    "変換元: " + temp.beforePass.pass + "\n" +
-                                    "変換先: " + temp.afterPass.pass + "\n" +
+                                    "変換元: " + beforePass.pass + "\n" +
+                                    "変換先: " + afterPass.pass + "\n" +
                                     "タグ: " + (() => {
                                         let tags = ""
-                                        cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.forEach(tag => tags += tag + " ")
+                                        presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
                                         return tags
                                     })() + "\n" +
-                                    "変換するファイル数: " + temp.fileList.length
+                                    "変換するファイル数: " + fileList.length
                                 )
-                                temp.permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
-                                if (temp.permission) {
-                                    temp.progressd = new progress()
-                                    temp.progressd.viewStr = "変換中"
-                                    temp.progressd.view()
-                                    temp.progressd.total = temp.fileList.length
-                                    for (let i = 0; i != temp.fileList.length; i++) {
-                                        temp.progressd.now = i
-                                        temp.convert = new ffmpegConverter(temp.fileList[i].pass + temp.fileList[i].filename + "." + temp.fileList[i].extension)
-                                        temp.convert.preset = cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag
+                                const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
+                                if (permission) {
+                                    const progressd = new progress()
+                                    progressd.viewStr = "変換中"
+                                    progressd.view()
+                                    progressd.total = fileList.length
+                                    for (let i = 0; i != fileList.length; i++) {
+                                        progressd.now = i
+                                        const convert = new ffmpegConverter(fileList[i].pass + fileList[i].filename + "." + fileList[i].extension)
+                                        convert.preset = presets[presetChoice - 1].tag
 
-                                        await temp.convert.convert(temp.afterPass.pass + "/" + (await (async () => {
+                                        await convert.convert(afterPass.pass + "/" + (await (async () => {
                                             let outfolders = ""
-                                            const point = temp.fileList[i].point
+                                            const point = fileList[i].point
                                             for (let i = 0; i !== point.length; i++) {
                                                 outfolders += point[i] + "/"
-                                                if (!(await exsits(temp.afterPass.pass + "/" + outfolders))) await mkdir(temp.afterPass.pass + "/" + outfolders)
+                                                if (!(await exsits(afterPass.pass + "/" + outfolders))) await mkdir(afterPass.pass + "/" + outfolders)
                                             }
                                             return outfolders
-                                        })()) + temp.fileList[i].filename + "." + cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].ext)
-                                        temp.fileList[i]
+                                        })()) + fileList[i].filename + "." + presets[presetChoice - 1].ext)
                                     }
-                                    temp.progressd.now = temp.fileList.length
-                                    temp.progressd.view()
-                                    temp.progressd.viewed = false
+                                    progressd.now = fileList.length
+                                    progressd.view()
+                                    progressd.viewed = false
                                 }
                                 break
                             }
@@ -1447,66 +1508,62 @@ namespace sumtool {
                     }
                     case 2: {
                         while (true) {
-                            temp.typeChoice = await choice(["プリセット作成", "プリセット編集", "プリセット一覧を表示", "終了"], "プリセット作成・編集の一覧", "操作したい項目を選択してください。")
-                            if (temp.typeChoice === null) {
+                            const typeChoice = await choice(["プリセット作成", "プリセット編集", "プリセット一覧を表示", "終了"], "プリセット作成・編集の一覧", "操作したい項目を選択してください。")
+                            if (typeChoice === null) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 break
-                            } else if (temp.typeChoice === 1) {
-                                if (!cuiIOtmp.ffmpegconverter) cuiIOtmp.ffmpegconverter = {
-                                    presets: []
-                                }
-                                cuiIOtmp.ffmpegconverter.presets.push(await ffmpegConverter.inputPreset())
-                            } else if (temp.typeChoice === 2) {
-                                if (!cuiIOtmp.ffmpegconverter) cuiIOtmp.ffmpegconverter = {
-                                    presets: []
-                                }
-                                if (!cuiIOtmp.ffmpegconverter.presets[0]) {
+                            } else if (typeChoice === 1) {
+                                presets.push(await ffmpegConverter.inputPreset())
+                                await data.save()
+                            } else if (typeChoice === 2) {
+                                if (!presets[0]) {
                                     console.log("プリセットがありません。追加してからもう一度やり直してください。")
                                     continue
                                 }
-                                temp.presetChoice = await choice((() => {
+                                const presetChoice = await choice((() => {
                                     let presetNames: string[] = []
-                                    cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
+                                    presets.forEach(preset => {
                                         presetNames.push(preset.name)
                                     })
                                     return presetNames
                                 })(), "プリセット一覧", "編集するプリセットを選択してください。")
-                                if (temp.presetChoice === null) {
+                                if (presetChoice === null) {
                                     console.log("入力が間違っているようです。最初からやり直してください。")
                                     continue
                                 }
-                                temp.funcChoice = await choice(["タグを修正", "タグを削除", "プリセット名を変更", "プリセットを削除"], "機能一覧", "利用する機能を選択してください。")
-                                switch (temp.funcChoice) {
+                                const funcChoice = await choice(["タグを修正", "タグを削除", "プリセット名を変更", "プリセットを削除"], "機能一覧", "利用する機能を選択してください。")
+                                switch (funcChoice) {
                                     case 1: {
-                                        temp.tagChoice = await choice((() => {
+                                        const tagChoice = await choice((() => {
                                             let tags: string[] = []
-                                            cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.forEach(tag => tags.push(tag))
+                                            presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
                                             return tags
                                         })(), "タグ一覧", "編集するタグを選択してください。")
-                                        cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag[temp.tagChoice - 1] = await question("新しいタグ名を入力してください。エラー検知はしません。")
+                                        presets[presetChoice - 1].tag[tagChoice - 1] = await question("新しいタグ名を入力してください。エラー検知はしません。")
                                         break
                                     }
                                     case 2: {
-                                        temp.tagChoice = await choice((() => {
+                                        const tagChoice = await choice((() => {
                                             let tags: string[] = []
-                                            cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.forEach(tag => tags.push(tag))
+                                            presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
                                             return tags
                                         })(), "タグ一覧", "削除するタグを選択してください。")
-                                        cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].tag.splice(temp.tagChoice - 1)
+                                        presets[presetChoice - 1].tag.splice(tagChoice - 1)
                                         break
                                     }
                                     case 3: {
-                                        cuiIOtmp.ffmpegconverter.presets[temp.presetChoice - 1].name = await question("新しい名前を入力してください。")
+                                        presets[presetChoice - 1].name = await question("新しい名前を入力してください。")
                                         break
                                     }
                                     case 4: {
-                                        temp.permission = await booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
-                                        if (temp.permission) cuiIOtmp.ffmpegconverter.presets.splice(temp.presetChoice - 1)
+                                        const permission = await booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
+                                        if (permission) presets.splice(presetChoice - 1)
                                     }
                                 }
+                                await data.save()
 
-                            } else if (temp.typeChoice === 3) {
-                                cuiIOtmp.ffmpegconverter.presets.forEach(preset => {
+                            } else if (typeChoice === 3) {
+                                presets.forEach(preset => {
                                     console.log(
                                         "プリセット名: " + preset.name +
                                         "\nタグ: " + (() => {
@@ -1516,42 +1573,46 @@ namespace sumtool {
                                         })()
                                     )
                                 })
-                            } else if (temp.typeChoice === 4) break
+                            } else if (typeChoice === 4) break
                         }
                         break
                     }
                 }
             },
             "棒読みちゃん読み上げ": async () => {
-                temp.msg = await question("読み上げたい内容を入力してください。")
-                if (!cuiIOtmp.bouyomi.temp || !await booleanIO("前回のデータを再利用しますか？")) {
-                    temp.speed = Number(await question("読み上げ速度を入力してください。"))
-                    temp.tone = Number(await question("声の高さを入力してください。"))
-                    temp.volume = Number(await question("声の大きさを入力してください。"))
-                    temp.voice = Number(await question("声の種類を入力してください。"))
-                    temp.address = await question("送信先のアドレスを入力してください。空白でlocalhostです。")
-                    temp.port = Number(await question("ポートを入力してください。空白で50001です。"))
-                    cuiIOtmp.bouyomi.temp = {
-                        speed: temp.speed ? temp.speed : -1,
-                        tone: temp.tone ? temp.tone : -1,
-                        voice: temp.voice ? temp.voice : 0,
-                        volume: temp.volume ? temp.volume : -1,
-                        address: temp.address ? temp.address : "localhost",
-                        port: temp.port ? temp.port : 50001
+                const data = await dataIO.initer("bouyomi")
+                if (data === null) return
+                if (!data.json.temp) data.json.temp = null
+                const msg = await question("読み上げたい内容を入力してください。")
+                if (!data.json.temp || !await booleanIO("前回のデータを再利用しますか？")) {
+                    const speed = Number(await question("読み上げ速度を入力してください。"))
+                    const tone = Number(await question("声の高さを入力してください。"))
+                    const volume = Number(await question("声の大きさを入力してください。"))
+                    const voice = Number(await question("声の種類を入力してください。"))
+                    const address = await question("送信先のアドレスを入力してください。空白でlocalhostです。")
+                    const port = Number(await question("ポートを入力してください。空白で50001です。"))
+                    data.json.temp = {
+                        speed: speed ? speed : -1,
+                        tone: tone ? tone : -1,
+                        voice: voice ? voice : 0,
+                        volume: volume ? volume : -1,
+                        address: address ? address : "localhost",
+                        port: port ? port : 50001
                     }
+                    await data.save()
                 }
-                temp.client = new Bouyomi(cuiIOtmp.bouyomi.temp)
+                const client = new Bouyomi(data.json.temp)
                 await new Promise<void>(resolve => {
-                    temp.client.ready(() => console.log("送信を開始します。"))
-                    temp.client.error(e => {
+                    client.on("ready", () => console.log("送信を開始します。"))
+                    client.on("error", e => {
                         console.log("理由: " + e + "により通信エラーが発生しました。")
                         resolve()
                     })
-                    temp.client.end(() => {
+                    client.on("end", () => {
                         console.log("送信が完了しました。")
                         resolve()
                     })
-                    temp.client.send(temp.msg)
+                    client.send(msg)
                 })
             },
             "Various Programsの状態・設定": async () => {
@@ -1566,6 +1627,17 @@ namespace sumtool {
                             "cuiIOtmpに入った不必要なデータは削除されています。\n" +
                             JSON.stringify(tmp, (k, v) => { return v }, "  ")
                         )
+                    },
+                    "キャッシュデータ等のパス設定": async () => {
+                        const data = await exsits("passCache.json") ? JSON.parse(String(await readFile("passCache.json"))) : null
+                        console.log("現在のキャッシュパス場所は" + (data ? data + "です。" : "設定されていません。"))
+                        const pass = await passCheck(await question("キャッシュデータを保存するパスを入力してください。"))
+                        if (pass === null) {
+                            console.log("入力が間違っているようです。最初からやり直してください。")
+                            return
+                        }
+                        await writeFile("passCache.json", JSON.stringify(pass.pass))
+                        console.log(JSON.parse(String(await readFile("passCache.json"))) + "に変更されました。")
                     }
                 }
                 const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
@@ -1620,25 +1692,54 @@ namespace sumtool {
             }
             const choiceProgramName = Object.keys(programs)[programChoice - 1]
             console.log(choiceProgramName + "を起動します。")
-            temp = {}
             try {
                 await programs[choiceProgramName]()
             } catch (e) {
                 console.log("プログラム「" + choiceProgramName + "が以下の理由で異常終了したようです。\n", e)
             }
-            temp = null
             console.log(choiceProgramName + "が終了しました。")
         }
     }
+    /**
+     * expressdは名前の通りexpressを利用しますが、少し変わった点があります。  
+     * それは、cuiIOの上位互換だと言うことです。
+     * 
+     * つまり、cuiIOでのプログラムにアクセスする手段のGUI版と言うことです。
+     * そのため、今後cuiIOとguiIOのプログラム内容の同期を行うための、新しい方法を試行錯誤しておきます。
+     * が、それまではプログラムは全く別になり、同じ操作方法を保証することはないです。
+     */
     export class expressd {
         constructor() { }
+        /**
+         * 未完成のため、ここの関数で実行されます。
+         * もしここの関数のみで完成した場合、classを削除しfunctionに置き換えます。
+         * ※sourcedフォルダにデータを入れていますが、main.jsのプログラムを全てここに入れ終えたら、sourcesに名前を変更します。
+         */
         static async main(): Promise<void> {
-
+            const app = express()
+            app.get("", async (req, res) => {
+                /**
+                 * リクエスト(要求)された場所
+                 */
+                const url = req.url
+                /**
+                 * 応答の種類です。
+                 * sourcesフォルダにアクセスするか、その他のデータにアクセスするかを確認し、それに合ったプログラムを実行します。
+                 * pass内に「/」で分割し、それを利用してファイル先へアクセスする手がかりにします。
+                 * 戻り値にファイルパスを入れる必要があります。
+                 */
+                const type: { [type: string]: (pass: string[]) => Promise<string> } = {
+                    "sources": async pass => {
+                        return ""
+                    }
+                }
+                const passArray = url.split("/")
+                const passdata = await type[passArray[1]]([...passArray])
+            })
         }
     }
 }
 (async () => {
-    console.log(process.env)
     sumtool.cuiIO() //コンソール画面で直接操作するためのプログラムです。
     sumtool.expressd.main() //ブラウザ等から直感的に操作するためのプログラムです。
 })()
