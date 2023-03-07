@@ -1128,14 +1128,16 @@ namespace sumtool {
             })
         }
         get operation() { return this.#operation }
-        async passGet(pass: string[], name: string, extension?: string): Promise<string> {
+        async passGet(pass: string[], name: string, option?: { extension?: string }): Promise<string> {
             if (!this.#operation) return null
+            let extension: string
+            if (option) {
+                if (option.extension) extension = option.extension
+            }
             let obj: dataiofiles = this.#passIndex
             for (let i = 0; i !== pass.length; i++) {
                 if (!obj[pass[i]]) obj[pass[i]] = {
-                    attribute: {
-                        directory: true
-                    },
+                    attribute: { directory: true },
                     pass: null,
                     data: {}
                 }
@@ -1148,9 +1150,7 @@ namespace sumtool {
                 }
             }
             if (!obj[name]) obj[name] = {
-                attribute: {
-                    directory: false
-                },
+                attribute: { directory: false },
                 pass: this.#folderPass + "/" + name + "-" + Date.now() + "-" + pass.join("") + "-" + Math.floor(Math.random() * 99) + (extension ? "." + extension : ""),
                 data: {}
             }
