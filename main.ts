@@ -1111,7 +1111,12 @@ namespace sumtool {
             passCheck(pass).then(async data => {
                 if (data) this.#pass = data.pass
                 else throw new Error("パスが間違っています。")
+                if (programName === "dataIO") throw new Error("dataIOを利用することは出来ません")
                 this.#name = programName
+                if (!await exsits(this.#pass + "/dataIO.json")) await writeFile(this.#pass + "/dataIO.json", "[]")
+                const dataIOIndex: { [programName: string]: any } = JSON.parse(String(await readFile(this.#pass + "/dataIO.json")))
+                if (!dataIOIndex[programName]) dataIOIndex[programName] = true
+                await writeFile(this.#pass + "/dataIO.json", JSON.stringify(dataIOIndex))
                 this.#jsonPass = this.#pass + "/" + this.#name + ".json"
                 this.#folderPass = this.#pass + "/" + this.#name
                 const initValue = JSON.stringify({ json: {}, passIndex: {} })
@@ -1127,7 +1132,11 @@ namespace sumtool {
                 this.emit("ready")
             })
         }
-        static async initer(programName: string): Promise<dataIO | null> {
+        static async initer(programName: string): Promise<dataIO> {
+            if (programName === "dataIO") {
+                console.log("クラス名と同じ名前を使用しないでください。\nこの名前は内部で予約されています。")
+                return null
+            }
             if (!await exsits("passCache.json")) {
                 console.log("passCache.jsonが存在しないため、プログラムを続行することが出来ません。\n設定を行ってください。")
                 return null
@@ -1552,26 +1561,26 @@ namespace sumtool {
             "棒読みちゃん読み上げ": async () => {
                 const data = await dataIO.initer("bouyomi")
                 if (data === null) return
-                const temp: bouyomiStatus = data.json.temp
+                if (!data.json.temp) data.json.temp = null
                 const msg = await question("読み上げたい内容を入力してください。")
-                if (!temp || !await booleanIO("前回のデータを再利用しますか？")) {
+                if (!data.json.temp || !await booleanIO("前回のデータを再利用しますか？")) {
                     const speed = Number(await question("読み上げ速度を入力してください。"))
                     const tone = Number(await question("声の高さを入力してください。"))
                     const volume = Number(await question("声の大きさを入力してください。"))
                     const voice = Number(await question("声の種類を入力してください。"))
                     const address = await question("送信先のアドレスを入力してください。空白でlocalhostです。")
                     const port = Number(await question("ポートを入力してください。空白で50001です。"))
-                    Object.assign(temp, {
+                    data.json.temp = {
                         speed: speed ? speed : -1,
                         tone: tone ? tone : -1,
                         voice: voice ? voice : 0,
                         volume: volume ? volume : -1,
                         address: address ? address : "localhost",
                         port: port ? port : 50001
-                    })
+                    }
                     await data.save()
                 }
-                const client = new Bouyomi(temp)
+                const client = new Bouyomi(data.json.temp)
                 await new Promise<void>(resolve => {
                     client.on("ready", () => console.log("送信を開始します。"))
                     client.on("error", e => {
