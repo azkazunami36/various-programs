@@ -8,6 +8,7 @@ import Discord from "discord.js"
 import net from "net"
 import crypto from "crypto"
 import EventEmitter from "events"
+import ytdl from "ytdl-core"
 /**
  * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
  * CUIでもGUIのような使い勝手の良さを実感してください。
@@ -383,11 +384,12 @@ namespace sumtool {
         }
     }
     interface sharpConvertEvents {
-        end: void,
-        progress: { now: number, total: number }
+        end: [void],
+        progress: [now: number, total: number]
     }
     export declare interface sharpConvert {
-        on<K extends keyof sharpConvertEvents>(s: K, listener: (v: sharpConvertEvents[K]) => any): this;
+        on<K extends keyof sharpConvertEvents>(s: K, listener: (...args: sharpConvertEvents[K]) => any): this
+        emit<K extends keyof sharpConvertEvents>(eventName: K, ...args: sharpConvertEvents[K]): boolean
     }
     export class sharpConvert extends EventEmitter {
         #converting = 0
@@ -413,7 +415,7 @@ namespace sumtool {
                     if (this.#converting === this.#maxconvert) return
                     if (this.#convertPoint === this.processd.length) {
                         if (this.#converting === 0) {
-                            this.emit("end")
+                            this.emit("end", null)
                             resolve()
                         }
                         clearInterval(this.#interval)
@@ -921,12 +923,13 @@ namespace sumtool {
         port?: number
     }
     interface BouyomiEvents {
-        ready: void,
-        error: Error,
-        end: void
+        ready: [void],
+        error: [Error],
+        end: [void]
     }
     export declare interface Bouyomi {
-        on<K extends keyof BouyomiEvents>(s: K, listener: (v: BouyomiEvents[K]) => any): this;
+        on<K extends keyof BouyomiEvents>(s: K, listener: (...args: BouyomiEvents[K]) => any): this
+        emit<K extends keyof BouyomiEvents>(eventName: K, ...args: BouyomiEvents[K]): boolean
     }
     export class Bouyomi extends EventEmitter {
         #client: net.Socket
@@ -950,9 +953,9 @@ namespace sumtool {
             this.ccode = data.ccode ? data.ccode : "utf8"
             this.#client = new net.Socket()
             const client = this.#client
-            client.on("ready", () => this.emit("ready"))
+            client.on("ready", () => this.emit("ready", null))
             client.on("error", e => this.emit("error", e))
-            client.on("end", () => this.emit("end"))
+            client.on("end", () => this.emit("end", null))
         }
         set speed(d) {
             d = (d > 200) ? 200 : d
@@ -1094,9 +1097,10 @@ namespace sumtool {
         pass: string,
         smalldata?: {}
     }
-    interface dataIOEvents { ready: void }
+    interface dataIOEvents { ready: [void] }
     export declare interface dataIO {
-        on<K extends keyof dataIOEvents>(s: K, listener: (v: dataIOEvents[K]) => any): this;
+        on<K extends keyof dataIOEvents>(s: K, listener: (...args: dataIOEvents[K]) => any): this
+        emit<K extends keyof dataIOEvents>(eventName: K, ...args: dataIOEvents[K]): boolean
     }
     export class dataIO extends EventEmitter {
         #operation = false
@@ -1129,7 +1133,7 @@ namespace sumtool {
                 this.json = rawJSON.json
                 this.#passIndex = rawJSON.passIndex
                 this.#operation = true
-                this.emit("ready")
+                this.emit("ready", null)
             })
         }
         static async initer(programName: string): Promise<dataIO> {
@@ -1176,6 +1180,24 @@ namespace sumtool {
         }
         async save() {
             await writeFile(this.#jsonPass, JSON.stringify({ json: this.json, passIndex: this.#passIndex }))
+        }
+    }
+    interface youtubeDownloaderEvents { ready: [void] }
+    export declare interface youtubeDownloader {
+        on<K extends keyof youtubeDownloaderEvents>(s: K, listener: (...args: youtubeDownloaderEvents[K]) => any): this
+        emit<K extends keyof youtubeDownloaderEvents>(eventName: K, ...args: youtubeDownloaderEvents[K]): boolean
+    }
+    export class youtubeDownloader extends EventEmitter {
+        data: dataIO
+        constructor() {
+            super()
+            this.pconst().then(() => this.emit("ready", null))
+        }
+        private async pconst() {
+            this.data = await dataIO.initer("youtube-downloader")
+        }
+        async videoDataGet(videoId: string, type: "videoonly" | "audioonly") {
+            const youtubedl = ytdl(videoId, { filter: type, quality: "highest" })
         }
     }
     export async function cuiIO() {
@@ -1235,8 +1257,7 @@ namespace sumtool {
                     const progressd = new progress()
                     progressd.viewStr = "変換中"
                     progressd.view()
-                    convert.on("progress", stats => {
-                        const { now, total } = stats
+                    convert.on("progress", (now, total) => {
                         progressd.now = now
                         progressd.total = total
                     })
