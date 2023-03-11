@@ -933,7 +933,7 @@ namespace sumtool {
     }
     export class Bouyomi extends EventEmitter {
         #client: net.Socket
-        #data: { speed: number, tone: number, volume: number, voice: number, port: number, url: string, code: "utf8" } = {
+        #data: { speed: number, tone: number, volume: number, voice: number, port: number, url: string, code: BufferEncoding } = {
             speed: -1,
             tone: -1,
             volume: -1,
@@ -942,7 +942,7 @@ namespace sumtool {
             url: "localhost",
             code: "utf8"
         }
-        constructor(data: { speed?: number, tone?: number, volume?: number, voice?: number, port?: number, address?: string, ccode?: "utf8" }) {
+        constructor(data: { speed?: number, tone?: number, volume?: number, voice?: number, port?: number, address?: string, ccode?: BufferEncoding }) {
             super()
             this.speed = data.speed ? data.speed : -1
             this.tone = data.tone ? data.tone : -1
@@ -1183,12 +1183,34 @@ namespace sumtool {
         }
     }
     interface youtubeDownloaderEvents { ready: [void] }
+    interface dataIOextJSON extends dataIO {
+        json: {
+            progress?: {
+                [videoId: string]: {
+                    status: "download" | "downloaded",
+                    startTime: number,
+                    chunkLength: number,
+                    downloaded: number,
+                    total: number
+                }
+            },
+            videoMeta?: {
+                [videoId: string]: {
+                    [codec: string]: {
+                        [height: number]: {
+                            [fps: number]: {}
+                        }
+                    }
+                }
+            }
+        }
+    }
     export declare interface youtubeDownloader {
         on<K extends keyof youtubeDownloaderEvents>(s: K, listener: (...args: youtubeDownloaderEvents[K]) => any): this
         emit<K extends keyof youtubeDownloaderEvents>(eventName: K, ...args: youtubeDownloaderEvents[K]): boolean
     }
     export class youtubeDownloader extends EventEmitter {
-        data: dataIO
+        data: dataIOextJSON
         constructor() {
             super()
             this.pconst().then(() => this.emit("ready", null))
@@ -1197,7 +1219,38 @@ namespace sumtool {
             this.data = await dataIO.initer("youtube-downloader")
         }
         async videoDataGet(videoId: string, type: "videoonly" | "audioonly") {
-            const youtubedl = ytdl(videoId, { filter: type, quality: "highest" })
+            await new Promise<void>(async resolve => {
+                const youtubedl = ytdl(videoId, { filter: type, quality: "highest" })
+                const pass = await this.data.passGet(["youtubeSource", "temp", videoId], type)
+                const Stream = fs.createWriteStream(pass)
+                youtubedl.pipe(Stream)
+                youtubedl.on("progress", (chunkLength, downloaded, total) => {
+                    const progress = this.data.json.progress[videoId]
+                    progress.chunkLength = chunkLength
+                    progress.downloaded = downloaded
+                    progress.total = total
+                    progress.status = "download"
+                    progress.startTime = progress.startTime ? progress.startTime : Date.now()
+                })
+                youtubedl.on("end", () => {
+                    this.data.json.progress[videoId].status = "downloaded"
+                    ffmpeg(pass).ffprobe((err, data) => {
+                        const video = data.streams[0]
+                        this.data.json.videoMeta[videoId][video.codec_name][video.height][(() => {
+                            if (video.r_frame_rate.match("/")) {
+                                const data = video.r_frame_rate.split("/")
+                                return Number(data[0]) / Number(data[1])
+                            } else return Number(video.r_frame_rate)
+                        })()]
+                        const dasa = {
+                            [video.codec_name]: {
+                                [video.height]: {}
+                            }
+                        }
+                        resolve()
+                    })
+                })
+            })
         }
     }
     export async function cuiIO() {
@@ -1625,7 +1678,7 @@ namespace sumtool {
                         delete tmp.cache
                         console.log(
                             "cuiIOtmpに入った不必要なデータは削除されています。\n" +
-                            JSON.stringify(tmp, (k, v) => { return v }, "  ")
+                            JSON.stringify(tmp, null, "  ")
                         )
                     },
                     "キャッシュデータ等のパス設定": async () => {
@@ -1649,6 +1702,7 @@ namespace sumtool {
                 await programs[choiceProgramName]()
             },
             "Cryptoによる暗号化": async () => {
+                console.log("現在のところ未完成です。")
                 const algorithm = "aes-256-cbc"
                 const data = await question("使用する文字列を入力してください。")
                 const password = await question("パスワードを入力してください。")
