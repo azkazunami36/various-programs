@@ -1,6 +1,6 @@
 import readline from "readline"
 import express from "express"
-import fs, { write } from "fs"
+import fs from "fs"
 import imageSize from "image-size"
 import sharp from "sharp"
 import ffmpeg from "fluent-ffmpeg"
