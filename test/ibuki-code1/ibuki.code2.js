@@ -1,5 +1,4 @@
 const { Client, GatewayIntentBits, Message, EmbedBuilder, ActionRowBuilder, DataResolver, ButtonBuilder, ButtonStyle, SlashCommandBuilder, GatewayVersion, Events } = require('discord.js')
-require("date-utils") //Date()のプログラム拡張に使用。削除厳禁です。toFormat()が利用できなくなります。
 require("dotenv").config() //.envの内容を読み込みます。削除厳禁です。process.env内にデータを入れることが出来なくなります。
 /**
  * 非同期関数内でのプログラム一時停止をします。
@@ -15,7 +14,15 @@ const sleep = time => { return new Promise((resolve, reject) => { setTimeout(() 
 /* 1秒間隔で実行。 */
 setInterval(() => {
     //時間を表示
-    console.log(Date().toFormat("YYYY年MM月DD日HH24時MI分SS秒"))
+    const date = new Date()
+    console.log(
+        date.getFullYear() + "年" +
+        ("0" + (date.getMonth() + 1)).slice(-2) + "月" +
+        ("0" + date.getDate()).slice(-2) + "日" +
+        ("0" + date.getHours()).slice(-2) + "時" +
+        ("0" + date.getMinutes()).slice(-2) + "分" +
+        ("0" + date.getSeconds()).slice(-2) + "秒"
+    )
 }, 1000);
 /**
  * @type {{
@@ -26,7 +33,7 @@ setInterval(() => {
  *  urldata: string[]
  * }}
  */
-const data = require("data.json")
+const data = require("./data.json")
 /**
  * プログラム内で値を保持する際に使用します。
  * @type {{
@@ -71,7 +78,7 @@ function arrayIf(str, arr, call) {
     let stats = { returnd: false, string: null }
     for (let i = 0; i !== arr.length; i++) {
         if (call) {
-            const bool = call()
+            const bool = call(str, arr[i])
             if (bool) return { returnd: true, string: arr[i] }
         }
         else if (str === arr[i]) return { returnd: true, string: arr[i] }
@@ -108,7 +115,7 @@ client.on(Events.MessageCreate, async message => {
             NGURL: {
                 Array: data.urldata,
                 type: "悪URL",
-                matchFunc: (str, arrstr) => { return str.match(arrstr) }
+                matchFunc: (str, arrstr) => { return str.match(arrstr) ? true : false }
             },
             NGEng: {
                 Array: data.Englishdata,
@@ -118,9 +125,17 @@ client.on(Events.MessageCreate, async message => {
             NGAdm: {
                 Array: data.data2,
                 type: "管理人への悪口"
+            },
+            NGNeko: {
+                Array: [
+                    "にゃにゃにゃ！"
+                ],
+                type: "猫の尊死",
+                customMessage: "猫かわええなおい"
             }
         }
         const ngStrings = []
+        let delMsgId = ""
         const noGoodis = await (async () => {
             let status = false
             const keys = Object.keys(newJSON)
@@ -130,9 +145,9 @@ client.on(Events.MessageCreate, async message => {
                 if (noGood.returnd) {
                     temp.ngStringNo++
                     ngStrings.push(noGood.string)
-                    if (!status) await message.reply(
+                    if (!status) delMsgId = (await message.reply(
                         NG.customMessage ? NG.customMessage : NG.type + "フィルタに一致。\n削除されます。"
-                    )
+                    )).id
                     status = true
                 }
             }
@@ -147,7 +162,10 @@ client.on(Events.MessageCreate, async message => {
                     return str
                 })() + "の" + ngStrings.length + (ngStrings.length < 10 ? "つ" : "個") + "です"
             )
+            await sleep(1000)
             await message.delete()
+            await sleep(5000)
+            await message.channel.messages.cache.get(delMsgId).delete()
             //メッセージを削除したため、これ以上の動作をしてエラーになる危険を回避するべく、returnをつけます。
             return
         }
