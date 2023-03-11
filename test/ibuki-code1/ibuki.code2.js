@@ -129,10 +129,12 @@ client.on(Events.MessageCreate, async message => {
             },
             NGNeko: {
                 Array: [
-                    "にゃにゃにゃ！"
+                    "にゃにゃにゃ！",
+                    "にゃ"
                 ],
                 type: "猫の尊死",
-                customMessage: "猫かわええなおい"
+                customMessage: "猫かわええなおい",
+                matchFunc: (str, arrstr) => { return str.match(arrstr) ? true : false }
             }
         }
         const ngStrings = []

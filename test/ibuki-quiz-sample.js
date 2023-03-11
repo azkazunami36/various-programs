@@ -72,7 +72,6 @@ client.on(Events.ClientReady, () => {
         commands.push(data[Object.keys(data)[i]].command)
     }
     client.application.commands.set(commands)
-
     //久々のコードだから、ミスってるかもしれん
 })
 
