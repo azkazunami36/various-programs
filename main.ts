@@ -1,10 +1,10 @@
 import readline from "readline"
 import express from "express"
-import fs from "fs"
+import fs, { truncate } from "fs"
 import imageSize from "image-size"
 import sharp from "sharp"
 import ffmpeg from "fluent-ffmpeg"
-import Discord from "discord.js"
+import Discord, { Events } from "discord.js"
 import net from "net"
 import crypto from "crypto"
 import EventEmitter from "events"
@@ -334,29 +334,65 @@ namespace sumtool {
         }
         return processd
     }
-    interface discordBotData {
+    interface discordRealTimeData {
+        name: string,
         client?: Discord.Client,
-        programs?: {
-            message?: {
-                [programName: string]: (message: Discord.Message) => void
-            },
-            interaction?: {
-                [programName: string]: (interaction: Discord.Interaction) => void
+        status?: {
+            logined?: boolean
+        },
+        program?: {
+            [programName: string]: {
+                message?: (message: Discord.Message) => void,
+                interaction?: (interaction: Discord.Interaction) => void
             }
         }
     }
-    export class discordBots {
-        constructor() { }
-        static async inits(data: discordBotData) {
+    interface discordBotEvents {
+        classReady: [void],
+        djsClientReady: [Discord.Client],
+        messageCreate: [Discord.Message],
+        interactionCreate: [Discord.Interaction]
+    }
+    export declare interface discordBot {
+        on<K extends keyof discordBotEvents>(s: K, listener: (...args: discordBotEvents[K]) => any): this
+        emit<K extends keyof discordBotEvents>(eventName: K, ...args: discordBotEvents[K]): boolean
+    }
+    interface discordDataIOextJSON extends dataIO {
+        json: {
+            [botName: string]: {
+                programs?: string[],
+                token?: string,
+                clientOptions?: Discord.ClientOptions
+            }
+        }
+    }
+    export class discordBot extends EventEmitter {
+        rtdata: discordRealTimeData
+        data: discordDataIOextJSON
+        /**
+         * @param data bot名のみを入れます。すると、class内で自動的にデータを読み込みます。
+         */
+        constructor(data: discordRealTimeData) {
+            super()
+            this.rtdata = data
+            if (!this.rtdata.status) this.rtdata.status = {}
+            this.pconst().then(() => this.emit("classReady"))
+        }
+        static async initer(data: discordRealTimeData) {
+            return await new Promise<discordBot>(resolve => {
+                const djs = new discordBot(data)
+                djs.on("classReady", () => resolve(djs))
+            })
+        }
+        private async pconst() {
             const { Client, GatewayIntentBits, Partials } = Discord
-            data.client = new Client({
+            const newClientOption = {
                 intents: [
                     GatewayIntentBits.AutoModerationConfiguration,
                     GatewayIntentBits.AutoModerationExecution,
                     GatewayIntentBits.DirectMessageReactions,
                     GatewayIntentBits.DirectMessageTyping,
                     GatewayIntentBits.DirectMessages,
-                    GatewayIntentBits.GuildBans,
                     GatewayIntentBits.GuildEmojisAndStickers,
                     GatewayIntentBits.GuildIntegrations,
                     GatewayIntentBits.GuildInvites,
@@ -380,7 +416,65 @@ namespace sumtool {
                     Partials.ThreadMember,
                     Partials.User
                 ]
+            }
+            this.data = await dataIO.initer("discordBot")
+            if (!this.data.json[this.rtdata.name]) this.data.json[this.rtdata.name] = {}
+            if (!this.rtdata.client) {
+                this.rtdata.client = new Client(this.data.json[this.rtdata.name].clientOptions ? this.data.json[this.rtdata.name].clientOptions : newClientOption)
+                const client = this.rtdata.client
+                client.on(Events.MessageCreate, message => {
+                    const programStrings = Object.keys(this.rtdata.program)
+                    for (let i = 0; i !== programStrings.length; i++) {
+                        const program = this.rtdata.program[programStrings[i]]
+                        if (program.message) program.message(message)
+                    }
+                })
+                client.on(Events.InteractionCreate, interaction => {
+                    const programStrings = Object.keys(this.rtdata.program)
+                    for (let i = 0; i !== programStrings.length; i++) {
+                        const program = this.rtdata.program[programStrings[i]]
+                        if (program.interaction) program.interaction(interaction)
+                    }
+                })
+                await this.data.save()
+            }
+            const client = this.rtdata.client
+            client.on(Events.ClientReady, client => {
+                this.emit("djsClientReady", client)
             })
+            client.on(Events.MessageCreate, message => {
+                this.emit("messageCreate", message)
+            })
+            client.on(Events.InteractionCreate, interaction => {
+                this.emit("interactionCreate", interaction)
+            })
+            await this.programSeting()
+        }
+
+        private programs: {
+            [programName: string]: {
+                message?: (message: Discord.Message) => void,
+                interaction?: (interaction: Discord.Interaction) => void
+            }
+        } = {}
+
+        async token(token: string) {
+            this.data.json[this.rtdata.name].token = token
+            await this.data.save()
+        }
+        private async programSeting() {
+            const progs = this.data.json[this.rtdata.name].programs
+            for (let i = 0; i !== progs.length; i++) {
+                if (!this.rtdata.program[progs[i]]) {
+                    this.rtdata.program[progs[i]] = this.programs[progs[i]]
+                }
+            }
+        }
+        async login() {
+            const token = this.data.json[this.rtdata.name].token
+            if (!token) return
+            this.rtdata.status.logined = true
+            await this.rtdata.client.login(token)
         }
     }
     interface sharpConvertEvents {
@@ -1183,7 +1277,7 @@ namespace sumtool {
         }
     }
     interface youtubeDownloaderEvents { ready: [void] }
-    interface dataIOextJSON extends dataIO {
+    interface ytdldataIOextJSON extends dataIO {
         json: {
             progress?: {
                 [videoId: string]: {
@@ -1210,7 +1304,7 @@ namespace sumtool {
         emit<K extends keyof youtubeDownloaderEvents>(eventName: K, ...args: youtubeDownloaderEvents[K]): boolean
     }
     export class youtubeDownloader extends EventEmitter {
-        data: dataIOextJSON
+        data: ytdldataIOextJSON
         constructor() {
             super()
             this.pconst().then(() => this.emit("ready", null))
