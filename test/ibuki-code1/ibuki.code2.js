@@ -110,7 +110,8 @@ client.on(Events.MessageCreate, async message => {
         const newJSON = {
             NGStr: {
                 Array: data.data,
-                type: "悪口"
+                type: "悪口",
+                matchFunc: (str, arrstr) => { return str.match(arrstr) ? true : false }
             },
             NGURL: {
                 Array: data.urldata,
