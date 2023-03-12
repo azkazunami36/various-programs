@@ -4,7 +4,7 @@ import fs, { truncate } from "fs"
 import imageSize from "image-size"
 import sharp from "sharp"
 import ffmpeg from "fluent-ffmpeg"
-import Discord, { Events } from "discord.js"
+import Discord, { Events, SlashCommandBuilder } from "discord.js"
 import net from "net"
 import crypto from "crypto"
 import EventEmitter from "events"
@@ -334,17 +334,14 @@ namespace sumtool {
         }
         return processd
     }
-    interface discordRealTimeData {
+    export interface discordRealTimeData {
         name: string,
         client?: Discord.Client,
         status?: {
             logined?: boolean
         },
         program?: {
-            [programName: string]: {
-                message?: (message: Discord.Message) => void,
-                interaction?: (interaction: Discord.Interaction) => void
-            }
+            [programName: string]: discordProgram
         }
     }
     interface discordBotEvents {
@@ -357,14 +354,20 @@ namespace sumtool {
         on<K extends keyof discordBotEvents>(s: K, listener: (...args: discordBotEvents[K]) => any): this
         emit<K extends keyof discordBotEvents>(eventName: K, ...args: discordBotEvents[K]): boolean
     }
-    interface discordDataIOextJSON extends dataIO {
-        json: {
-            [botName: string]: {
-                programs?: string[],
-                token?: string,
-                clientOptions?: Discord.ClientOptions
-            }
+    interface discordData {
+        [botName: string]: {
+            programs?: string[],
+            token?: string,
+            clientOptions?: Discord.ClientOptions
         }
+    }
+    interface discordDataIOextJSON extends dataIO {
+        json: discordData
+    }
+    interface discordProgram {
+        message?: (message: Discord.Message) => void,
+        interaction?: (interaction: Discord.Interaction) => void,
+        slashCommand?: Omit<Discord.SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">[]
     }
     export class discordBot extends EventEmitter {
         rtdata: discordRealTimeData
@@ -384,8 +387,14 @@ namespace sumtool {
                 djs.on("classReady", () => resolve(djs))
             })
         }
+        static async data() {
+            const data = await dataIO.initer("discordBot")
+            const json: discordData = data.json
+
+            return JSON.parse(JSON.stringify(json))
+        }
         private async pconst() {
-            const { Client, GatewayIntentBits, Partials } = Discord
+            const { GatewayIntentBits, Partials } = Discord
             const newClientOption = {
                 intents: [
                     GatewayIntentBits.AutoModerationConfiguration,
@@ -420,7 +429,7 @@ namespace sumtool {
             this.data = await dataIO.initer("discordBot")
             if (!this.data.json[this.rtdata.name]) this.data.json[this.rtdata.name] = {}
             if (!this.rtdata.client) {
-                this.rtdata.client = new Client(this.data.json[this.rtdata.name].clientOptions ? this.data.json[this.rtdata.name].clientOptions : newClientOption)
+                this.rtdata.client = new Discord.Client(this.data.json[this.rtdata.name].clientOptions ? this.data.json[this.rtdata.name].clientOptions : newClientOption)
                 const client = this.rtdata.client
                 client.on(Events.MessageCreate, message => {
                     const programStrings = Object.keys(this.rtdata.program)
@@ -435,8 +444,8 @@ namespace sumtool {
                         const program = this.rtdata.program[programStrings[i]]
                         if (program.interaction) program.interaction(interaction)
                     }
+                    const data = interaction.inGuild()
                 })
-                await this.data.save()
             }
             const client = this.rtdata.client
             client.on(Events.ClientReady, client => {
@@ -448,15 +457,40 @@ namespace sumtool {
             client.on(Events.InteractionCreate, interaction => {
                 this.emit("interactionCreate", interaction)
             })
+            await this.data.save()
             await this.programSeting()
         }
 
         private programs: {
-            [programName: string]: {
-                message?: (message: Discord.Message) => void,
-                interaction?: (interaction: Discord.Interaction) => void
+            [programName: string]: discordProgram
+        } = {
+                "簡易認証": {
+                    interaction: interaction => {
+                    },
+                    slashCommand: [
+                        new SlashCommandBuilder()
+                            .setName("ButtonCreate")
+                            .setDescription("認証ボタンを生成します。")
+                            .addRoleOption(option => option
+                                .setName("roles")
+                                .setDescription("認証後に付与するロールを選択します。")
+                                .setRequired(true)
+                            )
+                            .addBooleanOption(option => option
+                                .setName("question")
+                                .setDescription("認証をクリックした際に、計算問題を出すかどうかを選択します(通常は有効)")
+                            )
+                            .addStringOption(option => option
+                                .setName("title")
+                                .setDescription("認証ボタンのタイトルを入力します。")
+                            )
+                            .addStringOption(option => option
+                                .setName("description")
+                                .setDescription("認証ボタンの説明を入力します。")
+                            )
+                    ]
+                }
             }
-        } = {}
 
         async token(token: string) {
             this.data.json[this.rtdata.name].token = token
@@ -464,11 +498,12 @@ namespace sumtool {
         }
         private async programSeting() {
             const progs = this.data.json[this.rtdata.name].programs
-            for (let i = 0; i !== progs.length; i++) {
-                if (!this.rtdata.program[progs[i]]) {
-                    this.rtdata.program[progs[i]] = this.programs[progs[i]]
+            if (progs)
+                for (let i = 0; i !== progs.length; i++) {
+                    if (!this.rtdata.program[progs[i]]) {
+                        this.rtdata.program[progs[i]] = this.programs[progs[i]]
+                    }
                 }
-            }
         }
         async login() {
             const token = this.data.json[this.rtdata.name].token
@@ -1347,22 +1382,12 @@ namespace sumtool {
             })
         }
     }
-    export async function cuiIO() {
-        const cuiIOtmp: {
-            discordJs?: {
-                bots?: {
-                    [botName: string]: {
-
-                    }
-                }
-            }
-        } = {
-            discordJs: {
-                bots: {
-                    ["kannininshou"]: {}
-                }
-            }
+    export async function cuiIO(shareData: {
+        discordBot?: {
+            [botName: string]: discordRealTimeData
         }
+    }) {
+        const cuiIOtmp: {} = {}
         const programs: { [programName: string]: () => Promise<void> } = {
             "Image Resize": async () => {
                 const imageSize = Number(await question("指定の画像サイズを入力してください。"))
@@ -1418,10 +1443,87 @@ namespace sumtool {
             },
             "QWERTY Kana Convert": async () => console.log(kanaConvert(await question("変換元のテキストを入力してください。"), await booleanIO("QWERTYからかなに変換しますか？yで変換、nで逆変換します。"))),
             "Discord Bot": async () => {
-                const botChoice = await choice(["簡易認証"], "bot一覧", "利用するbotを選択してください。")
-                while (true) {
-                    const control = await choice(["起動/停止", "直前のログ", "終了"], "利用可能な操作一覧", "利用する機能を選択してください。")
-                    if (control === 3) break
+                const botNames = Object.keys(await discordBot.data())
+                for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
+                    const programs: { [programName: string]: () => Promise<void> } = {
+                        "botを利用する": async () => {
+                            if (botNames.length === 0) {
+                                console.log("botが存在しません。新規作成をしてから実行してください。")
+                                return
+                            }
+                            const botChoice = await choice(botNames, "bot一覧", "利用するbotを選択してください。")
+                            if (botChoice === null) {
+                                console.log("入力が間違っているようです。最初からやり直してください。")
+                                return
+                            }
+                            if (!shareData.discordBot[botNames[botChoice - 1]]) shareData.discordBot[botNames[botChoice - 1]] = {
+                                name: botNames[botChoice - 1]
+                            }
+                            const bot = await discordBot.initer(shareData.discordBot[botNames[botChoice - 1]])
+                            for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
+                                const programs: { [programName: string]: () => Promise<void> } = {
+                                    "起動/停止": async () => {
+                                        await bot.login()
+                                        console.log("ログインしました。停止機能はまだ未検証のため、2度目の起動は行わないでください。")
+                                    },
+                                    "設定": async () => {
+                                        const programs: { [programName: string]: () => Promise<void> } = {
+                                            "Tokenを設定する": async () => {
+                                                const token = await question("Tokenを入力してください。")
+                                                await bot.token(token)
+                                                console.log("設定が完了しました。")
+                                            },
+                                            "プログラムの選択": async () => {
+                                            },
+                                            "戻る": async () => { }
+                                        }
+                                        const programChoice = await choice(Object.keys(programs), "利用可能な操作一覧", "利用する機能を選択してください。")
+                                        if (programChoice === null) {
+                                            console.log("入力が間違っているようです。最初からやり直してください。")
+                                            return
+                                        }
+                                        const choiceProgramName = Object.keys(programs)[programChoice - 1]
+                                        await programs[choiceProgramName]()
+                                    },
+                                    "戻る": async () => {
+                                        i++
+                                    }
+                                }
+                                const programChoice = await choice(Object.keys(programs), "利用可能な操作一覧", "利用する機能を選択してください。")
+                                if (programChoice === null) {
+                                    console.log("入力が間違っているようです。最初からやり直してください。")
+                                    return
+                                }
+                                const choiceProgramName = Object.keys(programs)[programChoice - 1]
+                                await programs[choiceProgramName]()
+                            }
+                        },
+                        "botの新規作成": async () => {
+                            const name = await question("botの名前を入力してください。")
+                            if (name === "") {
+                                console.log("入力が間違っているようです。最初からやり直してください。")
+                                return
+                            }
+                            if (!shareData.discordBot[name]) shareData.discordBot[name] = {
+                                name: name
+                            }
+                            await discordBot.initer(shareData.discordBot[name])
+                            console.log("botの生成が完了しました。\nbotの細かな設定を「botを利用する」から行い、Token等の設定をしてください。")
+                        },
+                        "botの削除": async () => {
+                            console.log("現在、botの削除を行うことが出来ません。botの動作中に削除を行った際にエラーが発生する可能性を否めません。")
+                        },
+                        "終了": async () => {
+                            i++
+                        }
+                    }
+                    const programChoice = await choice(Object.keys(programs), "利用可能な操作一覧", "利用する機能を選択してください。")
+                    if (programChoice === null) {
+                        console.log("入力が間違っているようです。最初からやり直してください。")
+                        return
+                    }
+                    const choiceProgramName = Object.keys(programs)[programChoice - 1]
+                    await programs[choiceProgramName]()
                 }
             },
             "Time Class": async () => {
@@ -1454,277 +1556,300 @@ namespace sumtool {
             "FFmpeg Converter": async () => {
                 const data = await dataIO.initer("ffmpeg-converter")
                 if (data === null) return
-                if (!data.json.presets) data.json.presets = [
-                    {
-                        name: "h264(品質21-key120)-通常速度",
-                        ext: "mp4",
-                        tag: [
-                            "-c:v libx264",
-                            "-c:a aac",
-                            "-tag:v avc1",
-                            "-pix_fmt yuv420p",
-                            "-crf 21",
-                            "-g 120"
-                        ]
-                    },
-                    {
-                        name: "h264(品質21-key1)-高速処理",
-                        ext: "mp4",
-                        tag: [
-                            "-c:v libx264",
-                            "-c:a aac",
-                            "-tag:v avc1",
-                            "-pix_fmt yuv420p",
-                            "-preset ultrafast",
-                            "-tune fastdecode,zerolatency",
-                            "-crf 21",
-                            "-g 1"
-                        ]
-                    },
-                    {
-                        name: "h264(リサイズ960x540-品質31-key240)-通常処理",
-                        ext: "mp4",
-                        tag: [
-                            "-c:v libx264",
-                            "-c:a aac",
-                            "-tag:v avc1",
-                            "-vf scale=960x540",
-                            "-pix_fmt yuv420p",
-                            "-crf 31",
-                            "-g 240"
-                        ]
-                    },
-                    {
-                        name: "mp3(128kbps)-30db音量上昇用",
-                        ext: "mp3",
-                        tag: [
-                            "-af volume=30dB",
-                            "-c:a libmp3lame",
-                            "-ar 44100",
-                            "-ab 128"
-                        ]
-                    }
-                ]
+                if (!data.json.presets) {
+                    data.json.presets = [
+                        {
+                            name: "h264(品質21-key120)-通常速度",
+                            ext: "mp4",
+                            tag: [
+                                "-c:v libx264",
+                                "-c:a aac",
+                                "-tag:v avc1",
+                                "-pix_fmt yuv420p",
+                                "-crf 21",
+                                "-g 120"
+                            ]
+                        },
+                        {
+                            name: "h264(品質21-key1)-高速処理",
+                            ext: "mp4",
+                            tag: [
+                                "-c:v libx264",
+                                "-c:a aac",
+                                "-tag:v avc1",
+                                "-pix_fmt yuv420p",
+                                "-preset ultrafast",
+                                "-tune fastdecode,zerolatency",
+                                "-crf 21",
+                                "-g 1"
+                            ]
+                        },
+                        {
+                            name: "h264(リサイズ960x540-品質31-key240)-通常処理",
+                            ext: "mp4",
+                            tag: [
+                                "-c:v libx264",
+                                "-c:a aac",
+                                "-tag:v avc1",
+                                "-vf scale=960x540",
+                                "-pix_fmt yuv420p",
+                                "-crf 31",
+                                "-g 240"
+                            ]
+                        },
+                        {
+                            name: "mp3(128kbps)-30db音量上昇用",
+                            ext: "mp3",
+                            tag: [
+                                "-af volume=30dB",
+                                "-c:a libmp3lame",
+                                "-ar 44100",
+                                "-ab 128"
+                            ]
+                        }
+                    ]
+                    await data.save()
+                }
                 const presets: {
                     name: string,
                     ext: string,
                     tag: string[]
                 }[] = data.json.presets
-                const convertChoice = await choice(["変換を開始する", "プリセットの作成・編集"], "FFmpeg Converter", "利用する機能を選択してください、")
-                if (convertChoice === null) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                switch (convertChoice) {
-                    case 1: {
-                        const convertType = await choice(["パスを指定しプリセットで変換", "タグを手入力し、詳細な設定を自分で行う", "複数ファイルを一括変換"], "変換の種類の一覧", "上記から変換の種類を選択してください。")
-                        if (convertType === null) {
-                            console.log("入力が間違っているようです。最初からやり直してください。")
-                            break
-                        }
-                        switch (convertType) {
-                            case 1: {
-                                const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
-                                if (beforePass === null) {
-                                    console.log("入力が間違っているようです。最初からやり直してください。")
-                                    break
-                                }
-                                const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
-                                if (afterPass === null) {
-                                    console.log("入力が間違っているようです。最初からやり直してください。")
-                                    break
-                                }
-                                const filename = await question("書き出し先のファイル名を入力してください。")
-                                const presetChoice = await choice((() => {
-                                    let presetNames: string[] = []
-                                    presets.forEach(preset => {
-                                        presetNames.push(preset.name)
-                                    })
-                                    return presetNames
-                                })(), "プリセット一覧", "使用するプリセットを選択してください。")
-                                console.log(
-                                    "変換元: " + beforePass.pass + "\n" +
-                                    "変換先: " + afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext + "\n" +
-                                    "タグ: " + (() => {
-                                        let tags = ""
-                                        presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
-                                        return tags
-                                    })()
-                                )
-                                const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
-                                if (permission) {
-                                    const convert = new ffmpegConverter(beforePass.pass)
-                                    convert.preset = presets[presetChoice - 1].tag
-                                    console.log(convert.preset)
-                                    await convert.convert(afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext)
-                                    console.log("変換が完了しました！")
-                                }
-                                break
-                            }
-                            case 2: {
-                                const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
-                                if (beforePass === null) {
-                                    console.log("入力が間違っているようです。最初からやり直してください。")
-                                    break
-                                }
-                                const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
-                                if (afterPass === null) {
-                                    console.log("入力が間違っているようです。最初からやり直してください。")
-                                    break
-                                }
-                                const filename = await question("書き出し先のファイル名を入力してください。")
-                                const preset = await ffmpegConverter.inputPreset({ tagonly: true })
-                                console.log(
-                                    "変換元: " + beforePass.pass + "\n" +
-                                    "変換先: " + afterPass.pass + "/" + filename + "." + preset.ext + "\n" +
-                                    "タグ: " + (() => {
-                                        let tags = ""
-                                        preset.tag.forEach(tag => tags += tag + " ")
-                                        return tags
-                                    })()
-                                )
-                                const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
-                                if (permission) {
-                                    const convert = new ffmpegConverter(beforePass.pass)
-                                    convert.preset = preset.tag
-                                    console.log(convert.preset)
-                                    await convert.convert(afterPass.pass + "/" + filename + "." + preset.ext)
-                                    console.log("変換が完了しました！")
-                                }
-                                break
-                            }
-                            case 3: {
-                                const beforePass = await passCheck(await question("元のフォルダパスを入力してください。"))
-                                if (beforePass === null) {
-                                    console.log("入力が間違っているようです。最初からやり直してください。")
-                                    break
-                                }
-                                const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
-                                if (afterPass === null) {
-                                    console.log("入力が間違っているようです。最初からやり直してください。")
-                                    break
-                                }
-                                const folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
-                                const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v"] })
-                                const presetChoice = await choice((() => {
-                                    let presetNames: string[] = []
-                                    presets.forEach(preset => {
-                                        presetNames.push(preset.name)
-                                    })
-                                    return presetNames
-                                })(), "プリセット一覧", "使用するプリセットを選択してください。")
-                                console.log(
-                                    "変換元: " + beforePass.pass + "\n" +
-                                    "変換先: " + afterPass.pass + "\n" +
-                                    "タグ: " + (() => {
-                                        let tags = ""
-                                        presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
-                                        return tags
-                                    })() + "\n" +
-                                    "変換するファイル数: " + fileList.length
-                                )
-                                const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
-                                if (permission) {
-                                    const progressd = new progress()
-                                    progressd.viewStr = "変換中"
-                                    progressd.view()
-                                    progressd.total = fileList.length
-                                    for (let i = 0; i != fileList.length; i++) {
-                                        progressd.now = i
-                                        const convert = new ffmpegConverter(fileList[i].pass + fileList[i].filename + "." + fileList[i].extension)
-                                        convert.preset = presets[presetChoice - 1].tag
-
-                                        await convert.convert(afterPass.pass + "/" + (await (async () => {
-                                            let outfolders = ""
-                                            const point = fileList[i].point
-                                            for (let i = 0; i !== point.length; i++) {
-                                                outfolders += point[i] + "/"
-                                                if (!(await exsits(afterPass.pass + "/" + outfolders))) await mkdir(afterPass.pass + "/" + outfolders)
-                                            }
-                                            return outfolders
-                                        })()) + fileList[i].filename + "." + presets[presetChoice - 1].ext)
+                const programs: { [programName: string]: () => Promise<void> } = {
+                    "変換を開始する": async () => {
+                        for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
+                            const programs: { [programName: string]: () => Promise<void> } = {
+                                "パスを指定しプリセットで変換": async () => {
+                                    const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
+                                    if (beforePass === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        return
                                     }
-                                    progressd.now = fileList.length
-                                    progressd.view()
-                                    progressd.viewed = false
-                                }
-                                break
-                            }
-                        }
-                        break
-                    }
-                    case 2: {
-                        while (true) {
-                            const typeChoice = await choice(["プリセット作成", "プリセット編集", "プリセット一覧を表示", "終了"], "プリセット作成・編集の一覧", "操作したい項目を選択してください。")
-                            if (typeChoice === null) {
-                                console.log("入力が間違っているようです。最初からやり直してください。")
-                                break
-                            } else if (typeChoice === 1) {
-                                presets.push(await ffmpegConverter.inputPreset())
-                                await data.save()
-                            } else if (typeChoice === 2) {
-                                if (!presets[0]) {
-                                    console.log("プリセットがありません。追加してからもう一度やり直してください。")
-                                    continue
-                                }
-                                const presetChoice = await choice((() => {
-                                    let presetNames: string[] = []
-                                    presets.forEach(preset => {
-                                        presetNames.push(preset.name)
-                                    })
-                                    return presetNames
-                                })(), "プリセット一覧", "編集するプリセットを選択してください。")
-                                if (presetChoice === null) {
-                                    console.log("入力が間違っているようです。最初からやり直してください。")
-                                    continue
-                                }
-                                const funcChoice = await choice(["タグを修正", "タグを削除", "プリセット名を変更", "プリセットを削除"], "機能一覧", "利用する機能を選択してください。")
-                                switch (funcChoice) {
-                                    case 1: {
-                                        const tagChoice = await choice((() => {
-                                            let tags: string[] = []
-                                            presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
-                                            return tags
-                                        })(), "タグ一覧", "編集するタグを選択してください。")
-                                        presets[presetChoice - 1].tag[tagChoice - 1] = await question("新しいタグ名を入力してください。エラー検知はしません。")
-                                        break
+                                    const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+                                    if (afterPass === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        return
                                     }
-                                    case 2: {
-                                        const tagChoice = await choice((() => {
-                                            let tags: string[] = []
-                                            presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
-                                            return tags
-                                        })(), "タグ一覧", "削除するタグを選択してください。")
-                                        presets[presetChoice - 1].tag.splice(tagChoice - 1)
-                                        break
-                                    }
-                                    case 3: {
-                                        presets[presetChoice - 1].name = await question("新しい名前を入力してください。")
-                                        break
-                                    }
-                                    case 4: {
-                                        const permission = await booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
-                                        if (permission) presets.splice(presetChoice - 1)
-                                    }
-                                }
-                                await data.save()
-
-                            } else if (typeChoice === 3) {
-                                presets.forEach(preset => {
+                                    const filename = await question("書き出し先のファイル名を入力してください。")
+                                    const presetChoice = await choice((() => {
+                                        let presetNames: string[] = []
+                                        presets.forEach(preset => {
+                                            presetNames.push(preset.name)
+                                        })
+                                        return presetNames
+                                    })(), "プリセット一覧", "使用するプリセットを選択してください。")
                                     console.log(
-                                        "プリセット名: " + preset.name +
-                                        "\nタグ: " + (() => {
+                                        "変換元: " + beforePass.pass + "\n" +
+                                        "変換先: " + afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext + "\n" +
+                                        "タグ: " + (() => {
                                             let tags = ""
-                                            preset.tag.forEach(string => tags += string + " ")
+                                            presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
                                             return tags
                                         })()
                                     )
-                                })
-                            } else if (typeChoice === 4) break
+                                    const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
+                                    if (permission) {
+                                        const convert = new ffmpegConverter(beforePass.pass)
+                                        convert.preset = presets[presetChoice - 1].tag
+                                        console.log(convert.preset)
+                                        await convert.convert(afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext)
+                                        console.log("変換が完了しました！")
+                                    }
+                                },
+                                "タグを手入力し、詳細な設定を自分で行う": async () => {
+                                    const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
+                                    if (beforePass === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        return
+                                    }
+                                    const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+                                    if (afterPass === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        return
+                                    }
+                                    const filename = await question("書き出し先のファイル名を入力してください。")
+                                    const preset = await ffmpegConverter.inputPreset({ tagonly: true })
+                                    console.log(
+                                        "変換元: " + beforePass.pass + "\n" +
+                                        "変換先: " + afterPass.pass + "/" + filename + "." + preset.ext + "\n" +
+                                        "タグ: " + (() => {
+                                            let tags = ""
+                                            preset.tag.forEach(tag => tags += tag + " ")
+                                            return tags
+                                        })()
+                                    )
+                                    const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
+                                    if (permission) {
+                                        const convert = new ffmpegConverter(beforePass.pass)
+                                        convert.preset = preset.tag
+                                        console.log(convert.preset)
+                                        await convert.convert(afterPass.pass + "/" + filename + "." + preset.ext)
+                                        console.log("変換が完了しました！")
+                                    }
+                                },
+                                "複数ファイルを一括変換": async () => {
+                                    const beforePass = await passCheck(await question("元のフォルダパスを入力してください。"))
+                                    if (beforePass === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        return
+                                    }
+                                    const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+                                    if (afterPass === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        return
+                                    }
+                                    const folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
+                                    const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v"] })
+                                    const presetChoice = await choice((() => {
+                                        let presetNames: string[] = []
+                                        presets.forEach(preset => {
+                                            presetNames.push(preset.name)
+                                        })
+                                        return presetNames
+                                    })(), "プリセット一覧", "使用するプリセットを選択してください。")
+                                    console.log(
+                                        "変換元: " + beforePass.pass + "\n" +
+                                        "変換先: " + afterPass.pass + "\n" +
+                                        "タグ: " + (() => {
+                                            let tags = ""
+                                            presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
+                                            return tags
+                                        })() + "\n" +
+                                        "変換するファイル数: " + fileList.length
+                                    )
+                                    const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
+                                    if (permission) {
+                                        const progressd = new progress()
+                                        progressd.viewStr = "変換中"
+                                        progressd.view()
+                                        progressd.total = fileList.length
+                                        for (let i = 0; i != fileList.length; i++) {
+                                            progressd.now = i
+                                            const convert = new ffmpegConverter(fileList[i].pass + fileList[i].filename + "." + fileList[i].extension)
+                                            convert.preset = presets[presetChoice - 1].tag
+
+                                            await convert.convert(afterPass.pass + "/" + (await (async () => {
+                                                let outfolders = ""
+                                                const point = fileList[i].point
+                                                for (let i = 0; i !== point.length; i++) {
+                                                    outfolders += point[i] + "/"
+                                                    if (!(await exsits(afterPass.pass + "/" + outfolders))) await mkdir(afterPass.pass + "/" + outfolders)
+                                                }
+                                                return outfolders
+                                            })()) + fileList[i].filename + "." + presets[presetChoice - 1].ext)
+                                        }
+                                        progressd.now = fileList.length
+                                        progressd.view()
+                                        progressd.viewed = false
+                                    }
+                                },
+                                "終了": async () => {
+                                    i++
+                                }
+                            }
+                            const programChoice = await choice(Object.keys(programs), "利用可能な操作一覧", "利用する機能を選択してください。")
+                            if (programChoice === null) {
+                                console.log("入力が間違っているようです。最初からやり直してください。")
+                                return
+                            }
+                            const choiceProgramName = Object.keys(programs)[programChoice - 1]
+                            await programs[choiceProgramName]()
                         }
-                        break
+                    },
+                    "プリセットの作成・編集": async () => {
+                        for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
+                            const programs: { [programName: string]: () => Promise<void> } = {
+                                "プリセット作成": async () => {
+                                    presets.push(await ffmpegConverter.inputPreset())
+                                    await data.save()
+                                },
+                                "プリセット編集": async () => {
+                                    if (!presets[0]) {
+                                        console.log("プリセットがありません。追加してからもう一度やり直してください。")
+                                        return
+                                    }
+                                    const presetChoice = await choice((() => {
+                                        let presetNames: string[] = []
+                                        presets.forEach(preset => {
+                                            presetNames.push(preset.name)
+                                        })
+                                        return presetNames
+                                    })(), "プリセット一覧", "編集するプリセットを選択してください。")
+                                    if (presetChoice === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        return
+                                    }
+                                    const programs: { [programName: string]: () => Promise<void> } = {
+                                        "タグを修正": async () => {
+                                            const tagChoice = await choice((() => {
+                                                let tags: string[] = []
+                                                presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
+                                                return tags
+                                            })(), "タグ一覧", "編集するタグを選択してください。")
+                                            presets[presetChoice - 1].tag[tagChoice - 1] = await question("新しいタグ名を入力してください。エラー検知はしません。")
+                                        },
+                                        "タグを削除": async () => {
+                                            const tagChoice = await choice((() => {
+                                                let tags: string[] = []
+                                                presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
+                                                return tags
+                                            })(), "タグ一覧", "削除するタグを選択してください。")
+                                            presets[presetChoice - 1].tag.splice(tagChoice - 1)
+                                        },
+                                        "プリセット名を変更": async () => {
+                                            presets[presetChoice - 1].name = await question("新しい名前を入力してください。")
+                                        },
+                                        "プリセットを削除": async () => {
+                                            const permission = await booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
+                                            if (permission) presets.splice(presetChoice - 1)
+                                        },
+                                        "戻る": async () => { }
+                                    }
+                                    const programChoice = await choice(Object.keys(programs), "機能一覧", "利用する機能を選択してください。")
+                                    if (programChoice === null) {
+                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                        return
+                                    }
+                                    const choiceProgramName = Object.keys(programs)[programChoice - 1]
+                                    await programs[choiceProgramName]()
+                                    await data.save()
+                                },
+                                "プリセット一覧を表示": async () => {
+                                    presets.forEach(preset => {
+                                        console.log(
+                                            "プリセット名: " + preset.name +
+                                            "\nタグ: " + (() => {
+                                                let tags = ""
+                                                preset.tag.forEach(string => tags += string + " ")
+                                                return tags
+                                            })()
+                                        )
+                                    })
+                                },
+                                "終了": async () => {
+                                    i++
+                                },
+                            }
+                            const programChoice = await choice(Object.keys(programs), "利用可能な操作一覧", "利用する機能を選択してください。")
+                            if (programChoice === null) {
+                                console.log("入力が間違っているようです。最初からやり直してください。")
+                                return
+                            }
+                            const choiceProgramName = Object.keys(programs)[programChoice - 1]
+                            await programs[choiceProgramName]()
+                        }
+                    },
+                    "終了": async () => {
+                        return
                     }
                 }
+                const programChoice = await choice(Object.keys(programs), "利用可能な操作一覧", "利用する機能を選択してください。")
+                if (programChoice === null) {
+                    console.log("入力が間違っているようです。最初からやり直してください。")
+                    return
+                }
+                const choiceProgramName = Object.keys(programs)[programChoice - 1]
+                await programs[choiceProgramName]()
             },
             "棒読みちゃん読み上げ": async () => {
                 const data = await dataIO.initer("bouyomi")
@@ -1762,39 +1887,6 @@ namespace sumtool {
                     client.send(msg)
                 })
             },
-            "Various Programsの状態・設定": async () => {
-                const programs: { [programName: string]: () => Promise<void> } = {
-                    "プロセスのメモリ使用率": async () => {
-                        console.log("メモリ使用率(bytes): " + process.memoryUsage.rss())
-                    },
-                    "cuiIOデータをRaw表示": async () => {
-                        const tmp = JSON.parse(JSON.stringify(cuiIOtmp))
-                        delete tmp.cache
-                        console.log(
-                            "cuiIOtmpに入った不必要なデータは削除されています。\n" +
-                            JSON.stringify(tmp, null, "  ")
-                        )
-                    },
-                    "キャッシュデータ等のパス設定": async () => {
-                        const data = await exsits("passCache.json") ? JSON.parse(String(await readFile("passCache.json"))) : null
-                        console.log("現在のキャッシュパス場所は" + (data ? data + "です。" : "設定されていません。"))
-                        const pass = await passCheck(await question("キャッシュデータを保存するパスを入力してください。"))
-                        if (pass === null) {
-                            console.log("入力が間違っているようです。最初からやり直してください。")
-                            return
-                        }
-                        await writeFile("passCache.json", JSON.stringify(pass.pass))
-                        console.log(JSON.parse(String(await readFile("passCache.json"))) + "に変更されました。")
-                    }
-                }
-                const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
-                if (programChoice === null) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                const choiceProgramName = Object.keys(programs)[programChoice - 1]
-                await programs[choiceProgramName]()
-            },
             "Cryptoによる暗号化": async () => {
                 console.log("現在のところ未完成です。")
                 const algorithm = "aes-256-cbc"
@@ -1820,6 +1912,39 @@ namespace sumtool {
                         const decrypted_text = decrypted + decipher.final('utf-8')
 
                         console.log(decrypted_text)
+                    }
+                }
+                const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
+                if (programChoice === null) {
+                    console.log("入力が間違っているようです。最初からやり直してください。")
+                    return
+                }
+                const choiceProgramName = Object.keys(programs)[programChoice - 1]
+                await programs[choiceProgramName]()
+            },
+            "Various Programsの状態・設定": async () => {
+                const programs: { [programName: string]: () => Promise<void> } = {
+                    "プロセスのメモリ使用率": async () => {
+                        console.log("メモリ使用率(bytes): " + process.memoryUsage.rss())
+                    },
+                    "cuiIOデータをRaw表示": async () => {
+                        const tmp = JSON.parse(JSON.stringify(cuiIOtmp))
+                        delete tmp.cache
+                        console.log(
+                            "cuiIOtmpに入った不必要なデータは削除されています。\n" +
+                            JSON.stringify(tmp, null, "  ")
+                        )
+                    },
+                    "キャッシュデータ等のパス設定": async () => {
+                        const data = await exsits("passCache.json") ? JSON.parse(String(await readFile("passCache.json"))) : null
+                        console.log("現在のキャッシュパス場所は" + (data ? data + "です。" : "設定されていません。"))
+                        const pass = await passCheck(await question("キャッシュデータを保存するパスを入力してください。"))
+                        if (pass === null) {
+                            console.log("入力が間違っているようです。最初からやり直してください。")
+                            return
+                        }
+                        await writeFile("passCache.json", JSON.stringify(pass.pass))
+                        console.log(JSON.parse(String(await readFile("passCache.json"))) + "に変更されました。")
                     }
                 }
                 const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
@@ -1863,7 +1988,11 @@ namespace sumtool {
          * もしここの関数のみで完成した場合、classを削除しfunctionに置き換えます。
          * ※sourcedフォルダにデータを入れていますが、main.jsのプログラムを全てここに入れ終えたら、sourcesに名前を変更します。
          */
-        static async main(): Promise<void> {
+        static async main(shareData: {
+            discordBot?: {
+                [botName: string]: discordRealTimeData
+            }
+        }): Promise<void> {
             const app = express()
             app.get("", async (req, res) => {
                 /**
@@ -1888,6 +2017,11 @@ namespace sumtool {
     }
 }
 (async () => {
-    sumtool.cuiIO() //コンソール画面で直接操作するためのプログラムです。
-    sumtool.expressd.main() //ブラウザ等から直感的に操作するためのプログラムです。
+    const shareData: {
+        discordBot?: {
+            [botName: string]: sumtool.discordRealTimeData
+        }
+    } = {}
+    sumtool.cuiIO(shareData) //コンソール画面で直接操作するためのプログラムです。
+    sumtool.expressd.main(shareData) //ブラウザ等から直感的に操作するためのプログラムです。
 })()
