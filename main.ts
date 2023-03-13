@@ -4,7 +4,7 @@ import fs from "fs"
 import imageSize from "image-size"
 import sharp from "sharp"
 import ffmpeg from "fluent-ffmpeg"
-import Discord, { Events, SlashCommandBuilder } from "discord.js"
+import Discord from "discord.js"
 import net from "net"
 import crypto from "crypto"
 import EventEmitter from "events"
@@ -365,8 +365,8 @@ namespace sumtool {
         json: discordData
     }
     interface discordProgram {
-        message?: (message: Discord.Message) => void,
-        interaction?: (interaction: Discord.Interaction) => void,
+        message?: (message: Discord.Message) => Promise<void>,
+        interaction?: (interaction: Discord.Interaction) => Promise<void>,
         slashCommand?: Omit<Discord.SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">[]
     }
     export class discordBot extends EventEmitter {
@@ -431,30 +431,29 @@ namespace sumtool {
             if (!this.rtdata.client) {
                 this.rtdata.client = new Discord.Client(this.data.json[this.rtdata.name].clientOptions ? this.data.json[this.rtdata.name].clientOptions : newClientOption)
                 const client = this.rtdata.client
-                client.on(Events.MessageCreate, message => {
+                client.on(Discord.Events.MessageCreate, async message => {
                     const programStrings = Object.keys(this.rtdata.program)
                     for (let i = 0; i !== programStrings.length; i++) {
                         const program = this.rtdata.program[programStrings[i]]
-                        if (program.message) program.message(message)
+                        if (program.message) await program.message(message)
                     }
                 })
-                client.on(Events.InteractionCreate, interaction => {
+                client.on(Discord.Events.InteractionCreate, async interaction => {
                     const programStrings = Object.keys(this.rtdata.program)
                     for (let i = 0; i !== programStrings.length; i++) {
                         const program = this.rtdata.program[programStrings[i]]
-                        if (program.interaction) program.interaction(interaction)
+                        if (program.interaction) await program.interaction(interaction)
                     }
-                    const data = interaction.inGuild()
                 })
             }
             const client = this.rtdata.client
-            client.on(Events.ClientReady, client => {
+            client.on(Discord.Events.ClientReady, client => {
                 this.emit("djsClientReady", client)
             })
-            client.on(Events.MessageCreate, message => {
+            client.on(Discord.Events.MessageCreate, message => {
                 this.emit("messageCreate", message)
             })
-            client.on(Events.InteractionCreate, interaction => {
+            client.on(Discord.Events.InteractionCreate, interaction => {
                 this.emit("interactionCreate", interaction)
             })
             await this.data.save()
@@ -465,11 +464,89 @@ namespace sumtool {
             [programName: string]: discordProgram
         } = {
                 "簡易認証": {
-                    interaction: interaction => {
+                    interaction: async interaction => {
+                        interface gty {
+                            buttoncreate: {
+                                roleID: string,
+                                question: boolean
+                            },
+                            calc: {
+                                roleID: string,
+                                buttonNum: number,
+                                calcType: number
+                            }
+                        }
+                        interface authTProgram {
+                            buttoncreate: {
+                                type: "buttoncreate",
+                                data: {
+                                    roleID: string,
+                                    question: boolean
+                                }
+                            },
+                            calc: {
+                                type: "calc",
+                                data: {
+                                    roleID: string,
+                                    buttonNum: number,
+                                    calcType: number
+                                }
+                            }
+                        }
+                        interface type<K extends keyof authTProgram> {
+                            type: K,
+                            data: authTProgram[K]["data"]
+                        }
+                        if (interaction.isChatInputCommand()) {
+                            const name = interaction.commandName
+                            if (name === "buttoncreate") {
+                                const member = (await interaction.guild.members.fetch()).get(interaction.user.id)
+                                if (member.permissions.has(Discord.PermissionsBitField.Flags.Administrator)) {
+                                    interaction.options
+                                    const role = interaction.options.getRole("roles")
+                                    const question = interaction.options.getBoolean("question")
+                                    const title = interaction.options.getString("title")
+                                    const description = interaction.options.getString("description")
+                                    const data: type<"buttoncreate"> = {
+                                        type: "buttoncreate",
+                                        data: {
+                                            roleID: role.id,
+                                            question: question
+                                        }
+                                    }
+                                    const customId = Buffer.from(JSON.stringify(data), "base64")
+                                    const components = new Discord.ActionRowBuilder<Discord.ButtonBuilder>()
+                                        .addComponents(
+                                            new Discord.ButtonBuilder()
+                                                .setLabel("認証！")
+                                                .setStyle(Discord.ButtonStyle.Primary)
+                                                .setCustomId(String(customId))
+                                        )
+                                    const embed = new Discord.EmbedBuilder()
+                                        .setTitle(title || "認証をして僕たちとこのサーバーを楽しもう！")
+                                        .setDescription(description || "✅認証は下のボタンを押下する必要があります。")
+                                        .setAuthor({
+                                            name: interaction.guild.name,
+                                            iconURL: interaction.guild.iconURL()
+                                        })
+                                    try {
+                                        await interaction.channel.send({ embeds: [embed], components: [components] })
+                                        await interaction.reply({ content: "作成が完了しました！", ephemeral: true })
+                                    } catch (e) {
+                                        interaction.reply({
+                                            content: "エラーが確認されました。: `" + e.code + "/" + e.message,
+                                            ephemeral: true
+                                        })
+                                    }
+                                } else {
+                                    await interaction.reply({ content: "コマンド発行者自身に管理者権限がないため、実行することが出来ません..." })
+                                }
+                            }
+                        }
                     },
                     slashCommand: [
-                        new SlashCommandBuilder()
-                            .setName("ButtonCreate")
+                        new Discord.SlashCommandBuilder()
+                            .setName("buttoncreate")
                             .setDescription("認証ボタンを生成します。")
                             .addRoleOption(option => option
                                 .setName("roles")
