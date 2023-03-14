@@ -465,81 +465,147 @@ namespace sumtool {
         } = {
                 "簡易認証": {
                     interaction: async interaction => {
-                        interface gty {
-                            buttoncreate: {
-                                roleID: string,
+                        type ttt = {
+                            type: "buttoncreate",
+                            data: {
+                                roleId: string,
                                 question: boolean
-                            },
-                            calc: {
-                                roleID: string,
+                            }
+                        } | {
+                            type: "calc",
+                            data: {
+                                roleId: string,
                                 buttonNum: number,
                                 calcType: number
                             }
-                        }
-                        interface authTProgram {
-                            buttoncreate: {
-                                type: "buttoncreate",
-                                data: {
-                                    roleID: string,
-                                    question: boolean
-                                }
-                            },
-                            calc: {
-                                type: "calc",
-                                data: {
-                                    roleID: string,
-                                    buttonNum: number,
-                                    calcType: number
+                        };
+                        if (interaction.isChatInputCommand()) {
+                            if (interaction.channel.isTextBased() && !interaction.channel.isVoiceBased() && !interaction.channel.isThread() && !interaction.channel.isDMBased()) {
+                                const name = interaction.commandName
+                                if (name === "buttoncreate") {
+                                    const member = (await interaction.guild.members.fetch()).get(interaction.user.id)
+                                    if (member.permissions.has(Discord.PermissionsBitField.Flags.Administrator)) {
+                                        const role = interaction.options.getRole("roles")
+                                        const question = interaction.options.getBoolean("question")
+                                        const title = interaction.options.getString("title")
+                                        const description = interaction.options.getString("description")
+                                        const data: ttt = {
+                                            type: "buttoncreate",
+                                            data: {
+                                                roleId: role.id,
+                                                question: question
+                                            }
+                                        }
+                                        const components = new Discord.ActionRowBuilder<Discord.ButtonBuilder>()
+                                            .addComponents(
+                                                new Discord.ButtonBuilder()
+                                                    .setLabel("認証！")
+                                                    .setStyle(Discord.ButtonStyle.Primary)
+                                                    .setCustomId(JSON.stringify(data))
+                                            )
+                                        const embed = new Discord.EmbedBuilder()
+                                            .setTitle(title || "認証をして僕たちとこのサーバーを楽しもう！")
+                                            .setDescription(description || "✅認証は下のボタンを押下する必要があります。")
+                                            .setAuthor({
+                                                name: interaction.guild.name,
+                                                iconURL: interaction.guild.iconURL()
+                                            })
+                                        try {
+                                            await interaction.channel.send({ embeds: [embed], components: [components] })
+                                            await interaction.reply({ content: "作成が完了しました！", ephemeral: true })
+                                        } catch (e) {
+                                            interaction.reply({
+                                                content: "エラーが確認されました。: `" + e.code + "/" + e.message,
+                                                ephemeral: true
+                                            })
+                                        }
+                                    } else {
+                                        await interaction.reply({ content: "コマンド発行者自身に管理者権限がないため、実行することが出来ません..." })
+                                    }
                                 }
                             }
                         }
-                        interface type<K extends keyof authTProgram> {
-                            type: K,
-                            data: authTProgram[K]["data"]
-                        }
-                        if (interaction.isChatInputCommand()) {
-                            const name = interaction.commandName
-                            if (name === "buttoncreate") {
-                                const member = (await interaction.guild.members.fetch()).get(interaction.user.id)
-                                if (member.permissions.has(Discord.PermissionsBitField.Flags.Administrator)) {
-                                    interaction.options
-                                    const role = interaction.options.getRole("roles")
-                                    const question = interaction.options.getBoolean("question")
-                                    const title = interaction.options.getString("title")
-                                    const description = interaction.options.getString("description")
-                                    const data: type<"buttoncreate"> = {
-                                        type: "buttoncreate",
-                                        data: {
-                                            roleID: role.id,
-                                            question: question
+                        if (interaction.isButton()) {
+                            const customId = interaction.customId
+                            const data = ((): ttt => {
+                                try { return JSON.parse(customId) }
+                                catch (e) { return null } //JSONではない文字列の場合nullを返す
+                            })()
+                            let roleGive: { give: boolean, roleId: string } = {
+                                give: false,
+                                roleId: null
+                            }
+                            if (data !== null)
+                                if (data.type === "buttoncreate") {
+                                    const { roleId, question } = data.data
+                                    if (question) {
+                                        const embed = new Discord.EmbedBuilder();
+                                        const num: number[] = []
+                                        for (let i = 0; i !== 2; i++) num.push(Math.floor(Math.random() * 9))
+                                        const ord: { type: string, Num: number }[] = []
+                                        ord.push({ type: "+", Num: num[0] + num[1] })
+                                        ord.push({ type: "-", Num: num[0] - num[1] })
+                                        ord.push({ type: "x", Num: num[0] * num[1] })
+                                        const answer = Math.floor(Math.random() * ord.length - 1)
+                                        for (let i = 0; i !== ord.length - 1; i++) {
+                                            const random = Math.floor(Math.random() * i)
+                                            const tmp = ord[i]
+                                            ord[i] = ord[random]
+                                            ord[random] = tmp
                                         }
-                                    }
-                                    const customId = Buffer.from(JSON.stringify(data), "base64")
-                                    const components = new Discord.ActionRowBuilder<Discord.ButtonBuilder>()
-                                        .addComponents(
-                                            new Discord.ButtonBuilder()
-                                                .setLabel("認証！")
-                                                .setStyle(Discord.ButtonStyle.Primary)
-                                                .setCustomId(String(customId))
-                                        )
-                                    const embed = new Discord.EmbedBuilder()
-                                        .setTitle(title || "認証をして僕たちとこのサーバーを楽しもう！")
-                                        .setDescription(description || "✅認証は下のボタンを押下する必要があります。")
-                                        .setAuthor({
-                                            name: interaction.guild.name,
-                                            iconURL: interaction.guild.iconURL()
+                                        embed.setTitle("問題！")
+                                        embed.setDescription("下の計算を解くだけで認証が出来ます！")
+                                        embed.addFields({
+                                            name: num[0] + ord[answer].type + num[1] + "=",
+                                            value: "の答えを下から選びましょう。"
                                         })
-                                    try {
-                                        await interaction.channel.send({ embeds: [embed], components: [components] })
-                                        await interaction.reply({ content: "作成が完了しました！", ephemeral: true })
-                                    } catch (e) {
+                                        const components = new Discord.ActionRowBuilder<Discord.ButtonBuilder>();
+                                        for (let i = 0; ord.length != i; i++) {
+                                            const data: ttt = {
+                                                type: "calc",
+                                                data: {
+                                                    roleId: roleId,
+                                                    buttonNum: i,
+                                                    calcType: answer
+                                                }
+                                            }
+                                            components.addComponents(
+                                                new Discord.ButtonBuilder()
+                                                    .setLabel(String(ord[i].Num))
+                                                    .setStyle(Discord.ButtonStyle.Primary)
+                                                    .setCustomId(JSON.stringify(data))
+                                            )
+                                        }
                                         interaction.reply({
-                                            content: "エラーが確認されました。: `" + e.code + "/" + e.message,
+                                            embeds: [embed],
+                                            components: [components],
+                                            ephemeral: true
+                                        })
+                                    } else roleGive = { give: true, roleId: roleId }
+                                } else if (data.type === "calc") {
+                                    const { roleId, buttonNum, calcType } = data.data
+                                    if (buttonNum === calcType) roleGive = { give: true, roleId: roleId }
+                                    else interaction.reply({
+                                        content: "あぁ...答えが違いますよ...\nもっかいクリックしてやりなおしましょ！",
+                                        ephemeral: true
+                                    })
+                                }
+                            if (roleGive.give && roleGive.roleId !== null) {
+                                const role = await interaction.guild.roles.fetch(roleGive.roleId)
+                                const member = interaction.guild.members.cache.get(interaction.user.id)
+                                try { await member.roles.add(role) }
+                                catch (e) {
+                                    if (e.code) {
+                                        interaction.reply({
+                                            content: "エラー確認: " + e.code + "\nこのエラーコードを管理人に報告してくれると、一時的に対処が行われます。",
+                                            ephemeral: true
+                                        })
+                                    } else {
+                                        interaction.reply({
+                                            content: "認証でエラーが発生してしまいました...\nエラーは管理者が確認し修正します。",
                                             ephemeral: true
                                         })
                                     }
-                                } else {
-                                    await interaction.reply({ content: "コマンド発行者自身に管理者権限がないため、実行することが出来ません..." })
                                 }
                             }
                         }
@@ -2099,6 +2165,11 @@ namespace sumtool {
             [botName: string]: sumtool.discordRealTimeData
         }
     } = {}
+    const data = {
+        data: "data"
+    }
+    const str = ["data"]
+    console.log([JSON.parse(JSON.stringify(data)), JSON.parse(JSON.stringify(str))])
     sumtool.cuiIO(shareData) //コンソール画面で直接操作するためのプログラムです。
     sumtool.expressd.main(shareData) //ブラウザ等から直感的に操作するためのプログラムです。
 })()
