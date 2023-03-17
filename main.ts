@@ -559,7 +559,7 @@ namespace sumtool {
                       name: num[0] + ord[answer].type + num[1] + "=",
                       value: "の答えを下から選びましょう。"
                     })
-                    const components = new Discord.ActionRowBuilder<Discord.ButtonBuilder>();
+                    const components = new Discord.ActionRowBuilder<Discord.ButtonBuilder>()
                     for (let i = 0; ord.length != i; i++) {
                       const data: ttt = {
                         type: "calc",
@@ -591,9 +591,7 @@ namespace sumtool {
                   })
                 }
               if (roleGive.give && roleGive.roleId !== null) {
-                const role = await interaction.guild.roles.fetch(roleGive.roleId)
-                const member = interaction.guild.members.cache.get(interaction.user.id)
-                try { await member.roles.add(role) }
+                try { await interaction.guild.members.cache.get(interaction.user.id).roles.add(await interaction.guild.roles.fetch(roleGive.roleId)) }
                 catch (e) {
                   if (e.code) {
                     interaction.reply({
@@ -1842,7 +1840,7 @@ namespace sumtool {
                     return
                   }
                   const folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
-                  const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v"] })
+                  const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts"] })
                   const presetChoice = await choice((() => {
                     let presetNames: string[] = []
                     presets.forEach(preset => {
@@ -1946,7 +1944,7 @@ namespace sumtool {
                       const permission = await booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
                       if (permission) presets.splice(presetChoice - 1)
                     },
-                    "戻る": async () => { }
+                    "戻る": async () => { return }
                   }
                   const programChoice = await choice(Object.keys(programs), "機能一覧", "利用する機能を選択してください。")
                   if (programChoice === null) {
