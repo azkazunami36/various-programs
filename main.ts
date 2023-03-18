@@ -724,6 +724,10 @@ namespace sumtool {
         const loopInterval = setInterval(convert, 100)
       })
     }
+    /**
+     * 命名タイプを設定。これに反ってプログラムを作ること。
+     * @type {string[]}
+     */
     static type = [
       "[ファイル名].png",
       "[連番] - [ファイル名].png",
