@@ -726,9 +726,8 @@ namespace sumtool {
     }
     /**
      * 命名タイプを設定。これに反ってプログラムを作ること。
-     * @type {string[]}
      */
-    static type = [
+    static type: string[] = [
       "[ファイル名].png",
       "[連番] - [ファイル名].png",
       "[元拡張子] - [ファイル名].png",
