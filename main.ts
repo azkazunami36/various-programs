@@ -1475,6 +1475,9 @@ namespace sumtool {
 						}
 					}
 				}
+			},
+			codecType?: {
+				[codecName: string]: boolean
 			}
 		}
 	}
@@ -1529,6 +1532,7 @@ namespace sumtool {
 							}
 						}
 					})
+					this.data.json.codecType.push(video.codec_name)
 					resolve()
 				})
 			})
