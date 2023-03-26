@@ -1532,7 +1532,8 @@ namespace sumtool {
 							}
 						}
 					})
-					this.data.json.codecType.push(video.codec_name)
+					//これしか重複せず高速で、プログラムが入手したコーデック一覧を作る方法がわからない
+					this.data.json.codecType[video.codec_name] = true
 					resolve()
 				})
 			})
