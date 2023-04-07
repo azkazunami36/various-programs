@@ -1826,6 +1826,9 @@ namespace sumtool {
 												const convert = new ffmpegConverter(beforePass.pass)
 												convert.preset = presets[presetChoice - 1].tag
 												console.log(convert.preset)
+												if (await exsits(afterPass.pass)) {
+													if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) return
+												}
 												await convert.convert(afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext)
 												console.log("変換が完了しました！")
 											}
@@ -1857,6 +1860,10 @@ namespace sumtool {
 												const convert = new ffmpegConverter(beforePass.pass)
 												convert.preset = preset.tag
 												console.log(convert.preset)
+
+												if (await exsits(afterPass.pass)) {
+													if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) return
+												}
 												await convert.convert(afterPass.pass + "/" + filename + "." + preset.ext)
 												console.log("変換が完了しました！")
 											}
@@ -1873,7 +1880,7 @@ namespace sumtool {
 												return
 											}
 											const folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
-											const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts"] })
+											const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "wav", "alac", "vp9", "mp3", "m4a"] })
 											const presetChoice = await choice((() => {
 												let presetNames: string[] = []
 												presets.forEach(preset => {
@@ -1902,7 +1909,7 @@ namespace sumtool {
 													const convert = new ffmpegConverter(fileList[i].pass + fileList[i].filename + "." + fileList[i].extension)
 													convert.preset = presets[presetChoice - 1].tag
 
-													await convert.convert(afterPass.pass + "/" + (await (async () => {
+													const convertedPass = afterPass.pass + "/" + (await (async () => {
 														let outfolders = ""
 														const point = fileList[i].point
 														for (let i = 0; i !== point.length; i++) {
@@ -1910,7 +1917,15 @@ namespace sumtool {
 															if (!(await exsits(afterPass.pass + "/" + outfolders))) await mkdir(afterPass.pass + "/" + outfolders)
 														}
 														return outfolders
-													})()) + fileList[i].filename + "." + presets[presetChoice - 1].ext)
+													})()) + fileList[i].filename + "." + presets[presetChoice - 1].ext
+
+													if (await exsits(convertedPass)) {
+														progressd.viewed = false
+														if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) continue
+														progressd.view()
+													}
+
+													await convert.convert(convertedPass)
 												}
 												progressd.now = fileList.length
 												progressd.view()
