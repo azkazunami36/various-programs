@@ -236,18 +236,24 @@ namespace sumtool {
 			if (await exsits(passtmp)) return passtmp
 			passtmp = passtmp.replace(/\\ /g, " ")
 			if (await exsits(passtmp)) return passtmp
+			passtmp = passtmp.replace(/\\\(/g, "(")
+			if (await exsits(passtmp)) return passtmp
+			passtmp = passtmp.replace(/\\\)/g, ")")
+			if (await exsits(passtmp)) return passtmp
+			passtmp = passtmp.replace(/\\\#/g, "#")
+			if (await exsits(passtmp)) return passtmp
 			return null
 		})()
 		if (!pass) return null
 		const stats: fs.Stats = await new Promise(resolve => fs.stat(pass, (err, stats) => resolve(stats)))
 		return { pass: pass, ...stats }
 	}
-	export async function choice(array: string[], title?: string, questionText?: string): Promise<number | null> {
+	export async function choice(array: string[], title?: string, questionText?: string, manyNumNotDetected?: boolean): Promise<number | null> {
 		console.log((title ? title : "一覧") + ": ")
 		for (let i = 0; i !== array.length; i++) console.log("[" + (i + 1) + "] " + array[i])
 		const request = Number(await question(questionText ? questionText : "上記から数字で選択してください。"))
 		if (Number.isNaN(request)) return null
-		if (request > array.length || request < 1) return null
+		if (!manyNumNotDetected && request > array.length || request < 1) return null
 		return request
 	}
 	export async function booleanIO(text: string): Promise<boolean> {
@@ -1974,8 +1980,15 @@ namespace sumtool {
 														let tags: string[] = []
 														presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
 														return tags
-													})(), "タグ一覧", "編集するタグを選択してください。")
-													presets[presetChoice - 1].tag[tagChoice - 1] = await question("新しいタグ名を入力してください。エラー検知はしません。")
+													})(), "タグ一覧", "編集するタグを選択してください。", true)
+													const tagName = await question("新しいタグ名を入力してください。エラー検知はしません。")
+													if (tagChoice > (presets[presetChoice - 1].tag.length - 1)) {
+														presets[presetChoice - 1].tag.push(tagName)
+													} else {
+														if (tagName === "") {
+															delete presets[presetChoice - 1].tag[tagChoice - 1]
+														} else presets[presetChoice - 1].tag[tagChoice - 1] = tagName
+													}
 												},
 												"タグを削除": async () => {
 													const tagChoice = await choice((() => {
@@ -1987,6 +2000,9 @@ namespace sumtool {
 												},
 												"プリセット名を変更": async () => {
 													presets[presetChoice - 1].name = await question("新しい名前を入力してください。")
+												},
+												"拡張子を変更": async () => {
+													presets[presetChoice - 1].ext = await question("拡張子を入力してください。")
 												},
 												"プリセットを削除": async () => {
 													const permission = await booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
