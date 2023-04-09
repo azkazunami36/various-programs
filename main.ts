@@ -367,7 +367,7 @@ namespace sumtool {
   interface discordProgram {
     message?: (message: Discord.Message) => Promise<void>,
     interaction?: (interaction: Discord.Interaction) => Promise<void>,
-    slashCommand?: Omit<Discord.SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">[]
+    slashCommand?: Omit<Discord.SlashCommandBuilder, "addSubcommandGroup" | "addSubcommand" | "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption">[]
   }
   export class discordBot extends EventEmitter {
     rtdata: discordRealTimeData
@@ -1347,10 +1347,9 @@ namespace sumtool {
       let progress = ""
       const length = textLength(oneDisplay) + textLength(twoDisplay)
       const progressLength = windowSize[0] - 3 - length
-      const displayProgress = Number((percent * progressLength).toFixed())
-      const miniDisplayProgress = Number(((miniPercent / this.total) * progressLength).toFixed())
-      for (let i = 0; i < (displayProgress + miniDisplayProgress); i++) progress += "#"
-      for (let i = 0; i < progressLength - (displayProgress + miniDisplayProgress); i++) progress += " "
+      const displayProgress = Number(((percent + ((miniPercent ? miniPercent : 0) / this.total)) * progressLength).toFixed())
+      for (let i = 0; i < displayProgress; i++) progress += "#"
+      for (let i = 0; i < progressLength - (displayProgress); i++) progress += " "
       const display = oneDisplay + progress + twoDisplay
       readline.cursorTo(process.stdout, 0)
       process.stdout.clearLine(0)
@@ -2050,6 +2049,81 @@ namespace sumtool {
               })
               client.send(msg)
             })
+          }
+        },
+        {
+          name: "Folder Copy",
+          function: async () => {
+            console.log("このプログラムは想定外の入力に弱い傾向にあります。ご了承ください。")
+            const beforePass = await passCheck(await question("移動元のフォルダを指定してください。"))
+            const afterPass = await passCheck(await question("移動先のフォルダを指定してください。"))
+            const list = await fileLister(beforePass.pass, { contain: true })
+            console.log("移動元のフォルダには" + list.length + "個のファイルたちがあります。")
+            if (await booleanIO("移動を開始しますか？")) {
+              try {
+                let errorNum = 0
+                let skipNum = 0
+                const prog = new progress()
+                prog.view()
+                  prog.total = list.length
+                for (let i = 0; i !== list.length; i++) {
+                  const point = list[i].point
+                  let outfolders = ""
+                  for (let i = 0; i !== point.length; i++) {
+                    outfolders += point[i] + "/"
+                    if (!(await exsits(afterPass.pass + "/" + outfolders))) await mkdir(afterPass.pass + "/" + outfolders)
+                  }
+                  const fileName = list[i].filename + (list[i].extension ? ("." + list[i].extension) : "")
+                  const copyDataTo = afterPass.pass + "/" + outfolders + fileName
+                  prog.now = i
+                  prog.viewStr = "移動中。スキップ[" + skipNum + "] エラー[" + errorNum + "]"
+                  if (await exsits(list[i].pass + fileName)) {
+                    await new Promise<void>(resolve => {
+                      const Stream = fs.createReadStream(list[i].pass + fileName)
+                      Stream.pipe(fs.createWriteStream(copyDataTo))
+                      Stream.on("error", err => {
+                        errorNum++
+                      })
+                      Stream.on("end", () => { resolve() })
+                    })
+                  } else {
+                    skipNum++
+                  }
+                }
+                prog.view()
+                prog.viewed = false
+              } catch (e) { }
+            }
+          }
+        },
+        {
+          name: "プログラムテスト",
+          function: async () => {
+            console.log("これを使用してしまうと、強制終了する以外にプログラムを抜ける方法が無くなります。")
+            const programs: {
+              name: string,
+              function: () => Promise<void>
+            }[] = [{
+              name: "passCheck",
+              function: async () => {
+                const pass = await question("パスを入力")
+                const checked = await passCheck(pass)
+                console.log(checked ? checked.pass : null)
+              }
+            }]
+            const programsName = (() => {
+              const programsName = []
+              for (let i = 0; i !== programs.length; i++) programsName.push(programs[i].name)
+              return programsName
+            })()
+            const programChoice = await choice(programsName, "利用可能なプログラム", "実行したいプログラムを選択してください。")
+            if (programChoice === null) {
+              console.log("入力が間違っているようです。最初からやり直してください。")
+              return
+            }
+            while (true) {
+              await programs[programChoice - 1].function()
+            }
           }
         },
         {
