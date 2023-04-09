@@ -51,13 +51,13 @@
      * データを格納しています。
      * このjson内を操作する際は、プログラムを終了してから変更を加えてください。
      */
+    if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
     const dtbs = require("./data.json")
     const savePass = require("./dataPass.json").default
-    if (!fs.existsSync("data.json")) fs.writeFileSync("data.json", "{}")
     //----ここから初期化ラインです----
     if (!dtbs.ytdlRawInfoData) dtbs.ytdlRawInfoData = {}
     if (!dtbs.ytchRawInfoData) dtbs.ytchRawInfoData = {}
-    if (!dtbs.ytIndex) dtbs.ytIndex = {}
+    if (!dtbs.ytIndex) dtbs.ytIndex = { videoIds: {} }
     const folderCreate = pass => {
         if (!fs.existsSync(pass)) fs.mkdirSync(pass)
     }

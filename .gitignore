@@ -11,3 +11,4 @@
 /test/cs-lang/bin/*
 .DS_Store
 /passCache.json
+./dataPass.json
