@@ -234,14 +234,13 @@ namespace sumtool {
 			if (await exsits(passtmp)) return passtmp
 			while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
 			if (await exsits(passtmp)) return passtmp
-			passtmp = passtmp.replace(/\\ /g, " ")
-			if (await exsits(passtmp)) return passtmp
-			passtmp = passtmp.replace(/\\\(/g, "(")
-			if (await exsits(passtmp)) return passtmp
-			passtmp = passtmp.replace(/\\\)/g, ")")
-			if (await exsits(passtmp)) return passtmp
-			passtmp = passtmp.replace(/\\\#/g, "#")
-			if (await exsits(passtmp)) return passtmp
+			const expType = " ()#~"
+			for (let i = 0; i !== expType.length; i++) {
+				const type = expType[i]
+				const exp = new RegExp("\\\\\\" + type, "g")
+				passtmp = passtmp.replace(exp, type)
+				if (await exsits(passtmp)) return passtmp
+			}
 			return null
 		})()
 		if (!pass) return null
@@ -271,30 +270,63 @@ namespace sumtool {
 			new Promise(resolve => iface.question(text + "> ", answer => { iface.close(); resolve(answer) }))
 	}
 	interface passInfo {
+		/**
+		 * 拡張子を含まないファイル名が記載
+		 */
 		filename: string,
+		/**
+		 * 拡張子が記載
+		 */
 		extension: string,
+		/**
+		 * この位置までのパスが記載
+		 */
 		pass: string,
+		/**
+		 * 元パスから配列での記載
+		 */
 		point: string[]
 	}
-	export async function fileLister(pass: string, option?: { contain?: boolean, extensionFilter?: string[] }) {
+	export async function fileLister(pass: string, option?: { contain?: boolean, extensionFilter?: string[], invFIleIgnored?: boolean, macosInvIgnored?: boolean }) {
+		//オプションデータの格納用
 		let contain = false
 		let extensionFilter: string[] = []
+		let invFIleIgnored = false
+		let macosInvIgnored = false
 		if (option !== undefined) {
 			if (option.contain) contain = true
 			if (option.extensionFilter !== undefined) extensionFilter = option.extensionFilter
+			if (option.invFIleIgnored) invFIleIgnored = true
+			if (option.macosInvIgnored) macosInvIgnored = true
 		}
-		const processd: passInfo[] = []
+
+		const processd: passInfo[] = [] //出力データの保存場所
 		const point: string[] = [] //パス場所を設定
+		/**
+		 * キャッシュデータの格納
+		 */
 		const filepoint: {
+			/**
+			 * マークとなるディレクトリのパスを入力
+			 * @param lpass どこのパスかを記述する
+			 */
 			[lpass: string]: {
+				/**
+				 * キャッシュからファイルを指定する
+				 */
 				point: number,
+				/**
+				 * ディレクトリやファイルリストのキャッシュを保存
+				 */
 				dirents: fs.Dirent[]
 			}
 		} = {}
 
 		while (true) {
 			let lpass = pass + "/" //ファイル処理時の一時的パス場所
-			for (let i = 0; i !== point.length; i++) lpass += point[i] + "/" //パス取得
+			for (let i = 0; i !== point.length; i++) lpass += point[i] + "/" //パス解析、配列化
+
+			//filepointの初期化
 			if (!filepoint[lpass]) filepoint[lpass] = {
 				point: 0,
 				dirents: await new Promise(resolve => {
@@ -313,31 +345,49 @@ namespace sumtool {
 					})
 				})
 			}
+			/**
+			 * 保存されたリストを取得
+			 */
 			const dirents = filepoint[lpass].dirents
+			//もしディレクトリ内のファイル数とファイル指定番号が同じな場合
 			if (dirents.length === filepoint[lpass].point)
+				//lpassが初期値「pass + "/"」と同じ場合ループを抜ける
 				if (lpass === pass + "/") break
+				//そうでない場合上の階層へ移動する
 				else point.pop()
 			else {
+				//ファイル名の取得
 				const name = dirents[filepoint[lpass].point].name
+				//フォルダ、ディレクトリでない場合
 				if (!dirents[filepoint[lpass].point].isDirectory()) {
+					//ドットで分割
 					const namedot = name.split(".")
+					//拡張子を取得
 					const extension = namedot[namedot.length - 1]
-					if ((() => {
-						if (extensionFilter[0]) {
+					if ((() => { //もしも
+						if (extensionFilter[0]) { //拡張子指定がある場合
+							let stats = false
 							for (let i = 0; i !== extensionFilter.length; i++)
-								if (extensionFilter[i].match(new RegExp(extension, "i"))) return true
-						} else return true
-						return false
-					})()) processd.push({
+								if (extensionFilter[i].match(new RegExp(extension, "i"))) stats = true
+							if (!stats) return false //拡張子がマッチしなかったらfalse
+						}
+						//末端が一致した場合false
+						if (invFIleIgnored && name[0] === ".") return false
+						if (macosInvIgnored && name[0] === "." && name[1] === "_") return false
+						return true //全てがreturnしない場合true
+					})()) processd.push({ //ファイルデータを追加
 						filename: name.slice(0, -(extension.length + 1)),
 						extension: extension,
 						pass: lpass,
 						point: JSON.parse(JSON.stringify(point))
 					})
+					//ディレクトりの場合は階層を移動し、ディレクトリ内に入り込む
 				} else if (contain && dirents[filepoint[lpass].point].isDirectory()) point.push(name)
+				//次のファイルへ移動する
 				filepoint[lpass].point++
 			}
 		}
+		//データを出力
 		return processd
 	}
 	export interface discordRealTimeData {
@@ -661,7 +711,8 @@ namespace sumtool {
 	}
 	interface sharpConvertEvents {
 		end: [void],
-		progress: [now: number, total: number]
+		progress: [now: number, total: number],
+		error: [Error]
 	}
 	export declare interface sharpConvert {
 		on<K extends keyof sharpConvertEvents>(s: K, listener: (...args: sharpConvertEvents[K]) => any): this
@@ -717,16 +768,21 @@ namespace sumtool {
 						i + 1,
 					][this.nameing] + "." + sharpConvert.extType[this.type])
 					this.emit("progress", this.#convertPoint, this.processd.length)
-					await new Promise(async resolve => {
-						const imageW = imageSize(this.processd[i].pass + fileName).width
-						const sha = sharp(this.processd[i].pass + fileName)
-						sha.resize((this.size < imageW) ? this.size : imageW)
-						switch (sharpConvert.extType[this.type]) {
-							case "png": sha.png(); break
-							case "jpg": sha.jpeg(); break
+					await new Promise<void>(async resolve => {
+						try {
+							const image = imageSize(this.processd[i].pass + fileName)
+							const sha = sharp(this.processd[i].pass + fileName)
+							sha.resize((this.size < image.width) ? this.size : image.width)
+							switch (sharpConvert.extType[this.type]) {
+								case "png": sha.png(); break
+								case "jpg": sha.jpeg(); break
+							}
+							sha.pipe(Stream)
+							Stream.on("finish", resolve)
+						} catch (e) {
+							this.emit("error", e)
+							resolve()
 						}
-						sha.pipe(Stream)
-						Stream.on("finish", resolve)
 					})
 					this.#converting--
 					convert()
@@ -1353,12 +1409,12 @@ namespace sumtool {
 			const percent = this.now / this.total
 			const miniPercent = this.relativePercent.now / this.relativePercent.total
 			const oneDisplay = this.viewStr + "(" + this.now + "/" + this.total + ") " +
-				(percent * 100).toFixed() + "%["
+				((percent ? percent : 0) * 100).toFixed() + "%["
 			const twoDisplay = "]"
 			let progress = ""
 			const length = textLength(oneDisplay) + textLength(twoDisplay)
 			const progressLength = windowSize[0] - 3 - length
-			const displayProgress = Number(((percent + ((miniPercent ? miniPercent : 0) / this.total)) * progressLength).toFixed())
+			const displayProgress = Number((((percent ? percent : 0) + ((miniPercent ? miniPercent : 0) / this.total)) * progressLength).toFixed())
 			for (let i = 0; i < displayProgress; i++) progress += "#"
 			for (let i = 0; i < progressLength - (displayProgress); i++) progress += " "
 			const display = oneDisplay + progress + twoDisplay
@@ -1582,7 +1638,7 @@ namespace sumtool {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
 						}
-						const type = await choice(sharpConvert.extType, "拡張子一覧", "利用する拡張子と圧縮技術を選択してください。")
+						const type = await choice(sharpConvert.extType, "拡張子一覧", "利用する拡張子と圧縮技術を選択してください。") - 1
 						if (type === null) {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
@@ -1592,14 +1648,33 @@ namespace sumtool {
 							return
 						}
 						const folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
-						const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
+						const invFileIgnore = await booleanIO("最初に「.」が付くファイルを省略しますか？")
+						const listerOptions = {
+							macOSFileIgnote: false
+						}
+						if (!invFileIgnore) {
+							listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
+						}
+						const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFIleIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
 						console.log(
 							"変換元パス: " + beforePass.pass + "\n" +
 							"変換先パス: " + afterPass.pass + "\n" +
 							"変換先サイズ(縦): " + imageSize + "\n" +
 							"変換するファイル数: " + fileList.length + "\n" +
 							"命名方法: " + sharpConvert.type[nameing - 1] + "\n" +
-							"拡張子タイプ: " + sharpConvert.extType[type]
+							"拡張子タイプ: " + sharpConvert.extType[type] + "\n" +
+							"ファイル除外方法: " + (() => {
+								const ignoreStrings: string[] = []
+								if (invFileIgnore) ignoreStrings.push("末端に「.」が付いたファイルを除外")
+								if (listerOptions.macOSFileIgnote) ignoreStrings.push("末端に「._」が付いたファイルを除外")
+								let str = ""
+								for (let i = 0; i !== ignoreStrings.length; i++) {
+									if (i !== 0) str += "、"
+									str += ignoreStrings[i]
+								}
+								if (str === "") return "除外しない"
+								return str
+							})()
 						)
 						const permission = await booleanIO("上記のデータで実行してもよろしいですか？yと入力すると続行します。")
 						if (permission) {
@@ -1620,6 +1695,9 @@ namespace sumtool {
 								progressd.view()
 								progressd.viewed = false
 								console.log("\n変換が完了しました。")
+							})
+							convert.on("error", e => {
+								console.log("エラーを確認しました。: ", e)
 							})
 							await convert.convert()
 						}
@@ -1901,7 +1979,7 @@ namespace sumtool {
 												return
 											}
 											const folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
-											const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "alac", "flac", "3gp", "3g2"]})
+											const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "alac", "flac", "3gp", "3g2"] })
 											const presetChoice = await choice((() => {
 												let presetNames: string[] = []
 												presets.forEach(preset => {
