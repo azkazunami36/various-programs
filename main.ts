@@ -679,6 +679,7 @@ namespace sumtool {
 			pass: string
 		}[] = []
 		nameing = 1
+		type: 0 | 1 = 0
 		#maxconvert = 20
 		#interval: NodeJS.Timer
 		constructor() {
@@ -714,14 +715,17 @@ namespace sumtool {
 						this.processd[i].extension + " - " + this.processd[i].filename,
 						(i + 1) + "_" + this.processd[i].extension + " - " + this.processd[i].filename,
 						i + 1,
-					][this.nameing] + ".png")
+					][this.nameing] + "." + sharpConvert.extType[this.type])
 					this.emit("progress", this.#convertPoint, this.processd.length)
 					await new Promise(async resolve => {
 						const imageW = imageSize(this.processd[i].pass + fileName).width
-						sharp(this.processd[i].pass + fileName)
-							.resize((this.size < imageW) ? this.size : imageW)
-							.png()
-							.pipe(Stream)
+						const sha = sharp(this.processd[i].pass + fileName)
+						sha.resize((this.size < imageW) ? this.size : imageW)
+						switch (sharpConvert.extType[this.type]) {
+							case "png": sha.png(); break
+							case "jpg": sha.jpeg(); break
+						}
+						sha.pipe(Stream)
 						Stream.on("finish", resolve)
 					})
 					this.#converting--
@@ -740,6 +744,7 @@ namespace sumtool {
 			"[連番]_[元拡張子] - [ファイル名].png",
 			"[連番].png"
 		]
+		static extType = ["png", "jpg"]
 	}
 	export class ffmpegConverter extends EventEmitter {
 		#ffmpeg: ffmpeg.FfmpegCommand
@@ -1577,6 +1582,15 @@ namespace sumtool {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
 						}
+						const type = await choice(sharpConvert.extType, "拡張子一覧", "利用する拡張子と圧縮技術を選択してください。")
+						if (type === null) {
+							console.log("入力が間違っているようです。最初からやり直してください。")
+							return
+						}
+						if (type !== 0 && type !== 1) {
+							console.log("プログラム内で予期せぬエラーを回避するため、中断されました。")
+							return
+						}
 						const folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
 						const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
 						console.log(
@@ -1584,7 +1598,8 @@ namespace sumtool {
 							"変換先パス: " + afterPass.pass + "\n" +
 							"変換先サイズ(縦): " + imageSize + "\n" +
 							"変換するファイル数: " + fileList.length + "\n" +
-							"命名方法: " + sharpConvert.type[nameing - 1]
+							"命名方法: " + sharpConvert.type[nameing - 1] + "\n" +
+							"拡張子タイプ: " + sharpConvert.extType[type]
 						)
 						const permission = await booleanIO("上記のデータで実行してもよろしいですか？yと入力すると続行します。")
 						if (permission) {
@@ -1593,6 +1608,7 @@ namespace sumtool {
 							convert.nameing = nameing - 1
 							convert.size = imageSize
 							convert.processd = fileList
+							convert.type = type
 							const progressd = new progress()
 							progressd.viewStr = "変換中"
 							progressd.view()
@@ -1885,7 +1901,7 @@ namespace sumtool {
 												return
 											}
 											const folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
-											const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts"] })
+											const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "alac", "flac", "3gp", "3g2"]})
 											const presetChoice = await choice((() => {
 												let presetNames: string[] = []
 												presets.forEach(preset => {
