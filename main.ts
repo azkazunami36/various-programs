@@ -85,19 +85,25 @@ namespace sumtool {
 		 */
 		async count(seconds: number) {
 			const converttime = Date.now()
-			const up = Math.sign(seconds)
-			let num = 0
-			if (up === 1) while (num < seconds) {
-				this.setting(true)
-				num++
-				await wait(1)
+			if (this.#secRaw !== 0) {
+				const up = Math.sign(seconds)
+				let num = 0
+				if (up === 1) while (num < seconds) {
+					this.setting(true)
+					num++
+					await wait(1)
+				}
+				if (up === -1) while (seconds < num) {
+					this.setting(false)
+					num--
+					await wait(1)
+				}
+				this.#convertTime = Date.now() - converttime
+			} else {
+				this.#secRaw = seconds
+				this.#sec = this.#secRaw % 60
+				this.#minRaw = this.#secRaw / 60
 			}
-			if (up === -1) while (seconds < num) {
-				this.setting(false)
-				num--
-				await wait(1)
-			}
-			this.#convertTime = Date.now() - converttime
 			return { toJSON: this.toJSON, toString: this.toString }
 		}
 		setting(up: boolean) {
@@ -1979,7 +1985,19 @@ namespace sumtool {
 												return
 											}
 											const folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
-											const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "alac", "flac", "3gp", "3g2"] })
+											const invFileIgnore = await booleanIO("最初に「.」が付くファイルを省略しますか？")
+											const listerOptions = {
+												macOSFileIgnote: false
+											}
+											if (!invFileIgnore) {
+												listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
+											}
+											const fileList = await fileLister(beforePass.pass, { 
+												contain: folderContain, 
+												extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "alac", "flac", "3gp", "3g2", "webm", "aac", "hevc"],
+												invFIleIgnored: invFileIgnore,
+												macosInvIgnored: listerOptions.macOSFileIgnote
+											})
 											const presetChoice = await choice((() => {
 												let presetNames: string[] = []
 												presets.forEach(preset => {
