@@ -10,9 +10,8 @@ import crypto from "crypto"
 import EventEmitter from "events"
 import ytdl from "ytdl-core"
 /**
- * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
- * CUIでもGUIのような使い勝手の良さを実感してください。
- * 改良や機能追加が楽になるように設計いたします。
+ * 改善する前に、README.mdをお読みください。
+ * しかし、読まなくても僕がコードを確認するので、重要事項ではないことはご了承ください。
  */
 
 namespace sumtool {
