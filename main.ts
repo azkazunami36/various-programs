@@ -97,12 +97,18 @@ namespace sumtool {
 					num--
 					await wait(1)
 				}
-				this.#convertTime = Date.now() - converttime
 			} else {
 				this.#secRaw = seconds
 				this.#sec = this.#secRaw % 60
 				this.#minRaw = this.#secRaw / 60
+				this.#min = this.#minRaw % 60
+				this.#hourRaw = this.#minRaw / 60
+				this.#hour = this.#hourRaw % 60
+				this.#daysRaw = this.#hourRaw / 60
+				this.#days = this.#daysRaw % 60
+				this.#year = (this.#daysRaw / 60) % 60
 			}
+			this.#convertTime = Date.now() - converttime
 			return { toJSON: this.toJSON, toString: this.toString }
 		}
 		setting(up: boolean) {
@@ -807,6 +813,15 @@ namespace sumtool {
 		]
 		static extType = ["png", "jpg"]
 	}
+	export interface ffmpegConverterEvents {
+		end: [void]
+		progress: [any]
+		error: [Error]
+	}
+	export declare interface ffmpegConverter {
+		on<K extends keyof ffmpegConverterEvents>(s: K, listener: (...args: ffmpegConverterEvents[K]) => any): this
+		emit<K extends keyof ffmpegConverterEvents>(eventName: K, ...args: ffmpegConverterEvents[K]): boolean
+	}
 	export class ffmpegConverter extends EventEmitter {
 		#ffmpeg: ffmpeg.FfmpegCommand
 		constructor(pass: string) {
@@ -818,10 +833,17 @@ namespace sumtool {
 			await new Promise<void>(resolve => {
 				this.#ffmpeg.addOptions(this.preset)
 				this.#ffmpeg.save(savePass)
-				this.#ffmpeg.on("end", () => { resolve() })
-				this.#ffmpeg.on('progress', function (progress) {
-					console.log(progress);
-				});
+				this.#ffmpeg.on("end", () => {
+					resolve()
+					this.emit("end", null)
+				})
+				this.#ffmpeg.on("progress", progress => {
+					console.log(progress)
+					this.emit("progress", progress)
+				})
+				this.#ffmpeg.on("error", err => {
+					console.log(err)
+				})
 			})
 		}
 		addInput(pass: string) {
@@ -1991,8 +2013,8 @@ namespace sumtool {
 											if (!invFileIgnore) {
 												listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
 											}
-											const fileList = await fileLister(beforePass.pass, { 
-												contain: folderContain, 
+											const fileList = await fileLister(beforePass.pass, {
+												contain: folderContain,
 												extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "caf", "aif", "aiff", "n4r", "alac", "flac", "3gp", "3g2", "webm", "aac", "hevc"],
 												invFIleIgnored: invFileIgnore,
 												macosInvIgnored: listerOptions.macOSFileIgnote
