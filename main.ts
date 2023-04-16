@@ -1993,7 +1993,7 @@ namespace sumtool {
 											}
 											const fileList = await fileLister(beforePass.pass, { 
 												contain: folderContain, 
-												extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "caf", "aif", "aiff", "n4r", "alac", "flac", "3gp", "3g2", "webm", "aac", "hevc"],
+												extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "caf", "aif", "aiff", "m4r", "alac", "flac", "3gp", "3g2", "webm", "aac", "hevc"],
 												invFIleIgnored: invFileIgnore,
 												macosInvIgnored: listerOptions.macOSFileIgnote
 											})
