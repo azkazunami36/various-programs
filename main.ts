@@ -188,7 +188,7 @@ namespace sumtool {
 			if (hour !== 0) timeString = 2
 			if (outputRaw.days && days !== 0) timeString = 3
 			if (outputRaw.year && year !== 0) timeString = 4
-			if (option.timeString !== undefined) timeString = option.timeString
+			if (option && option.timeString !== undefined) timeString = option.timeString
 			return (3 < timeString ? numfiller(year, fill.fillnum) + counter.year : "") +
 				(2 < timeString ? numfiller(days, fill.fillnum) + counter.days : "") +
 				(1 < timeString ? numfiller(hour, fill.fillnum) + counter.hour : "") +
@@ -234,7 +234,22 @@ namespace sumtool {
 		for (let i = 0; i !== string.length; i++) string[i].match(/[ -~]/) ? length += 1 : length += 2
 		return length
 	}
-	export async function passCheck(string: string): Promise<{ pass: string } & fs.Stats> {
+	/**
+	 * 存在しない連想配列の初期化をし、undefinedを回避します。
+	 * @param keyName キー名を入力します。
+	 * @param datas キー名が入るとされる連想配列を入力します。
+	 * @param set 初期化時に使用するデータを入力します。
+	 * @returns 参照渡しがそのまま受け継がれたデータを出力します。
+	 */
+	const def = <T>(keyName: string, datas: Record<string, T | undefined>, set: T): T => {
+		let value = datas[keyName];
+		if (value === undefined) {
+			value = set;
+			datas[keyName] = value;
+		}
+		return value;
+	};
+	export async function passCheck(string: string): Promise<{ pass: string } & fs.Stats | null> {
 		const pass = await (async () => {
 			const passDeli = (string.match(/:\\/)) ? "\\" : "/"
 			const passArray = string.split(passDeli)
@@ -312,6 +327,7 @@ namespace sumtool {
 		}
 
 		const processd: passInfo[] = [] //出力データの保存場所
+		if (!await passCheck(pass)) return processd
 		const point: string[] = [] //パス場所を設定
 		/**
 		 * キャッシュデータの格納
@@ -412,10 +428,11 @@ namespace sumtool {
 		}
 	}
 	interface discordBotEvents {
-		classReady: [void],
-		djsClientReady: [Discord.Client],
-		messageCreate: [Discord.Message],
+		classReady: [void]
+		djsClientReady: [Discord.Client]
+		messageCreate: [Discord.Message]
 		interactionCreate: [Discord.Interaction]
+		error: [Error]
 	}
 	export declare interface discordBot {
 		on<K extends keyof discordBotEvents>(s: K, listener: (...args: discordBotEvents[K]) => any): this
@@ -437,7 +454,13 @@ namespace sumtool {
 		slashCommand?: Omit<Discord.SlashCommandBuilder, "addSubcommandGroup" | "addSubcommand" | "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption">[]
 	}
 	export class discordBot extends EventEmitter {
+		/**
+		 * バッググラウンドで動作するために一時的に参照する固定の変数です。ここにVCや状態を書き込みます。
+		 */
 		rtdata: discordRealTimeData
+		/**
+		 * 保存するために入力します。
+		 */
 		data: discordDataIOextJSON
 		/**
 		 * @param data bot名のみを入れます。すると、class内で自動的にデータを読み込みます。
@@ -456,9 +479,10 @@ namespace sumtool {
 		}
 		static async data() {
 			const data = await dataIO.initer("discordBot")
+			if (!data) return null
 			const json: discordData = data.json
 
-			return JSON.parse(JSON.stringify(json))
+			return <discordData>JSON.parse(JSON.stringify(json))
 		}
 		private async pconst() {
 			const { GatewayIntentBits, Partials } = Discord
@@ -493,23 +517,36 @@ namespace sumtool {
 					Partials.User
 				]
 			}
-			this.data = await dataIO.initer("discordBot")
+			const data = await dataIO.initer("discordBot")
+			if (!data) {
+				const e = new ReferenceError()
+				e.message = "dataIOの準備ができませんでした。"
+				e.name = "Discord Bot"
+				this.emit("error", e)
+				return
+			}
+			this.data = data
 			if (!this.data.json[this.rtdata.name]) this.data.json[this.rtdata.name] = {}
 			if (!this.rtdata.client) {
-				this.rtdata.client = new Discord.Client(this.data.json[this.rtdata.name].clientOptions ? this.data.json[this.rtdata.name].clientOptions : newClientOption)
+				const json = this.data.json[this.rtdata.name]
+				this.rtdata.client = new Discord.Client(json.clientOptions !== undefined ? json.clientOptions : newClientOption)
 				const client = this.rtdata.client
 				client.on(Discord.Events.MessageCreate, async message => {
-					const programStrings = Object.keys(this.rtdata.program)
-					for (let i = 0; i !== programStrings.length; i++) {
-						const program = this.rtdata.program[programStrings[i]]
-						if (program.message) await program.message(message)
+					if (this.rtdata.program) {
+						const programStrings = Object.keys(this.rtdata.program)
+						for (let i = 0; i !== programStrings.length; i++) {
+							const program = this.rtdata.program[programStrings[i]]
+							if (program.message) await program.message(message)
+						}
 					}
 				})
 				client.on(Discord.Events.InteractionCreate, async interaction => {
-					const programStrings = Object.keys(this.rtdata.program)
-					for (let i = 0; i !== programStrings.length; i++) {
-						const program = this.rtdata.program[programStrings[i]]
-						if (program.interaction) await program.interaction(interaction)
+					if (this.rtdata.program) {
+						const programStrings = Object.keys(this.rtdata.program)
+						for (let i = 0; i !== programStrings.length; i++) {
+							const program = this.rtdata.program[programStrings[i]]
+							if (program.interaction) await program.interaction(interaction)
+						}
 					}
 				})
 			}
@@ -532,6 +569,17 @@ namespace sumtool {
 		} = {
 				"簡易認証": {
 					interaction: async interaction => {
+						interface ttts {
+							buttoncreate: {
+								roleId: string
+								question: boolean
+							}
+							calc: {
+								roleId: string
+								buttonNum: number
+								calcType: number
+							}
+						};
 						type ttt = {
 							type: "buttoncreate",
 							data: {
@@ -547,15 +595,19 @@ namespace sumtool {
 							}
 						};
 						if (interaction.isChatInputCommand()) {
-							if (interaction.channel.isTextBased() && !interaction.channel.isVoiceBased() && !interaction.channel.isThread() && !interaction.channel.isDMBased()) {
+							if (interaction.channel && interaction.channel.isTextBased() && !interaction.channel.isVoiceBased() && !interaction.channel.isThread() && !interaction.channel.isDMBased() && interaction.guild) {
 								const name = interaction.commandName
 								if (name === "buttoncreate") {
 									const member = (await interaction.guild.members.fetch()).get(interaction.user.id)
-									if (member.permissions.has(Discord.PermissionsBitField.Flags.Administrator)) {
+									if (member && member.permissions.has(Discord.PermissionsBitField.Flags.Administrator)) {
 										const role = interaction.options.getRole("roles")
 										const question = interaction.options.getBoolean("question")
 										const title = interaction.options.getString("title")
 										const description = interaction.options.getString("description")
+										if (role === null || question === null) {
+											interaction.channel.send("必要なデータが不足または破損してしまっているようです。最初からやり直してください。")
+											return
+										}
 										const data: ttt = {
 											type: "buttoncreate",
 											data: {
@@ -570,12 +622,13 @@ namespace sumtool {
 													.setStyle(Discord.ButtonStyle.Primary)
 													.setCustomId(JSON.stringify(data))
 											)
+										const iconURL = interaction.guild.iconURL()
 										const embed = new Discord.EmbedBuilder()
 											.setTitle(title || "認証をして僕たちとこのサーバーを楽しもう！")
 											.setDescription(description || "✅認証は下のボタンを押下する必要があります。")
 											.setAuthor({
 												name: interaction.guild.name,
-												iconURL: interaction.guild.iconURL()
+												iconURL: iconURL ? iconURL : undefined
 											})
 										try {
 											await interaction.channel.send({ embeds: [embed], components: [components] })
@@ -594,11 +647,11 @@ namespace sumtool {
 						}
 						if (interaction.isButton()) {
 							const customId = interaction.customId
-							const data = ((): ttt => {
+							const data = ((): ttt | null => {
 								try { return JSON.parse(customId) }
 								catch (e) { return null } //JSONではない文字列の場合nullを返す
 							})()
-							let roleGive: { give: boolean, roleId: string } = {
+							let roleGive: { give: boolean, roleId: string | null } = {
 								give: false,
 								roleId: null
 							}
@@ -657,8 +710,19 @@ namespace sumtool {
 										ephemeral: true
 									})
 								}
-							if (roleGive.give && roleGive.roleId !== null) {
-								try { await interaction.guild.members.cache.get(interaction.user.id).roles.add(await interaction.guild.roles.fetch(roleGive.roleId)) }
+							if (roleGive.give && roleGive.roleId !== null && interaction.channel) {
+								try {
+									if (interaction.guild) {
+										const member = interaction.guild.members.cache.get(interaction.user.id)
+										const role = await interaction.guild.roles.fetch(roleGive.roleId)
+										if (member && role) member.roles.add(role)
+									} else {
+										interaction.reply({
+											content: "",
+											ephemeral: true
+										})
+									}
+								}
 								catch (e) {
 									if (e.code) {
 										interaction.reply({
@@ -678,23 +742,39 @@ namespace sumtool {
 					slashCommand: [
 						new Discord.SlashCommandBuilder()
 							.setName("buttoncreate")
-							.setDescription("認証ボタンを生成します。")
+							.setDescription("認証ボタンを作成します。")
 							.addRoleOption(option => option
 								.setName("roles")
-								.setDescription("認証後に付与するロールを選択します。")
+								.setDescription("付与する際に使用するロールを選択します。")
 								.setRequired(true)
 							)
 							.addBooleanOption(option => option
 								.setName("question")
-								.setDescription("認証をクリックした際に、計算問題を出すかどうかを選択します(通常は有効)")
+								.setDescription("認証をクリックした際に、計算問題を出すかどうかを決めます(通常は有効)")
 							)
 							.addStringOption(option => option
 								.setName("title")
-								.setDescription("認証ボタンのタイトルを入力します。")
+								.setDescription("埋め込みのタイトルを決めます。")
 							)
 							.addStringOption(option => option
 								.setName("description")
-								.setDescription("認証ボタンの説明を入力します。")
+								.setDescription("埋め込みの説明を決めます。")
+							),
+						new Discord.SlashCommandBuilder()
+							.setName("multirolebtn")
+							.setDescription("複数役職を付与したい場合に使用します。")
+							.addStringOption(option => option
+								.setName("roleids")
+								.setDescription("ロールIDをスペースで区切り、それを使用し複数ロールの付与をします。")
+								.setRequired(true)
+							)
+							.addStringOption(option => option
+								.setName("title")
+								.setDescription("埋め込みのタイトルを決めます。")
+							)
+							.addStringOption(option => option
+								.setName("description")
+								.setDescription("埋め込みの説明を決めます。")
 							)
 					]
 				}
@@ -708,12 +788,14 @@ namespace sumtool {
 			const progs = this.data.json[this.rtdata.name].programs
 			if (progs)
 				for (let i = 0; i !== progs.length; i++) {
-					if (!this.rtdata.program[progs[i]]) {
+					if (this.rtdata.program && !this.rtdata.program[progs[i]]) {
 						this.rtdata.program[progs[i]] = this.programs[progs[i]]
 					}
 				}
 		}
 		async login() {
+			if (!this.rtdata.status) return
+			if (!this.rtdata.client) return
 			const token = this.data.json[this.rtdata.name].token
 			if (!token) return
 			this.rtdata.status.logined = true
@@ -754,7 +836,7 @@ namespace sumtool {
 					if (this.#converting === this.#maxconvert) return
 					if (this.#convertPoint === this.processd.length) {
 						if (this.#converting === 0) {
-							this.emit("end", null)
+							this.emit("end", undefined)
 							resolve()
 						}
 						clearInterval(this.#interval)
@@ -782,14 +864,22 @@ namespace sumtool {
 					await new Promise<void>(async resolve => {
 						try {
 							const image = imageSize(this.processd[i].pass + fileName)
-							const sha = sharp(this.processd[i].pass + fileName)
-							sha.resize((this.size < image.width) ? this.size : image.width)
-							switch (sharpConvert.extType[this.type]) {
-								case "png": sha.png(); break
-								case "jpg": sha.jpeg(); break
+							if (image.width) {
+								const sha = sharp(this.processd[i].pass + fileName)
+								sha.resize((this.size < image.width) ? this.size : image.width)
+								switch (sharpConvert.extType[this.type]) {
+									case "png": sha.png(); break
+									case "jpg": sha.jpeg(); break
+								}
+								sha.pipe(Stream)
+								Stream.on("finish", resolve)
+							} else {
+								const e = new ReferenceError()
+								e.message = "width is undefined."
+								e.name = "imageSize"
+								this.emit("error", e)
+								resolve()
 							}
-							sha.pipe(Stream)
-							Stream.on("finish", resolve)
 						} catch (e) {
 							this.emit("error", e)
 							resolve()
@@ -835,7 +925,7 @@ namespace sumtool {
 				this.#ffmpeg.save(savePass)
 				this.#ffmpeg.on("end", () => {
 					resolve()
-					this.emit("end", null)
+					this.emit("end", undefined)
 				})
 				this.#ffmpeg.on("progress", progress => {
 					console.log(progress)
@@ -849,7 +939,7 @@ namespace sumtool {
 		addInput(pass: string) {
 			this.#ffmpeg.addInput(pass)
 		}
-		static async inputPreset(option?: { tagonly?: boolean }): Promise<{ name: string, ext: string, tag: string[] }> {
+		static async inputPreset(option?: { tagonly?: boolean }): Promise<{ name: string | null, ext: string, tag: string[] }> {
 			console.log("-からタグの入力を始めます。複数を１度に入力してはなりません。検知し警告します。\n空白で続行すると完了したことになります。")
 			const presets: string[] = []
 			while (true) {
@@ -1320,9 +1410,9 @@ namespace sumtool {
 			this.ccode = data.ccode ? data.ccode : "utf8"
 			this.#client = new net.Socket()
 			const client = this.#client
-			client.on("ready", () => this.emit("ready", null))
+			client.on("ready", () => this.emit("ready", undefined))
 			client.on("error", e => this.emit("error", e))
-			client.on("end", () => this.emit("end", null))
+			client.on("end", () => this.emit("end", undefined))
 		}
 		set speed(d) {
 			d = (d > 200) ? 200 : d
@@ -1460,7 +1550,7 @@ namespace sumtool {
 			directory: boolean
 		}
 		data: dataiofiles,
-		pass: string,
+		pass: string | null,
 		smalldata?: {}
 	}
 	interface dataIOEvents { ready: [void] }
@@ -1499,10 +1589,10 @@ namespace sumtool {
 				this.json = rawJSON.json
 				this.#passIndex = rawJSON.passIndex
 				this.#operation = true
-				this.emit("ready", null)
+				this.emit("ready", undefined)
 			})
 		}
-		static async initer(programName: string): Promise<dataIO> {
+		static async initer(programName: string): Promise<dataIO | null> {
 			if (programName === "dataIO") {
 				console.log("クラス名と同じ名前を使用しないでください。\nこの名前は内部で予約されています。")
 				return null
@@ -1516,9 +1606,9 @@ namespace sumtool {
 			return io
 		}
 		get operation() { return this.#operation }
-		async passGet(pass: string[], name: string, option?: { extension?: string }): Promise<string> {
+		async passGet(pass: string[], name: string, option?: { extension?: string }): Promise<string | null> {
 			if (!this.#operation) return null
-			let extension: string
+			let extension: string | null = null
 			if (option) {
 				if (option.extension) extension = option.extension
 			}
@@ -1548,7 +1638,10 @@ namespace sumtool {
 			await writeFile(this.#jsonPass, JSON.stringify({ json: this.json, passIndex: this.#passIndex }))
 		}
 	}
-	interface youtubeDownloaderEvents { ready: [void] }
+	interface youtubeDownloaderEvents {
+		ready: [void]
+		error: [Error]
+	}
 	interface ytdldataIOextJSON extends dataIO {
 		json: {
 			progress?: {
@@ -1579,56 +1672,71 @@ namespace sumtool {
 		emit<K extends keyof youtubeDownloaderEvents>(eventName: K, ...args: youtubeDownloaderEvents[K]): boolean
 	}
 	export class youtubeDownloader extends EventEmitter {
-		data: ytdldataIOextJSON
+		data: ytdldataIOextJSON | undefined
 		constructor() {
 			super()
-			this.pconst().then(() => this.emit("ready", null))
+			this.pconst().then(() => this.emit("ready", undefined))
 		}
 		private async pconst() {
-			this.data = await dataIO.initer("youtube-downloader")
+			const data = await dataIO.initer("youtube-downloader")
+			if (!data) {
+				const e = new ReferenceError()
+				e.message = "dataIOの準備ができませんでした。"
+				e.name = "YouTube Downloader"
+				this.emit("error", e)
+			}
 		}
 		async videoDataGet(videoId: string, type: "videoonly" | "audioonly") {
-			await new Promise<void>(async resolve => {
-				const youtubedl = ytdl(videoId, { filter: type, quality: "highest" })
-				const pass = await this.data.passGet(["youtubeSource", "temp", videoId], type)
-				const Stream = fs.createWriteStream(pass)
-				youtubedl.pipe(Stream)
-				youtubedl.on("progress", (chunkLength, downloaded, total) => {
-					const progress = this.data.json.progress[videoId]
-					progress.chunkLength = chunkLength
-					progress.downloaded = downloaded
-					progress.total = total
-					progress.status = "download"
-					progress.startTime = progress.startTime ? progress.startTime : Date.now()
-				})
-				youtubedl.on("end", async () => {
-					this.data.json.progress[videoId].status = "downloaded"
-					async function ffprobe(pass: string): Promise<ffmpeg.FfprobeData> {
-						return await new Promise(resolve => {
-							ffmpeg(pass).ffprobe((err, data) => { resolve(data) })
-						})
-					}
-					const data = await ffprobe(pass)
-					const video = data.streams[0]
-					const fps = (() => {
-						if (video.r_frame_rate.match("/")) { //もしfps値が「0」または「0/0」だった場合に自動で計算する関数
-							const data = video.r_frame_rate.split("/")
-							return Number(data[0]) / Number(data[1])
-						} else return Number(video.r_frame_rate)
-					})()
-					Object.assign(this.data.json.videoMeta, {
-						[videoId]: {
-							[video.codec_name]: {
-								[video.height]: {
-									[fps]: {}
-								}
+			if (!this.data) return
+			const youtubedl = ytdl(videoId, { filter: type, quality: "highest" })
+			const pass = await this.data.passGet(["youtubeSource", "temp", videoId], type)
+			if (!pass) return
+			const Stream = fs.createWriteStream(pass)
+			youtubedl.pipe(Stream)
+			youtubedl.on("progress", (chunkLength, downloaded, total) => {
+				if (!this.data) return
+				if (!this.data.json.progress) this.data.json.progress = {}
+				const progress = this.data.json.progress[videoId]
+				progress.chunkLength = chunkLength
+				progress.downloaded = downloaded
+				progress.total = total
+				progress.status = "download"
+				progress.startTime = progress.startTime ? progress.startTime : Date.now()
+			})
+			youtubedl.on("end", async () => {
+				if (!this.data) return
+				if (!this.data.json.progress) this.data.json.progress = {}
+				this.data.json.progress[videoId].status = "downloaded"
+				async function ffprobe(pass: string): Promise<ffmpeg.FfprobeData> {
+					return await new Promise(resolve => {
+						ffmpeg(pass).ffprobe((err, data) => { resolve(data) })
+					})
+				}
+				const data = await ffprobe(pass)
+				const video = data.streams[0]
+				const fps = (() => {
+					if (!video.r_frame_rate) return null
+					if (video.r_frame_rate.match("/")) { //もしfps値が「0」または「0/0」だった場合に自動で計算する関数
+						const data = video.r_frame_rate.split("/")
+						return Number(data[0]) / Number(data[1])
+					} else return Number(video.r_frame_rate)
+				})()
+				if (!this.data.json.videoMeta) this.data.json.videoMeta = {}
+				if (!video.codec_name) return
+				if (!video.height) return
+				if (!fps) return
+				Object.assign(this.data.json.videoMeta, {
+					[videoId]: {
+						[video.codec_name]: {
+							[video.height]: {
+								[fps]: {}
 							}
 						}
-					})
-					//これしか重複せず高速で、プログラムが入手したコーデック一覧を作る方法がわからない
-					this.data.json.codecType[video.codec_name] = true
-					resolve()
+					}
 				})
+				//これしか重複せず高速で、プログラムが入手したコーデック一覧を作る方法がわからない
+				if (!this.data.json.codecType) this.data.json.codecType = {}
+				this.data.json.codecType[video.codec_name] = true
 			})
 		}
 	}
@@ -1665,12 +1773,12 @@ namespace sumtool {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
 						}
-						const type = await choice(sharpConvert.extType, "拡張子一覧", "利用する拡張子と圧縮技術を選択してください。") - 1
+						const type = await choice(sharpConvert.extType, "拡張子一覧", "利用する拡張子と圧縮技術を選択してください。")
 						if (type === null) {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
 						}
-						if (type !== 0 && type !== 1) {
+						if (type !== 1 && type !== 2) {
 							console.log("プログラム内で予期せぬエラーを回避するため、中断されました。")
 							return
 						}
@@ -1683,13 +1791,17 @@ namespace sumtool {
 							listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
 						}
 						const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFIleIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
+						if (!fileList) {
+							console.log("ファイルの取得ができなかったようです。")
+							return
+						}
 						console.log(
 							"変換元パス: " + beforePass.pass + "\n" +
 							"変換先パス: " + afterPass.pass + "\n" +
 							"変換先サイズ(縦): " + imageSize + "\n" +
 							"変換するファイル数: " + fileList.length + "\n" +
 							"命名方法: " + sharpConvert.type[nameing - 1] + "\n" +
-							"拡張子タイプ: " + sharpConvert.extType[type] + "\n" +
+							"拡張子タイプ: " + sharpConvert.extType[type - 1] + "\n" +
 							"ファイル除外方法: " + (() => {
 								const ignoreStrings: string[] = []
 								if (invFileIgnore) ignoreStrings.push("末端に「.」が付いたファイルを除外")
@@ -1710,7 +1822,7 @@ namespace sumtool {
 							convert.nameing = nameing - 1
 							convert.size = imageSize
 							convert.processd = fileList
-							convert.type = type
+							convert.type = (type === 1) ? 0 : 1
 							const progressd = new progress()
 							progressd.viewStr = "変換中"
 							progressd.view()
@@ -1737,7 +1849,12 @@ namespace sumtool {
 				{
 					name: "Discord Bot",
 					function: async () => {
-						const botNames = Object.keys(await discordBot.data())
+						const data = await discordBot.data()
+						if (!data) {
+							console.log("データの準備ができませんでした。")
+							return
+						}
+						const botNames = Object.keys(data)
 						for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
 							const programs: { [programName: string]: () => Promise<void> } = {
 								"botを利用する": async () => {
@@ -1750,6 +1867,7 @@ namespace sumtool {
 										console.log("入力が間違っているようです。最初からやり直してください。")
 										return
 									}
+									if (!shareData.discordBot) shareData.discordBot = {}
 									if (!shareData.discordBot[botNames[botChoice - 1]]) shareData.discordBot[botNames[botChoice - 1]] = {
 										name: botNames[botChoice - 1]
 									}
@@ -1798,6 +1916,7 @@ namespace sumtool {
 										console.log("入力が間違っているようです。最初からやり直してください。")
 										return
 									}
+									if (!shareData.discordBot) shareData.discordBot = {}
 									if (!shareData.discordBot[name]) shareData.discordBot[name] = {
 										name: name
 									}
@@ -1938,6 +2057,10 @@ namespace sumtool {
 												})
 												return presetNames
 											})(), "プリセット一覧", "使用するプリセットを選択してください。")
+											if (!presetChoice) {
+												console.log("入力が間違っているようです。最初からやり直してください。")
+												return
+											}
 											console.log(
 												"変換元: " + beforePass.pass + "\n" +
 												"変換先: " + afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext + "\n" +
@@ -2026,6 +2149,10 @@ namespace sumtool {
 												})
 												return presetNames
 											})(), "プリセット一覧", "使用するプリセットを選択してください。")
+											if (!presetChoice) {
+												console.log("入力が間違っているようです。最初からやり直してください。")
+												return
+											}
 											console.log(
 												"変換元: " + beforePass.pass + "\n" +
 												"変換先: " + afterPass.pass + "\n" +
@@ -2087,7 +2214,17 @@ namespace sumtool {
 								for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
 									const programs: { [programName: string]: () => Promise<void> } = {
 										"プリセット作成": async () => {
-											presets.push(await ffmpegConverter.inputPreset())
+											const preset = await ffmpegConverter.inputPreset()
+											const name = preset.name
+											if (name === null) {
+												console.log("名前を読み込めませんでした。")
+												return
+											}
+											presets.push({
+												name: name,
+												ext: preset.ext,
+												tag: preset.tag
+											})
 											await data.save()
 										},
 										"プリセット編集": async () => {
@@ -2113,6 +2250,10 @@ namespace sumtool {
 														presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
 														return tags
 													})(), "タグ一覧", "編集するタグを選択してください。", true)
+													if (!tagChoice) {
+														console.log("入力が間違ってるようです。もう一度やり直してください。")
+														return
+													}
 													const tagName = await question("新しいタグ名を入力してください。エラー検知はしません。")
 													if (tagChoice > (presets[presetChoice - 1].tag.length - 1)) {
 														presets[presetChoice - 1].tag.push(tagName)
@@ -2128,6 +2269,10 @@ namespace sumtool {
 														presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
 														return tags
 													})(), "タグ一覧", "削除するタグを選択してください。")
+													if (!tagChoice) {
+														console.log("入力が間違ってるようです。もう一度やり直してください。")
+														return
+													}
 													presets[presetChoice - 1].tag.splice(tagChoice - 1)
 												},
 												"プリセット名を変更": async () => {
@@ -2233,7 +2378,15 @@ namespace sumtool {
 					function: async () => {
 						console.log("このプログラムは想定外の入力に弱い傾向にあります。ご了承ください。")
 						const beforePass = await passCheck(await question("移動元のフォルダを指定してください。"))
+						if (!beforePass) {
+							console.log("入力が間違ってるようです。もう一度やり直してください。")
+							return
+						}
 						const afterPass = await passCheck(await question("移動先のフォルダを指定してください。"))
+						if (!afterPass) {
+							console.log("入力が間違ってるようです。もう一度やり直してください。")
+							return
+						}
 						const list = await fileLister(beforePass.pass, { contain: true })
 						console.log("移動元のフォルダには" + list.length + "個のファイルたちがあります。")
 						if (await booleanIO("移動を開始しますか？")) {

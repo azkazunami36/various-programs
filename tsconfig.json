@@ -6,6 +6,7 @@
         "baseUrl": "./",
         "skipLibCheck": true,
         "target": "ESNext",
-        "noImplicitAny": true
+        "noImplicitAny": true,
+        "strictNullChecks": true
     },
 }
