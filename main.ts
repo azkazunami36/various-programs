@@ -281,6 +281,20 @@ namespace sumtool {
 		return length
 	}
 	/**
+	 * 配列をぐっちゃぐちゃにしたげます。にこっ
+	 * @param array 配列を入力します。
+	 * @returns 配列が出力されます。
+	 */
+	export function arrayRandom<T>(array: T[]): T[] {
+		for (let i = 0; array.length !== i; i++) {
+			const rm = Math.floor(Math.random() * i)
+			let tmp = array[i]
+			array[i] = array[rm]
+			array[rm] = tmp
+		}
+		return array
+	}
+	/**
 	 * 存在しない連想配列の初期化をし、undefinedを回避します。
 	 * キー名が違う際に内型定義が変わる場合は利用しないでください。union型となってしまい、コードの記述がうまくいかなくなります。
 	 * @param keyName キー名を入力します。
@@ -329,7 +343,7 @@ namespace sumtool {
 	}
 	export function slashPathStr(passArray: string[]) {
 		let passtmp = ""
-		for (let i = 0; i !== passArray.length; i++) passtmp += ((i + 1) !== passArray.length) ? "/" : ""
+		for (let i = 0; i !== passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
 		return passtmp
 	}
 	/**
@@ -1642,12 +1656,13 @@ namespace sumtool {
 				else throw new Error("パスが間違っています。")
 				if (programName === "dataIO") throw new Error("dataIOを利用することは出来ません")
 				this.#name = programName
-				if (!await sfs.exsits(slashPathStr(this.#pass) + "/dataIO.json")) await sfs.writeFile(this.#pass + "/dataIO.json", "[]")
-				const dataIOIndex: { [programName: string]: any } = JSON.parse(String(await sfs.readFile(this.#pass + "/dataIO.json")))
+				const path = slashPathStr(this.#pass)
+				if (!await sfs.exsits(path + "/dataIO.json")) await sfs.writeFile(path + "/dataIO.json", "[]")
+				const dataIOIndex: { [programName: string]: any } = JSON.parse(String(await sfs.readFile(path + "/dataIO.json")))
 				if (!dataIOIndex[programName]) dataIOIndex[programName] = true
-				await sfs.writeFile(slashPathStr(this.#pass) + "/dataIO.json", JSON.stringify(dataIOIndex))
-				this.#jsonPass = slashPathStr(this.#pass) + "/" + this.#name + ".json"
-				this.#folderPass = slashPathStr(this.#pass) + "/" + this.#name
+				await sfs.writeFile(path + "/dataIO.json", JSON.stringify(dataIOIndex))
+				this.#jsonPass = path + "/" + this.#name + ".json"
+				this.#folderPass = path + "/" + this.#name
 				const initValue = JSON.stringify({ json: {}, passIndex: {} })
 				if (!await sfs.exsits(this.#jsonPass)) await sfs.writeFile(this.#jsonPass, initValue)
 				if (!await sfs.exsits(this.#folderPass)) await sfs.mkdir(this.#folderPass)
@@ -1808,6 +1823,46 @@ namespace sumtool {
 				this.data.json.codecType[video.codec_name] = true
 			})
 		}
+	}
+	/**
+	 * 動画や音声をスムーズにクライアントに送信する関数です
+	 * @param videopath パスを入力します
+	 * @param range リクエストのレンジを入力します
+	 * @param type Content-Typeに使用します
+	 * @param res response変数を入力します
+	 */
+	async function VASourceGet(videopath: string, range: string, type: string, res: any) {
+		const videoSize = fs.statSync(videopath).size //ファイルサイズ(byte)
+		const chunkSize = 1 * 1e7 //チャンクサイズ
+
+		const ranges = String(range).split("-")
+		if (ranges[0]) ranges[0] = ranges[0].replace(/\D/g, "")
+		if (ranges[1]) ranges[1] = ranges[1].replace(/\D/g, "")
+		//これは取得するデータ範囲を決定します。
+		const options = { start: 0, end: 0 }
+		options.start = Number(ranges[0]) //始まりの指定
+		options.end = Number(ranges[1]) || Math.min(options.start + chunkSize, videoSize - 1) //終わりの指定
+		if (!range) options.end = videoSize - 1
+
+		const headers: {
+			[name: string]: string
+		} = {} //ヘッダー
+		headers["Accept-Ranges"] = "bytes"
+		headers["Content-Length"] = String(videoSize)
+		if (range) headers["Content-Length"] = String(options.end - options.start + 1)
+		if (range) headers["Content-Range"] = "bytes " + options.start + "-" + options.end + "/" + videoSize
+		headers["Content-Range"] = "bytes " + options.start + "-" + options.end + "/" + videoSize
+		headers["Content-Type"] = type
+		console.log(options, ranges, range)
+		res.writeHead((range) ? 206 : 200, headers) //206を使用すると接続を続行することが出来る
+		const Stream = fs.createReadStream(videopath, options) //ストリームにし、範囲のデータを読み込む
+		Stream.on("error", error => {
+			console.log("Error reading file" + videopath + ".")
+			console.log(error)
+			res.sendStatus(500)
+		});
+		Stream.on("data", c => res.write(c))
+		Stream.on("end", () => res.end())
 	}
 	export async function cuiIO(shareData: {
 		discordBot?: {
