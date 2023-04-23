@@ -210,7 +210,20 @@ namespace sumtool {
 			}
 		}
 	}
-	export function numfiller(number: number, fillnum: number, option?: { overflow?: boolean }): string {
+	/**
+	 * 数字データの末尾に0を足し、文字数を整えるために使えます。
+	 * @param number 元値データを入力
+	 * @param fillnum 0を埋める文字数を入力
+	 * @param option オプションを入力
+	 * @returns 
+	 */
+	export function numfiller(number: number, fillnum: number, option?: {
+		/**
+		 * 文字数を超えた元データを受け取った場合に、文字数を変化させるかを決定させます。
+		 * 通常はtrueです。
+		 */
+		overflow?: boolean
+	}): string {
 		let overflow = true
 		if (option !== undefined) {
 			if (option.overflow !== undefined) overflow = option.overflow
@@ -224,18 +237,66 @@ namespace sumtool {
 		}
 		return (fillString + number.toFixed()).slice(fillNum)
 	}
+	namespace sfs {
+		/**
+		 * fsの関数を非同期関数にしたものです。
+		 * @param pass パスを入力します。
+		 * @returns 
+		 */
+		export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
+		/**
+		 * fsの関数を非同期関数にしたものです。
+		 * @param pass パスを入力します。
+		 * @returns 
+		 */
+		export async function mkdir(pass: string): Promise<boolean> { return await new Promise<boolean>(resolve => fs.mkdir(pass, err => resolve(err === null))) }
+		/**
+		 * fsの関数を非同期関数にしたものです。
+		 * @param pass パスを入力します。
+		 * @returns 
+		 */
+		export async function readFile(pass: string): Promise<Buffer> { return await new Promise<Buffer>(resolve => fs.readFile(pass, (err, data) => resolve(data))) }
+		/**
+		 * fsの関数を非同期関数にしたものです。
+		 * @param pass パスを入力します。
+		 * @param data 書き込む文字列を入力します。
+		 * @returns 
+		 */
+		export async function writeFile(pass: string, data: string): Promise<void> { return await new Promise<void>(resolve => fs.writeFile(pass, data, () => resolve())) }
+		/**
+		 * 半角と全角を区別し、それにあった文字列を算出します。
+		 * 半角を1、全角を2文字とします。
+		 * @param string 文字列を入力します。
+		 * @returns 
+		 */
+	}
+	/**
+	 * 待機します。ライブラリでは使用しすぎないでください。IOや高負荷の回避におすすめです。
+	 * @param time 時間を入力
+	 */
 	export async function wait(time: number) { await new Promise<void>(resolve => setTimeout(() => resolve(), time)) }
-	export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
-	export async function mkdir(pass: string): Promise<boolean> { return await new Promise<boolean>(resolve => fs.mkdir(pass, err => resolve(err === null))) }
-	export async function readFile(pass: string): Promise<Buffer> { return await new Promise<Buffer>(resolve => fs.readFile(pass, (err, data) => resolve(data))) }
-	export async function writeFile(pass: string, data: string): Promise<void> { return await new Promise<void>(resolve => fs.writeFile(pass, data, () => resolve())) }
 	export function textLength(string: string) {
 		let length = 0
 		for (let i = 0; i !== string.length; i++) string[i].match(/[ -~]/) ? length += 1 : length += 2
 		return length
 	}
 	/**
+	 * 配列をぐっちゃぐちゃにしたげます。にこっ
+	 * @param array 配列を入力します。
+	 * @returns 配列が出力されます。
+	 */
+	export function arrayRandom<T>(array: T[]): T[] {
+		for (let i = 0; array.length !== i; i++) {
+			const rm = Math.floor(Math.random() * i)
+			let tmp = array[i]
+			array[i] = array[rm]
+			array[rm] = tmp
+		}
+		return array
+	}
+	/**
 	 * 存在しない連想配列の初期化をし、undefinedを回避します。
+	 * キー名が違う際に内型定義が変わる場合は利用しないでください。union型となってしまい、コードの記述がうまくいかなくなります。
 	 * @param keyName キー名を入力します。
 	 * @param datas キー名が入るとされる連想配列を入力します。
 	 * @param set 初期化時に使用するデータを入力します。
@@ -249,30 +310,50 @@ namespace sumtool {
 		}
 		return value;
 	};
-	export async function passCheck(string: string): Promise<{ pass: string } & fs.Stats | null> {
+	/**
+	 * 有効なパスかをチェックします。そして、一部の特殊なパスの場合に変換をします
+	 * @param string 文字列を入力します。
+	 * @returns 
+	 */
+	export async function pathChecker(string: string) {
 		const pass = await (async () => {
 			const passDeli = (string.match(/:\\/)) ? "\\" : "/"
 			const passArray = string.split(passDeli)
 			let passtmp = ""
-			for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
-			if (await exsits(passtmp)) return passtmp
+			for (let i = 0; i !== passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
+			if (await sfs.exsits(passtmp)) return passtmp
 			if (passtmp[0] === "\"" && passtmp[passtmp.length - 1] === "\"") passtmp = passtmp.substring(1, passtmp.length - 1)
-			if (await exsits(passtmp)) return passtmp
+			if (await sfs.exsits(passtmp)) return passtmp
+			if (passtmp[0] === "\'" && passtmp[passtmp.length - 1] === "\'") passtmp = passtmp.substring(1, passtmp.length - 1)
+			if (await sfs.exsits(passtmp)) return passtmp
 			while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
-			if (await exsits(passtmp)) return passtmp
+			if (await sfs.exsits(passtmp)) return passtmp
 			const expType = " ()#~"
 			for (let i = 0; i !== expType.length; i++) {
 				const type = expType[i]
 				const exp = new RegExp("\\\\\\" + type, "g")
 				passtmp = passtmp.replace(exp, type)
-				if (await exsits(passtmp)) return passtmp
+				if (await sfs.exsits(passtmp)) return passtmp
 			}
 			return null
 		})()
 		if (!pass) return null
-		const stats: fs.Stats = await new Promise(resolve => fs.stat(pass, (err, stats) => resolve(stats)))
-		return { pass: pass, ...stats }
+		const passArray = pass.split("/")
+		return passArray
 	}
+	export function slashPathStr(passArray: string[]) {
+		let passtmp = ""
+		for (let i = 0; i !== passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
+		return passtmp
+	}
+	/**
+	 * 文字列配列からユーザー入力を利用し番号を選択させます。
+	 * @param array 文字列配列を入力します。
+	 * @param title 文字列配列の意図を入力します。
+	 * @param questionText 質問文を入力します。
+	 * @param manyNumNotDetected 配列以外の数字を選択された際にnullを返さないかどうかを決定します。
+	 * @returns 
+	 */
 	export async function choice(array: string[], title?: string, questionText?: string, manyNumNotDetected?: boolean): Promise<number | null> {
 		console.log((title ? title : "一覧") + ": ")
 		for (let i = 0; i !== array.length; i++) console.log("[" + (i + 1) + "] " + array[i])
@@ -281,14 +362,25 @@ namespace sumtool {
 		if (!manyNumNotDetected && request > array.length || request < 1) return null
 		return request
 	}
+	/**
+	 * ユーザーの文字列からture、falseを決定します。
+	 * @param text ユーザーへの質問文を入力します。
+	 * @returns 
+	 */
 	export async function booleanIO(text: string): Promise<boolean> {
 		switch (await question(text)) {
 			case "y": return true
 			case "yes": return true
 			case "true": return true
+			case "ok": return true
 			default: return false
 		}
 	}
+	/**
+	 * ユーザーから文字列を受け取ります。
+	 * @param text ユーザーへの質問文を入力します。
+	 * @returns 
+	 */
 	export async function question(text: string): Promise<string> {
 		const iface =
 			readline.createInterface({ input: process.stdin, output: process.stdout })
@@ -313,7 +405,7 @@ namespace sumtool {
 		 */
 		point: string[]
 	}
-	export async function fileLister(pass: string, option?: { contain?: boolean, extensionFilter?: string[], invFIleIgnored?: boolean, macosInvIgnored?: boolean }) {
+	export async function fileLister(pass: string[], option?: { contain?: boolean, extensionFilter?: string[], invFIleIgnored?: boolean, macosInvIgnored?: boolean }) {
 		//オプションデータの格納用
 		let contain = false
 		let extensionFilter: string[] = []
@@ -327,7 +419,7 @@ namespace sumtool {
 		}
 
 		const processd: passInfo[] = [] //出力データの保存場所
-		if (!await passCheck(pass)) return processd
+		if (!await pathChecker(slashPathStr(pass))) return processd
 		const point: string[] = [] //パス場所を設定
 		/**
 		 * キャッシュデータの格納
@@ -350,22 +442,13 @@ namespace sumtool {
 		} = {}
 
 		while (true) {
-			let lpass = pass + "/" //ファイル処理時の一時的パス場所
+			let lpass = slashPathStr(pass) + "/" //ファイル処理時の一時的パス場所
 			for (let i = 0; i !== point.length; i++) lpass += point[i] + "/" //パス解析、配列化
 
 			//filepointの初期化
 			if (!filepoint[lpass]) filepoint[lpass] = {
 				point: 0,
 				dirents: await new Promise(resolve => {
-					fs.readdir(lpass, { withFileTypes: true }, (err, dirents) => {
-						if (err) throw err
-						resolve(dirents)
-					})
-				})
-			}
-			if (!filepoint[lpass].point) filepoint[lpass].point = 0
-			if (!filepoint[lpass].dirents) {
-				filepoint[lpass].dirents = await new Promise(resolve => {
 					fs.readdir(lpass, { withFileTypes: true }, (err, dirents) => {
 						if (err) throw err
 						resolve(dirents)
@@ -379,7 +462,7 @@ namespace sumtool {
 			//もしディレクトリ内のファイル数とファイル指定番号が同じな場合
 			if (dirents.length === filepoint[lpass].point)
 				//lpassが初期値「pass + "/"」と同じ場合ループを抜ける
-				if (lpass === pass + "/") break
+				if (lpass === slashPathStr(pass) + "/") break
 				//そうでない場合上の階層へ移動する
 				else point.pop()
 			else {
@@ -406,7 +489,7 @@ namespace sumtool {
 						filename: name.slice(0, -(extension.length + 1)),
 						extension: extension,
 						pass: lpass,
-						point: JSON.parse(JSON.stringify(point))
+						point: JSON.parse(JSON.stringify([...pass, ...point]))
 					})
 					//ディレクトりの場合は階層を移動し、ディレクトリ内に入り込む
 				} else if (contain && dirents[filepoint[lpass].point].isDirectory()) point.push(name)
@@ -851,7 +934,7 @@ namespace sumtool {
 					const point = this.processd[i].point
 					for (let i = 0; i !== point.length; i++) {
 						outfolders += point[i] + "/"
-						if (!(await exsits(this.afterPass + "/" + outfolders))) await mkdir(this.afterPass + "/" + outfolders)
+						if (!(await sfs.exsits(this.afterPass + "/" + outfolders))) await sfs.mkdir(this.afterPass + "/" + outfolders)
 					}
 					const Stream = fs.createWriteStream(this.afterPass + "/" + outfolders + [
 						this.processd[i].filename,
@@ -1560,7 +1643,7 @@ namespace sumtool {
 	}
 	export class dataIO extends EventEmitter {
 		#operation = false
-		#pass: string
+		#pass: string[]
 		#name: string
 		#jsonPass: string
 		#folderPass: string
@@ -1568,24 +1651,25 @@ namespace sumtool {
 		#passIndex: dataiofiles
 		constructor(pass: string, programName: string) {
 			super()
-			passCheck(pass).then(async data => {
-				if (data) this.#pass = data.pass
+			pathChecker(pass).then(async data => {
+				if (data) this.#pass = data
 				else throw new Error("パスが間違っています。")
 				if (programName === "dataIO") throw new Error("dataIOを利用することは出来ません")
 				this.#name = programName
-				if (!await exsits(this.#pass + "/dataIO.json")) await writeFile(this.#pass + "/dataIO.json", "[]")
-				const dataIOIndex: { [programName: string]: any } = JSON.parse(String(await readFile(this.#pass + "/dataIO.json")))
+				const path = slashPathStr(this.#pass)
+				if (!await sfs.exsits(path + "/dataIO.json")) await sfs.writeFile(path + "/dataIO.json", "[]")
+				const dataIOIndex: { [programName: string]: any } = JSON.parse(String(await sfs.readFile(path + "/dataIO.json")))
 				if (!dataIOIndex[programName]) dataIOIndex[programName] = true
-				await writeFile(this.#pass + "/dataIO.json", JSON.stringify(dataIOIndex))
-				this.#jsonPass = this.#pass + "/" + this.#name + ".json"
-				this.#folderPass = this.#pass + "/" + this.#name
+				await sfs.writeFile(path + "/dataIO.json", JSON.stringify(dataIOIndex))
+				this.#jsonPass = path + "/" + this.#name + ".json"
+				this.#folderPass = path + "/" + this.#name
 				const initValue = JSON.stringify({ json: {}, passIndex: {} })
-				if (!await exsits(this.#jsonPass)) await writeFile(this.#jsonPass, initValue)
-				if (!await exsits(this.#folderPass)) await mkdir(this.#folderPass)
+				if (!await sfs.exsits(this.#jsonPass)) await sfs.writeFile(this.#jsonPass, initValue)
+				if (!await sfs.exsits(this.#folderPass)) await sfs.mkdir(this.#folderPass)
 				const rawJSON: {
 					json: {},
 					passIndex: dataiofiles
-				} = await JSON.parse(String(await readFile(this.#jsonPass)))
+				} = await JSON.parse(String(await sfs.readFile(this.#jsonPass)))
 				this.json = rawJSON.json
 				this.#passIndex = rawJSON.passIndex
 				this.#operation = true
@@ -1597,11 +1681,11 @@ namespace sumtool {
 				console.log("クラス名と同じ名前を使用しないでください。\nこの名前は内部で予約されています。")
 				return null
 			}
-			if (!await exsits("passCache.json")) {
+			if (!await sfs.exsits("passCache.json")) {
 				console.log("passCache.jsonが存在しないため、プログラムを続行することが出来ません。\n設定を行ってください。")
 				return null
 			}
-			const io = new dataIO(JSON.parse(String(await readFile("passCache.json"))), programName)
+			const io = new dataIO(JSON.parse(String(await sfs.readFile("passCache.json"))), programName)
 			await new Promise<void>(resolve => io.on("ready", () => resolve()))
 			return io
 		}
@@ -1635,7 +1719,7 @@ namespace sumtool {
 			return obj[name].pass
 		}
 		async save() {
-			await writeFile(this.#jsonPass, JSON.stringify({ json: this.json, passIndex: this.#passIndex }))
+			await sfs.writeFile(this.#jsonPass, JSON.stringify({ json: this.json, passIndex: this.#passIndex }))
 		}
 	}
 	interface youtubeDownloaderEvents {
@@ -1740,6 +1824,46 @@ namespace sumtool {
 			})
 		}
 	}
+	/**
+	 * 動画や音声をスムーズにクライアントに送信する関数です
+	 * @param videopath パスを入力します
+	 * @param range リクエストのレンジを入力します
+	 * @param type Content-Typeに使用します
+	 * @param res response変数を入力します
+	 */
+	async function VASourceGet(videopath: string, range: string, type: string, res: any) {
+		const videoSize = fs.statSync(videopath).size //ファイルサイズ(byte)
+		const chunkSize = 1 * 1e7 //チャンクサイズ
+
+		const ranges = String(range).split("-")
+		if (ranges[0]) ranges[0] = ranges[0].replace(/\D/g, "")
+		if (ranges[1]) ranges[1] = ranges[1].replace(/\D/g, "")
+		//これは取得するデータ範囲を決定します。
+		const options = { start: 0, end: 0 }
+		options.start = Number(ranges[0]) //始まりの指定
+		options.end = Number(ranges[1]) || Math.min(options.start + chunkSize, videoSize - 1) //終わりの指定
+		if (!range) options.end = videoSize - 1
+
+		const headers: {
+			[name: string]: string
+		} = {} //ヘッダー
+		headers["Accept-Ranges"] = "bytes"
+		headers["Content-Length"] = String(videoSize)
+		if (range) headers["Content-Length"] = String(options.end - options.start + 1)
+		if (range) headers["Content-Range"] = "bytes " + options.start + "-" + options.end + "/" + videoSize
+		headers["Content-Range"] = "bytes " + options.start + "-" + options.end + "/" + videoSize
+		headers["Content-Type"] = type
+		console.log(options, ranges, range)
+		res.writeHead((range) ? 206 : 200, headers) //206を使用すると接続を続行することが出来る
+		const Stream = fs.createReadStream(videopath, options) //ストリームにし、範囲のデータを読み込む
+		Stream.on("error", error => {
+			console.log("Error reading file" + videopath + ".")
+			console.log(error)
+			res.sendStatus(500)
+		});
+		Stream.on("data", c => res.write(c))
+		Stream.on("end", () => res.end())
+	}
 	export async function cuiIO(shareData: {
 		discordBot?: {
 			[botName: string]: discordRealTimeData
@@ -1758,12 +1882,12 @@ namespace sumtool {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
 						}
-						const beforePass = await passCheck(await question("変換元の画像フォルダを指定してください。"))
+						const beforePass = await pathChecker(await question("変換元の画像フォルダを指定してください。"))
 						if (beforePass === null) {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
 						}
-						const afterPass = await passCheck(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
+						const afterPass = await pathChecker(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
 						if (afterPass === null) {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
@@ -1790,14 +1914,14 @@ namespace sumtool {
 						if (!invFileIgnore) {
 							listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
 						}
-						const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFIleIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
+						const fileList = await fileLister(beforePass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFIleIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
 						if (!fileList) {
 							console.log("ファイルの取得ができなかったようです。")
 							return
 						}
 						console.log(
-							"変換元パス: " + beforePass.pass + "\n" +
-							"変換先パス: " + afterPass.pass + "\n" +
+							"変換元パス: " + slashPathStr(beforePass) + "\n" +
+							"変換先パス: " + slashPathStr(afterPass) + "\n" +
 							"変換先サイズ(縦): " + imageSize + "\n" +
 							"変換するファイル数: " + fileList.length + "\n" +
 							"命名方法: " + sharpConvert.type[nameing - 1] + "\n" +
@@ -1818,7 +1942,7 @@ namespace sumtool {
 						const permission = await booleanIO("上記のデータで実行してもよろしいですか？yと入力すると続行します。")
 						if (permission) {
 							const convert = new sharpConvert()
-							convert.afterPass = afterPass.pass
+							convert.afterPass = afterPass[0]
 							convert.nameing = nameing - 1
 							convert.size = imageSize
 							convert.processd = fileList
@@ -2039,12 +2163,12 @@ namespace sumtool {
 								for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
 									const programs: { [programName: string]: () => Promise<void> } = {
 										"パスを指定しプリセットで変換": async () => {
-											const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
+											const beforePass = await pathChecker(await question("元のソースパスを入力してください。"))
 											if (beforePass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
 											}
-											const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+											const afterPass = await pathChecker(await question("保存先のフォルダパスを入力してください。"))
 											if (afterPass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
@@ -2062,8 +2186,8 @@ namespace sumtool {
 												return
 											}
 											console.log(
-												"変換元: " + beforePass.pass + "\n" +
-												"変換先: " + afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext + "\n" +
+												"変換元: " + slashPathStr(beforePass) + "\n" +
+												"変換先: " + slashPathStr(afterPass) + "/" + filename + "." + presets[presetChoice - 1].ext + "\n" +
 												"タグ: " + (() => {
 													let tags = ""
 													presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
@@ -2072,23 +2196,23 @@ namespace sumtool {
 											)
 											const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
 											if (permission) {
-												const convert = new ffmpegConverter(beforePass.pass)
+												const convert = new ffmpegConverter(slashPathStr(beforePass))
 												convert.preset = presets[presetChoice - 1].tag
 												console.log(convert.preset)
-												if (await exsits(afterPass.pass)) {
+												if (await sfs.exsits(slashPathStr(afterPass))) {
 													if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) return
 												}
-												await convert.convert(afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext)
+												await convert.convert(slashPathStr(afterPass) + "/" + filename + "." + presets[presetChoice - 1].ext)
 												console.log("変換が完了しました！")
 											}
 										},
 										"タグを手入力し、詳細な設定を自分で行う": async () => {
-											const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
+											const beforePass = await pathChecker(await question("元のソースパスを入力してください。"))
 											if (beforePass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
 											}
-											const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+											const afterPass = await pathChecker(await question("保存先のフォルダパスを入力してください。"))
 											if (afterPass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
@@ -2096,8 +2220,8 @@ namespace sumtool {
 											const filename = await question("書き出し先のファイル名を入力してください。")
 											const preset = await ffmpegConverter.inputPreset({ tagonly: true })
 											console.log(
-												"変換元: " + beforePass.pass + "\n" +
-												"変換先: " + afterPass.pass + "/" + filename + "." + preset.ext + "\n" +
+												"変換元: " + slashPathStr(beforePass) + "\n" +
+												"変換先: " + slashPathStr(afterPass) + "/" + filename + "." + preset.ext + "\n" +
 												"タグ: " + (() => {
 													let tags = ""
 													preset.tag.forEach(tag => tags += tag + " ")
@@ -2106,24 +2230,24 @@ namespace sumtool {
 											)
 											const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
 											if (permission) {
-												const convert = new ffmpegConverter(beforePass.pass)
+												const convert = new ffmpegConverter(slashPathStr(beforePass))
 												convert.preset = preset.tag
 												console.log(convert.preset)
 
-												if (await exsits(afterPass.pass)) {
+												if (await sfs.exsits(slashPathStr(afterPass))) {
 													if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) return
 												}
-												await convert.convert(afterPass.pass + "/" + filename + "." + preset.ext)
+												await convert.convert(slashPathStr(afterPass) + "/" + filename + "." + preset.ext)
 												console.log("変換が完了しました！")
 											}
 										},
 										"複数ファイルを一括変換": async () => {
-											const beforePass = await passCheck(await question("元のフォルダパスを入力してください。"))
+											const beforePass = await pathChecker(await question("元のフォルダパスを入力してください。"))
 											if (beforePass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
 											}
-											const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+											const afterPass = await pathChecker(await question("保存先のフォルダパスを入力してください。"))
 											if (afterPass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
@@ -2136,7 +2260,7 @@ namespace sumtool {
 											if (!invFileIgnore) {
 												listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
 											}
-											const fileList = await fileLister(beforePass.pass, {
+											const fileList = await fileLister(beforePass, {
 												contain: folderContain,
 												extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "caf", "aif", "aiff", "m4r", "alac", "flac", "3gp", "3g2", "webm", "aac", "hevc"],
 												invFIleIgnored: invFileIgnore,
@@ -2154,8 +2278,8 @@ namespace sumtool {
 												return
 											}
 											console.log(
-												"変換元: " + beforePass.pass + "\n" +
-												"変換先: " + afterPass.pass + "\n" +
+												"変換元: " + slashPathStr(beforePass) + "\n" +
+												"変換先: " + slashPathStr(afterPass) + "\n" +
 												"タグ: " + (() => {
 													let tags = ""
 													presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
@@ -2174,17 +2298,17 @@ namespace sumtool {
 													const convert = new ffmpegConverter(fileList[i].pass + fileList[i].filename + "." + fileList[i].extension)
 													convert.preset = presets[presetChoice - 1].tag
 
-													const convertedPass = afterPass.pass + "/" + (await (async () => {
+													const convertedPass = slashPathStr(afterPass) + "/" + (await (async () => {
 														let outfolders = ""
 														const point = fileList[i].point
 														for (let i = 0; i !== point.length; i++) {
 															outfolders += point[i] + "/"
-															if (!(await exsits(afterPass.pass + "/" + outfolders))) await mkdir(afterPass.pass + "/" + outfolders)
+															if (!(await sfs.exsits(slashPathStr(afterPass) + "/" + outfolders))) await sfs.mkdir(slashPathStr(afterPass) + "/" + outfolders)
 														}
 														return outfolders
 													})()) + fileList[i].filename + "." + presets[presetChoice - 1].ext
 
-													if (await exsits(convertedPass)) {
+													if (await sfs.exsits(convertedPass)) {
 														progressd.viewed = false
 														if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) continue
 														progressd.view()
@@ -2377,17 +2501,17 @@ namespace sumtool {
 					name: "Folder Copy",
 					function: async () => {
 						console.log("このプログラムは想定外の入力に弱い傾向にあります。ご了承ください。")
-						const beforePass = await passCheck(await question("移動元のフォルダを指定してください。"))
+						const beforePass = await pathChecker(await question("移動元のフォルダを指定してください。"))
 						if (!beforePass) {
 							console.log("入力が間違ってるようです。もう一度やり直してください。")
 							return
 						}
-						const afterPass = await passCheck(await question("移動先のフォルダを指定してください。"))
+						const afterPass = await pathChecker(await question("移動先のフォルダを指定してください。"))
 						if (!afterPass) {
 							console.log("入力が間違ってるようです。もう一度やり直してください。")
 							return
 						}
-						const list = await fileLister(beforePass.pass, { contain: true })
+						const list = await fileLister(beforePass, { contain: true })
 						console.log("移動元のフォルダには" + list.length + "個のファイルたちがあります。")
 						if (await booleanIO("移動を開始しますか？")) {
 							try {
@@ -2401,13 +2525,13 @@ namespace sumtool {
 									let outfolders = ""
 									for (let i = 0; i !== point.length; i++) {
 										outfolders += point[i] + "/"
-										if (!(await exsits(afterPass.pass + "/" + outfolders))) await mkdir(afterPass.pass + "/" + outfolders)
+										if (!(await sfs.exsits(slashPathStr(afterPass) + "/" + outfolders))) await sfs.mkdir(slashPathStr(afterPass) + "/" + outfolders)
 									}
 									const fileName = list[i].filename + (list[i].extension ? ("." + list[i].extension) : "")
-									const copyDataTo = afterPass.pass + "/" + outfolders + fileName
+									const copyDataTo = slashPathStr(afterPass) + "/" + outfolders + fileName
 									prog.now = i
 									prog.viewStr = "移動中。スキップ[" + skipNum + "] エラー[" + errorNum + "]"
-									if (await exsits(list[i].pass + fileName)) {
+									if (await sfs.exsits(list[i].pass + fileName)) {
 										await new Promise<void>(resolve => {
 											const Stream = fs.createReadStream(list[i].pass + fileName)
 											Stream.pipe(fs.createWriteStream(copyDataTo))
@@ -2437,8 +2561,8 @@ namespace sumtool {
 							name: "passCheck",
 							function: async () => {
 								const pass = await question("パスを入力")
-								const checked = await passCheck(pass)
-								console.log(checked ? checked.pass : null)
+								const checked = await pathChecker(pass)
+								console.log(checked ? slashPathStr(checked) : null)
 							}
 						}]
 						const programsName = (() => {
@@ -2495,6 +2619,89 @@ namespace sumtool {
 					}
 				},
 				{
+					name: "Discord BotToken情報収集",
+					function: async () => {
+						const token = await question("Botのトークンを入力してください。")
+						const {
+							Client,
+							Partials,
+							GatewayIntentBits
+						} = Discord
+						const client = new Client({
+							intents: [
+								GatewayIntentBits.GuildMembers,
+								GatewayIntentBits.MessageContent,
+								GatewayIntentBits.Guilds
+							],
+							partials: [
+								Partials.Channel,
+								Partials.GuildMember,
+								Partials.GuildScheduledEvent,
+								Partials.Message,
+								Partials.Reaction,
+								Partials.ThreadMember,
+								Partials.User
+							]
+						})
+						client.on(Discord.Events.Error, err => {
+							throw err
+						})
+						await client.login(token)
+						await new Promise<void>(resolve => {
+							client.on(Discord.Events.ClientReady, client => {
+								resolve()
+							})
+						})
+						const guilds: {
+							guildName: string
+							guildId: string
+							channels: {
+								channelName: string
+							}[]
+							users: {
+								displayName: string
+								nickName: string | null
+							}[]
+						}[] = []
+						const data = (await client.guilds.fetch())
+						data.map(data => {
+							data
+						})
+						client.guilds.cache.map(guild => guilds.push({
+							guildName: guild.name,
+							guildId: guild.id,
+							channels: (() => {
+								const channels: {
+									channelName: string
+								}[] = []
+								guild.channels.cache.map(channel => {
+									channels.push({
+										channelName: channel.name
+									})
+								})
+								return channels
+							})(),
+							users: (() => {
+								const users: {
+									displayName: string
+									nickName: string | null
+								}[] = []
+								guild.members.cache.map(member => {
+									users.push({
+										displayName: member.displayName,
+										nickName: member.nickname
+									})
+								})
+								return users
+							})()
+						}))
+						client.destroy()
+						console.log("情報が取得されました。")
+						while (true) {
+						}
+					}
+				},
+				{
 					name: "Various Programsの状態・設定",
 					function: async () => {
 						const programs: { [programName: string]: () => Promise<void> } = {
@@ -2510,15 +2717,15 @@ namespace sumtool {
 								)
 							},
 							"キャッシュデータ等のパス設定": async () => {
-								const data = await exsits("passCache.json") ? JSON.parse(String(await readFile("passCache.json"))) : null
+								const data = await sfs.exsits("passCache.json") ? JSON.parse(String(await sfs.readFile("passCache.json"))) : null
 								console.log("現在のキャッシュパス場所は" + (data ? data + "です。" : "設定されていません。"))
-								const pass = await passCheck(await question("キャッシュデータを保存するパスを入力してください。"))
+								const pass = await pathChecker(await question("キャッシュデータを保存するパスを入力してください。"))
 								if (pass === null) {
 									console.log("入力が間違っているようです。最初からやり直してください。")
 									return
 								}
-								await writeFile("passCache.json", JSON.stringify(pass.pass))
-								console.log(JSON.parse(String(await readFile("passCache.json"))) + "に変更されました。")
+								await sfs.writeFile("passCache.json", JSON.stringify(slashPathStr(pass)))
+								console.log(JSON.parse(String(await sfs.readFile("passCache.json"))) + "に変更されました。")
 							}
 						}
 						const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
