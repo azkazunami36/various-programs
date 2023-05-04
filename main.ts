@@ -315,8 +315,12 @@ namespace sumtool {
 	 * @param string 文字列を入力します。
 	 * @returns 
 	 */
-	export async function pathChecker(string: string) {
+	export async function pathChecker(str: string | string[]) {
 		const pass = await (async () => {
+			const string = (() => {
+				if (typeof str === "string") return str
+				else return slashPathStr(str)
+			})()
 			const passDeli = (string.match(/:\\/)) ? "\\" : "/"
 			const passArray = string.split(passDeli)
 			let passtmp = ""
@@ -391,25 +395,69 @@ namespace sumtool {
 		/**
 		 * 拡張子を含まないファイル名が記載
 		 */
-		filename: string,
+		filename: string
 		/**
 		 * 拡張子が記載
 		 */
-		extension: string,
+		extension: string
 		/**
 		 * この位置までのパスが記載
 		 */
-		pass: string,
+		pass: string
 		/**
-		 * 元パスから配列での記載
+		 * 相対パスでの配列での記載
+		 * フォルダ内のデータを移動する際に役立つ。
 		 */
 		point: string[]
+		/**
+		 * 元パスから配列での記載
+		 * データにアクセスするために役立つ。passデータとはあまり変わらない。
+		 */
+		isPoint: string[]
 	}
-	export async function fileLister(pass: string[], option?: { contain?: boolean, extensionFilter?: string[], invFIleIgnored?: boolean, macosInvIgnored?: boolean }) {
+	export async function fileLister(
+		/**
+		 * フォルダパスを入力。その中のファイルやフォルダを配列化する。
+		 */
+		pass: string[],
+		/**
+		 * 様々なオプションを入力
+		 */
+		option?: {
+			/**
+			 * フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか
+			 */
+			contain?: boolean,
+			/**
+			 * 拡張子を限定し、検索範囲を絞る
+			 */
+			extensionFilter?: string[],
+			/**
+			 * 「.」を使った隠しファイルを検出し、検索から除外する
+			 */
+			invFIleIgnored?: boolean,
+			/**
+			 * 「._」を使った隠しパラメーターファイルを検出し、検索から除外する
+			 */
+			macosInvIgnored?: boolean
+		}
+	) {
 		//オプションデータの格納用
+			/**
+			 * フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか
+			 */
 		let contain = false
+		/**
+		 * 拡張子を限定し、検索範囲を絞る
+		 */
 		let extensionFilter: string[] = []
+		/**
+		 * 「.」を使った隠しファイルを検出し、検索から除外する
+		 */
 		let invFIleIgnored = false
+		/**
+		 * 「._」を使った隠しパラメーターファイルを検出し、検索から除外する
+		 */
 		let macosInvIgnored = false
 		if (option !== undefined) {
 			if (option.contain) contain = true
@@ -419,7 +467,7 @@ namespace sumtool {
 		}
 
 		const processd: passInfo[] = [] //出力データの保存場所
-		if (!await pathChecker(slashPathStr(pass))) return processd
+		if (!await pathChecker(pass)) return processd
 		const point: string[] = [] //パス場所を設定
 		/**
 		 * キャッシュデータの格納
@@ -442,14 +490,14 @@ namespace sumtool {
 		} = {}
 
 		while (true) {
-			let lpass = slashPathStr(pass) + "/" //ファイル処理時の一時的パス場所
-			for (let i = 0; i !== point.length; i++) lpass += point[i] + "/" //パス解析、配列化
+			let lpass = pass //ファイル処理時の一時的パス場所
+			for (let i = 0; i !== point.length; i++) lpass.push(point[i]) //パス解析、配列化
 
 			//filepointの初期化
-			if (!filepoint[lpass]) filepoint[lpass] = {
+			if (!filepoint[slashPathStr(lpass)]) filepoint[slashPathStr(lpass)] = {
 				point: 0,
 				dirents: await new Promise(resolve => {
-					fs.readdir(lpass, { withFileTypes: true }, (err, dirents) => {
+					fs.readdir(slashPathStr(lpass), { withFileTypes: true }, (err, dirents) => {
 						if (err) throw err
 						resolve(dirents)
 					})
@@ -458,18 +506,18 @@ namespace sumtool {
 			/**
 			 * 保存されたリストを取得
 			 */
-			const dirents = filepoint[lpass].dirents
+			const dirents = filepoint[slashPathStr(lpass)].dirents
 			//もしディレクトリ内のファイル数とファイル指定番号が同じな場合
-			if (dirents.length === filepoint[lpass].point)
+			if (dirents.length === filepoint[slashPathStr(lpass)].point)
 				//lpassが初期値「pass + "/"」と同じ場合ループを抜ける
-				if (lpass === slashPathStr(pass) + "/") break
+				if (slashPathStr(lpass) === slashPathStr(pass)) break
 				//そうでない場合上の階層へ移動する
 				else point.pop()
 			else {
 				//ファイル名の取得
-				const name = dirents[filepoint[lpass].point].name
+				const name = dirents[filepoint[slashPathStr(lpass)].point].name
 				//フォルダ、ディレクトリでない場合
-				if (!dirents[filepoint[lpass].point].isDirectory()) {
+				if (!dirents[filepoint[slashPathStr(lpass)].point].isDirectory()) {
 					//ドットで分割
 					const namedot = name.split(".")
 					//拡張子を取得
@@ -488,16 +536,18 @@ namespace sumtool {
 					})()) processd.push({ //ファイルデータを追加
 						filename: name.slice(0, -(extension.length + 1)),
 						extension: extension,
-						pass: lpass,
-						point: JSON.parse(JSON.stringify([...pass, ...point]))
+						pass: slashPathStr(lpass),
+						isPoint: JSON.parse(JSON.stringify([...pass, ...point])),
+						point: point
 					})
 					//ディレクトりの場合は階層を移動し、ディレクトリ内に入り込む
-				} else if (contain && dirents[filepoint[lpass].point].isDirectory()) point.push(name)
+				} else if (contain && dirents[filepoint[slashPathStr(lpass)].point].isDirectory()) point.push(name)
 				//次のファイルへ移動する
-				filepoint[lpass].point++
+				filepoint[slashPathStr(lpass)].point++
 			}
 		}
 		//データを出力
+		console.log(processd)
 		return processd
 	}
 	export interface discordRealTimeData {
@@ -2295,7 +2345,7 @@ namespace sumtool {
 												progressd.total = fileList.length
 												for (let i = 0; i != fileList.length; i++) {
 													progressd.now = i
-													const convert = new ffmpegConverter(fileList[i].pass + fileList[i].filename + "." + fileList[i].extension)
+													const convert = new ffmpegConverter(fileList[i].pass + "/" + fileList[i].filename + "." + fileList[i].extension)
 													convert.preset = presets[presetChoice - 1].tag
 
 													const convertedPass = slashPathStr(afterPass) + "/" + (await (async () => {
