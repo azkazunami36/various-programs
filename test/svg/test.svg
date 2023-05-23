@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="100" r="100" fill="transparent" />
+    <path d="
+        M 5, 50
+        C 25, 0 125, 0 145, 50
+        L 140, 65
+        C 125, 10 25, 10 10, 65
+        L 5, 50
+    " stroke="#0000ff" fill="rgba(0,0,0,0)" />
+    <path d="
+        M 20, 70
+        C 25, 20 125, 20 130, 70
+        L 120, 80
+        C 125, 30 25, 30 30, 80
+        L 20, 70
+    " stroke="blue" fill="transparent" />
+    <path d="
+        M 0, 50
+        C 25, 0 125, 0 150, 50
+        L 140, 60
+        C 125, 10 25, 10 10, 60
+        L 0, 50
+    " stroke="transparent" fill="transparent" />
+</svg>

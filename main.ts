@@ -10,9 +10,8 @@ import crypto from "crypto"
 import EventEmitter from "events"
 import ytdl from "ytdl-core"
 /**
- * various-programsのGUIを作成するのが、かなり難しい状態になったため、まずはCUIから作ることにいたします。
- * CUIでもGUIのような使い勝手の良さを実感してください。
- * 改良や機能追加が楽になるように設計いたします。
+ * 改善する前に、README.mdをお読みください。
+ * しかし、読まなくても僕がコードを確認するので、重要事項ではないことはご了承ください。
  */
 
 namespace sumtool {
@@ -85,17 +84,29 @@ namespace sumtool {
 		 */
 		async count(seconds: number) {
 			const converttime = Date.now()
-			const up = Math.sign(seconds)
-			let num = 0
-			if (up === 1) while (num < seconds) {
-				this.setting(true)
-				num++
-				await wait(1)
-			}
-			if (up === -1) while (seconds < num) {
-				this.setting(false)
-				num--
-				await wait(1)
+			if (this.#secRaw !== 0) {
+				const up = Math.sign(seconds)
+				let num = 0
+				if (up === 1) while (num < seconds) {
+					this.setting(true)
+					num++
+					await wait(1)
+				}
+				if (up === -1) while (seconds < num) {
+					this.setting(false)
+					num--
+					await wait(1)
+				}
+			} else {
+				this.#secRaw = seconds
+				this.#sec = this.#secRaw % 60
+				this.#minRaw = this.#secRaw / 60
+				this.#min = this.#minRaw % 60
+				this.#hourRaw = this.#minRaw / 60
+				this.#hour = this.#hourRaw % 60
+				this.#daysRaw = this.#hourRaw / 60
+				this.#days = this.#daysRaw % 60
+				this.#year = (this.#daysRaw / 60) % 60
 			}
 			this.#convertTime = Date.now() - converttime
 			return { toJSON: this.toJSON, toString: this.toString }
@@ -177,7 +188,7 @@ namespace sumtool {
 			if (hour !== 0) timeString = 2
 			if (outputRaw.days && days !== 0) timeString = 3
 			if (outputRaw.year && year !== 0) timeString = 4
-			if (option.timeString !== undefined) timeString = option.timeString
+			if (option && option.timeString !== undefined) timeString = option.timeString
 			return (3 < timeString ? numfiller(year, fill.fillnum) + counter.year : "") +
 				(2 < timeString ? numfiller(days, fill.fillnum) + counter.days : "") +
 				(1 < timeString ? numfiller(hour, fill.fillnum) + counter.hour : "") +
@@ -199,7 +210,20 @@ namespace sumtool {
 			}
 		}
 	}
-	export function numfiller(number: number, fillnum: number, option?: { overflow?: boolean }): string {
+	/**
+	 * 数字データの末尾に0を足し、文字数を整えるために使えます。
+	 * @param number 元値データを入力
+	 * @param fillnum 0を埋める文字数を入力
+	 * @param option オプションを入力
+	 * @returns 
+	 */
+	export function numfiller(number: number, fillnum: number, option?: {
+		/**
+		 * 文字数を超えた元データを受け取った場合に、文字数を変化させるかを決定させます。
+		 * 通常はtrueです。
+		 */
+		overflow?: boolean
+	}): string {
 		let overflow = true
 		if (option !== undefined) {
 			if (option.overflow !== undefined) overflow = option.overflow
@@ -213,51 +237,154 @@ namespace sumtool {
 		}
 		return (fillString + number.toFixed()).slice(fillNum)
 	}
+	namespace sfs {
+		/**
+		 * fsの関数を非同期関数にしたものです。
+		 * @param pass パスを入力します。
+		 * @returns 
+		 */
+		export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
+		/**
+		 * fsの関数を非同期関数にしたものです。
+		 * @param pass パスを入力します。
+		 * @returns 
+		 */
+		export async function mkdir(pass: string): Promise<boolean> { return await new Promise<boolean>(resolve => fs.mkdir(pass, err => resolve(err === null))) }
+		/**
+		 * fsの関数を非同期関数にしたものです。
+		 * @param pass パスを入力します。
+		 * @returns 
+		 */
+		export async function readFile(pass: string): Promise<Buffer> { return await new Promise<Buffer>(resolve => fs.readFile(pass, (err, data) => resolve(data))) }
+		/**
+		 * fsの関数を非同期関数にしたものです。
+		 * @param pass パスを入力します。
+		 * @param data 書き込む文字列を入力します。
+		 * @returns 
+		 */
+		export async function writeFile(pass: string, data: string): Promise<void> { return await new Promise<void>(resolve => fs.writeFile(pass, data, () => resolve())) }
+		/**
+		 * 半角と全角を区別し、それにあった文字列を算出します。
+		 * 半角を1、全角を2文字とします。
+		 * @param string 文字列を入力します。
+		 * @returns 
+		 */
+	}
+	/**
+	 * 待機します。ライブラリでは使用しすぎないでください。IOや高負荷の回避におすすめです。
+	 * @param time 時間を入力
+	 */
 	export async function wait(time: number) { await new Promise<void>(resolve => setTimeout(() => resolve(), time)) }
-	export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
-	export async function mkdir(pass: string): Promise<boolean> { return await new Promise<boolean>(resolve => fs.mkdir(pass, err => resolve(err === null))) }
-	export async function readFile(pass: string): Promise<Buffer> { return await new Promise<Buffer>(resolve => fs.readFile(pass, (err, data) => resolve(data))) }
-	export async function writeFile(pass: string, data: string): Promise<void> { return await new Promise<void>(resolve => fs.writeFile(pass, data, () => resolve())) }
 	export function textLength(string: string) {
 		let length = 0
 		for (let i = 0; i !== string.length; i++) string[i].match(/[ -~]/) ? length += 1 : length += 2
 		return length
 	}
-	export async function passCheck(string: string): Promise<{ pass: string } & fs.Stats> {
+	/**
+	 * 配列をぐっちゃぐちゃにしたげます。にこっ
+	 * @param array 配列を入力します。
+	 * @returns 配列が出力されます。
+	 */
+	export function arrayRandom<T>(array: T[]): T[] {
+		for (let i = 0; array.length !== i; i++) {
+			const rm = Math.floor(Math.random() * i)
+			let tmp = array[i]
+			array[i] = array[rm]
+			array[rm] = tmp
+		}
+		return array
+	}
+	/**
+	 * 存在しない連想配列の初期化をし、undefinedを回避します。
+	 * キー名が違う際に内型定義が変わる場合は利用しないでください。union型となってしまい、コードの記述がうまくいかなくなります。
+	 * @param keyName キー名を入力します。
+	 * @param datas キー名が入るとされる連想配列を入力します。
+	 * @param set 初期化時に使用するデータを入力します。
+	 * @returns 参照渡しがそのまま受け継がれたデータを出力します。
+	 */
+	const def = <T>(keyName: string, datas: Record<string, T | undefined>, set: T): T => {
+		let value = datas[keyName];
+		if (value === undefined) {
+			value = set;
+			datas[keyName] = value;
+		}
+		return value;
+	};
+	/**
+	 * 有効なパスかをチェックします。そして、一部の特殊なパスの場合に変換をします
+	 * @param string 文字列を入力します。
+	 * @returns 
+	 */
+	export async function pathChecker(str: string | string[]) {
 		const pass = await (async () => {
+			const string = (() => {
+				if (typeof str === "string") return str
+				else return slashPathStr(str)
+			})()
 			const passDeli = (string.match(/:\\/)) ? "\\" : "/"
 			const passArray = string.split(passDeli)
 			let passtmp = ""
-			for (let i = 0; i != passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
-			if (await exsits(passtmp)) return passtmp
+			for (let i = 0; i !== passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
+			if (await sfs.exsits(passtmp)) return passtmp
 			if (passtmp[0] === "\"" && passtmp[passtmp.length - 1] === "\"") passtmp = passtmp.substring(1, passtmp.length - 1)
-			if (await exsits(passtmp)) return passtmp
+			if (await sfs.exsits(passtmp)) return passtmp
+			if (passtmp[0] === "\'" && passtmp[passtmp.length - 1] === "\'") passtmp = passtmp.substring(1, passtmp.length - 1)
+			if (await sfs.exsits(passtmp)) return passtmp
 			while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
-			if (await exsits(passtmp)) return passtmp
-			passtmp = passtmp.replace(/\\ /g, " ")
-			if (await exsits(passtmp)) return passtmp
+			if (await sfs.exsits(passtmp)) return passtmp
+			const expType = " ()#~"
+			for (let i = 0; i !== expType.length; i++) {
+				const type = expType[i]
+				const exp = new RegExp("\\\\\\" + type, "g")
+				passtmp = passtmp.replace(exp, type)
+				if (await sfs.exsits(passtmp)) return passtmp
+			}
 			return null
 		})()
 		if (!pass) return null
-		const stats: fs.Stats = await new Promise(resolve => fs.stat(pass, (err, stats) => resolve(stats)))
-		return { pass: pass, ...stats }
+		const passArray = pass.split("/")
+		return passArray
 	}
-	export async function choice(array: string[], title?: string, questionText?: string): Promise<number | null> {
+	export function slashPathStr(passArray: string[]) {
+		let passtmp = ""
+		for (let i = 0; i !== passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
+		return passtmp
+	}
+	/**
+	 * 文字列配列からユーザー入力を利用し番号を選択させます。
+	 * @param array 文字列配列を入力します。
+	 * @param title 文字列配列の意図を入力します。
+	 * @param questionText 質問文を入力します。
+	 * @param manyNumNotDetected 配列以外の数字を選択された際にnullを返さないかどうかを決定します。
+	 * @returns 
+	 */
+	export async function choice(array: string[], title?: string, questionText?: string, manyNumNotDetected?: boolean): Promise<number | null> {
 		console.log((title ? title : "一覧") + ": ")
 		for (let i = 0; i !== array.length; i++) console.log("[" + (i + 1) + "] " + array[i])
 		const request = Number(await question(questionText ? questionText : "上記から数字で選択してください。"))
 		if (Number.isNaN(request)) return null
-		if (request > array.length || request < 1) return null
+		if (!manyNumNotDetected && request > array.length || request < 1) return null
 		return request
 	}
+	/**
+	 * ユーザーの文字列からture、falseを決定します。
+	 * @param text ユーザーへの質問文を入力します。
+	 * @returns 
+	 */
 	export async function booleanIO(text: string): Promise<boolean> {
 		switch (await question(text)) {
 			case "y": return true
 			case "yes": return true
 			case "true": return true
+			case "ok": return true
 			default: return false
 		}
 	}
+	/**
+	 * ユーザーから文字列を受け取ります。
+	 * @param text ユーザーへの質問文を入力します。
+	 * @returns 
+	 */
 	export async function question(text: string): Promise<string> {
 		const iface =
 			readline.createInterface({ input: process.stdin, output: process.stdout })
@@ -265,73 +392,162 @@ namespace sumtool {
 			new Promise(resolve => iface.question(text + "> ", answer => { iface.close(); resolve(answer) }))
 	}
 	interface passInfo {
-		filename: string,
-		extension: string,
-		pass: string,
+		/**
+		 * 拡張子を含まないファイル名が記載
+		 */
+		filename: string
+		/**
+		 * 拡張子が記載
+		 */
+		extension: string
+		/**
+		 * この位置までのパスが記載
+		 */
+		pass: string
+		/**
+		 * 相対パスでの配列での記載
+		 * フォルダ内のデータを移動する際に役立つ。
+		 */
 		point: string[]
+		/**
+		 * 元パスから配列での記載
+		 * データにアクセスするために役立つ。passデータとはあまり変わらない。
+		 */
+		isPoint: string[]
 	}
-	export async function fileLister(pass: string, option?: { contain?: boolean, extensionFilter?: string[] }) {
+	export async function fileLister(
+		/**
+		 * フォルダパスを入力。その中のファイルやフォルダを配列化する。
+		 */
+		pass: string[],
+		/**
+		 * 様々なオプションを入力
+		 */
+		option?: {
+			/**
+			 * フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか
+			 */
+			contain?: boolean,
+			/**
+			 * 拡張子を限定し、検索範囲を絞る
+			 */
+			extensionFilter?: string[],
+			/**
+			 * 「.」を使った隠しファイルを検出し、検索から除外する
+			 */
+			invFIleIgnored?: boolean,
+			/**
+			 * 「._」を使った隠しパラメーターファイルを検出し、検索から除外する
+			 */
+			macosInvIgnored?: boolean
+		}
+	) {
+		//オプションデータの格納用
+			/**
+			 * フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか
+			 */
 		let contain = false
+		/**
+		 * 拡張子を限定し、検索範囲を絞る
+		 */
 		let extensionFilter: string[] = []
+		/**
+		 * 「.」を使った隠しファイルを検出し、検索から除外する
+		 */
+		let invFIleIgnored = false
+		/**
+		 * 「._」を使った隠しパラメーターファイルを検出し、検索から除外する
+		 */
+		let macosInvIgnored = false
 		if (option !== undefined) {
 			if (option.contain) contain = true
 			if (option.extensionFilter !== undefined) extensionFilter = option.extensionFilter
+			if (option.invFIleIgnored) invFIleIgnored = true
+			if (option.macosInvIgnored) macosInvIgnored = true
 		}
-		const processd: passInfo[] = []
+
+		const processd: passInfo[] = [] //出力データの保存場所
+		if (!await pathChecker(pass)) return processd
 		const point: string[] = [] //パス場所を設定
+		/**
+		 * キャッシュデータの格納
+		 */
 		const filepoint: {
+			/**
+			 * マークとなるディレクトリのパスを入力
+			 * @param lpass どこのパスかを記述する
+			 */
 			[lpass: string]: {
+				/**
+				 * キャッシュからファイルを指定する
+				 */
 				point: number,
+				/**
+				 * ディレクトリやファイルリストのキャッシュを保存
+				 */
 				dirents: fs.Dirent[]
 			}
 		} = {}
 
 		while (true) {
-			let lpass = pass + "/" //ファイル処理時の一時的パス場所
-			for (let i = 0; i !== point.length; i++) lpass += point[i] + "/" //パス取得
-			if (!filepoint[lpass]) filepoint[lpass] = {
+			let lpass = pass //ファイル処理時の一時的パス場所
+			for (let i = 0; i !== point.length; i++) lpass.push(point[i]) //パス解析、配列化
+
+			//filepointの初期化
+			if (!filepoint[slashPathStr(lpass)]) filepoint[slashPathStr(lpass)] = {
 				point: 0,
 				dirents: await new Promise(resolve => {
-					fs.readdir(lpass, { withFileTypes: true }, (err, dirents) => {
+					fs.readdir(slashPathStr(lpass), { withFileTypes: true }, (err, dirents) => {
 						if (err) throw err
 						resolve(dirents)
 					})
 				})
 			}
-			if (!filepoint[lpass].point) filepoint[lpass].point = 0
-			if (!filepoint[lpass].dirents) {
-				filepoint[lpass].dirents = await new Promise(resolve => {
-					fs.readdir(lpass, { withFileTypes: true }, (err, dirents) => {
-						if (err) throw err
-						resolve(dirents)
-					})
-				})
-			}
-			const dirents = filepoint[lpass].dirents
-			if (dirents.length === filepoint[lpass].point)
-				if (lpass === pass + "/") break
+			/**
+			 * 保存されたリストを取得
+			 */
+			const dirents = filepoint[slashPathStr(lpass)].dirents
+			//もしディレクトリ内のファイル数とファイル指定番号が同じな場合
+			if (dirents.length === filepoint[slashPathStr(lpass)].point)
+				//lpassが初期値「pass + "/"」と同じ場合ループを抜ける
+				if (slashPathStr(lpass) === slashPathStr(pass)) break
+				//そうでない場合上の階層へ移動する
 				else point.pop()
 			else {
-				const name = dirents[filepoint[lpass].point].name
-				if (!dirents[filepoint[lpass].point].isDirectory()) {
+				//ファイル名の取得
+				const name = dirents[filepoint[slashPathStr(lpass)].point].name
+				//フォルダ、ディレクトリでない場合
+				if (!dirents[filepoint[slashPathStr(lpass)].point].isDirectory()) {
+					//ドットで分割
 					const namedot = name.split(".")
+					//拡張子を取得
 					const extension = namedot[namedot.length - 1]
-					if ((() => {
-						if (extensionFilter[0]) {
+					if ((() => { //もしも
+						if (extensionFilter[0]) { //拡張子指定がある場合
+							let stats = false
 							for (let i = 0; i !== extensionFilter.length; i++)
-								if (extensionFilter[i].match(new RegExp(extension, "i"))) return true
-						} else return true
-						return false
-					})()) processd.push({
+								if (extensionFilter[i].match(new RegExp(extension, "i"))) stats = true
+							if (!stats) return false //拡張子がマッチしなかったらfalse
+						}
+						//末端が一致した場合false
+						if (invFIleIgnored && name[0] === ".") return false
+						if (macosInvIgnored && name[0] === "." && name[1] === "_") return false
+						return true //全てがreturnしない場合true
+					})()) processd.push({ //ファイルデータを追加
 						filename: name.slice(0, -(extension.length + 1)),
 						extension: extension,
-						pass: lpass,
-						point: JSON.parse(JSON.stringify(point))
+						pass: slashPathStr(lpass),
+						isPoint: JSON.parse(JSON.stringify([...pass, ...point])),
+						point: point
 					})
-				} else if (contain && dirents[filepoint[lpass].point].isDirectory()) point.push(name)
-				filepoint[lpass].point++
+					//ディレクトりの場合は階層を移動し、ディレクトリ内に入り込む
+				} else if (contain && dirents[filepoint[slashPathStr(lpass)].point].isDirectory()) point.push(name)
+				//次のファイルへ移動する
+				filepoint[slashPathStr(lpass)].point++
 			}
 		}
+		//データを出力
+		console.log(processd)
 		return processd
 	}
 	export interface discordRealTimeData {
@@ -345,10 +561,11 @@ namespace sumtool {
 		}
 	}
 	interface discordBotEvents {
-		classReady: [void],
-		djsClientReady: [Discord.Client],
-		messageCreate: [Discord.Message],
+		classReady: [void]
+		djsClientReady: [Discord.Client]
+		messageCreate: [Discord.Message]
 		interactionCreate: [Discord.Interaction]
+		error: [Error]
 	}
 	export declare interface discordBot {
 		on<K extends keyof discordBotEvents>(s: K, listener: (...args: discordBotEvents[K]) => any): this
@@ -367,10 +584,16 @@ namespace sumtool {
 	interface discordProgram {
 		message?: (message: Discord.Message) => Promise<void>,
 		interaction?: (interaction: Discord.Interaction) => Promise<void>,
-		slashCommand?: Omit<Discord.SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">[]
+		slashCommand?: Omit<Discord.SlashCommandBuilder, "addSubcommandGroup" | "addSubcommand" | "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption">[]
 	}
 	export class discordBot extends EventEmitter {
+		/**
+		 * バッググラウンドで動作するために一時的に参照する固定の変数です。ここにVCや状態を書き込みます。
+		 */
 		rtdata: discordRealTimeData
+		/**
+		 * 保存するために入力します。
+		 */
 		data: discordDataIOextJSON
 		/**
 		 * @param data bot名のみを入れます。すると、class内で自動的にデータを読み込みます。
@@ -389,9 +612,10 @@ namespace sumtool {
 		}
 		static async data() {
 			const data = await dataIO.initer("discordBot")
+			if (!data) return null
 			const json: discordData = data.json
 
-			return JSON.parse(JSON.stringify(json))
+			return <discordData>JSON.parse(JSON.stringify(json))
 		}
 		private async pconst() {
 			const { GatewayIntentBits, Partials } = Discord
@@ -426,23 +650,36 @@ namespace sumtool {
 					Partials.User
 				]
 			}
-			this.data = await dataIO.initer("discordBot")
+			const data = await dataIO.initer("discordBot")
+			if (!data) {
+				const e = new ReferenceError()
+				e.message = "dataIOの準備ができませんでした。"
+				e.name = "Discord Bot"
+				this.emit("error", e)
+				return
+			}
+			this.data = data
 			if (!this.data.json[this.rtdata.name]) this.data.json[this.rtdata.name] = {}
 			if (!this.rtdata.client) {
-				this.rtdata.client = new Discord.Client(this.data.json[this.rtdata.name].clientOptions ? this.data.json[this.rtdata.name].clientOptions : newClientOption)
+				const json = this.data.json[this.rtdata.name]
+				this.rtdata.client = new Discord.Client(json.clientOptions !== undefined ? json.clientOptions : newClientOption)
 				const client = this.rtdata.client
 				client.on(Discord.Events.MessageCreate, async message => {
-					const programStrings = Object.keys(this.rtdata.program)
-					for (let i = 0; i !== programStrings.length; i++) {
-						const program = this.rtdata.program[programStrings[i]]
-						if (program.message) await program.message(message)
+					if (this.rtdata.program) {
+						const programStrings = Object.keys(this.rtdata.program)
+						for (let i = 0; i !== programStrings.length; i++) {
+							const program = this.rtdata.program[programStrings[i]]
+							if (program.message) await program.message(message)
+						}
 					}
 				})
 				client.on(Discord.Events.InteractionCreate, async interaction => {
-					const programStrings = Object.keys(this.rtdata.program)
-					for (let i = 0; i !== programStrings.length; i++) {
-						const program = this.rtdata.program[programStrings[i]]
-						if (program.interaction) await program.interaction(interaction)
+					if (this.rtdata.program) {
+						const programStrings = Object.keys(this.rtdata.program)
+						for (let i = 0; i !== programStrings.length; i++) {
+							const program = this.rtdata.program[programStrings[i]]
+							if (program.interaction) await program.interaction(interaction)
+						}
 					}
 				})
 			}
@@ -465,6 +702,17 @@ namespace sumtool {
 		} = {
 				"簡易認証": {
 					interaction: async interaction => {
+						interface ttts {
+							buttoncreate: {
+								roleId: string
+								question: boolean
+							}
+							calc: {
+								roleId: string
+								buttonNum: number
+								calcType: number
+							}
+						};
 						type ttt = {
 							type: "buttoncreate",
 							data: {
@@ -480,15 +728,19 @@ namespace sumtool {
 							}
 						};
 						if (interaction.isChatInputCommand()) {
-							if (interaction.channel.isTextBased() && !interaction.channel.isVoiceBased() && !interaction.channel.isThread() && !interaction.channel.isDMBased()) {
+							if (interaction.channel && interaction.channel.isTextBased() && !interaction.channel.isVoiceBased() && !interaction.channel.isThread() && !interaction.channel.isDMBased() && interaction.guild) {
 								const name = interaction.commandName
 								if (name === "buttoncreate") {
 									const member = (await interaction.guild.members.fetch()).get(interaction.user.id)
-									if (member.permissions.has(Discord.PermissionsBitField.Flags.Administrator)) {
+									if (member && member.permissions.has(Discord.PermissionsBitField.Flags.Administrator)) {
 										const role = interaction.options.getRole("roles")
 										const question = interaction.options.getBoolean("question")
 										const title = interaction.options.getString("title")
 										const description = interaction.options.getString("description")
+										if (role === null || question === null) {
+											interaction.channel.send("必要なデータが不足または破損してしまっているようです。最初からやり直してください。")
+											return
+										}
 										const data: ttt = {
 											type: "buttoncreate",
 											data: {
@@ -503,12 +755,13 @@ namespace sumtool {
 													.setStyle(Discord.ButtonStyle.Primary)
 													.setCustomId(JSON.stringify(data))
 											)
+										const iconURL = interaction.guild.iconURL()
 										const embed = new Discord.EmbedBuilder()
 											.setTitle(title || "認証をして僕たちとこのサーバーを楽しもう！")
 											.setDescription(description || "✅認証は下のボタンを押下する必要があります。")
 											.setAuthor({
 												name: interaction.guild.name,
-												iconURL: interaction.guild.iconURL()
+												iconURL: iconURL ? iconURL : undefined
 											})
 										try {
 											await interaction.channel.send({ embeds: [embed], components: [components] })
@@ -527,11 +780,11 @@ namespace sumtool {
 						}
 						if (interaction.isButton()) {
 							const customId = interaction.customId
-							const data = ((): ttt => {
+							const data = ((): ttt | null => {
 								try { return JSON.parse(customId) }
 								catch (e) { return null } //JSONではない文字列の場合nullを返す
 							})()
-							let roleGive: { give: boolean, roleId: string } = {
+							let roleGive: { give: boolean, roleId: string | null } = {
 								give: false,
 								roleId: null
 							}
@@ -590,8 +843,19 @@ namespace sumtool {
 										ephemeral: true
 									})
 								}
-							if (roleGive.give && roleGive.roleId !== null) {
-								try { await interaction.guild.members.cache.get(interaction.user.id).roles.add(await interaction.guild.roles.fetch(roleGive.roleId)) }
+							if (roleGive.give && roleGive.roleId !== null && interaction.channel) {
+								try {
+									if (interaction.guild) {
+										const member = interaction.guild.members.cache.get(interaction.user.id)
+										const role = await interaction.guild.roles.fetch(roleGive.roleId)
+										if (member && role) member.roles.add(role)
+									} else {
+										interaction.reply({
+											content: "",
+											ephemeral: true
+										})
+									}
+								}
 								catch (e) {
 									if (e.code) {
 										interaction.reply({
@@ -611,23 +875,39 @@ namespace sumtool {
 					slashCommand: [
 						new Discord.SlashCommandBuilder()
 							.setName("buttoncreate")
-							.setDescription("認証ボタンを生成します。")
+							.setDescription("認証ボタンを作成します。")
 							.addRoleOption(option => option
 								.setName("roles")
-								.setDescription("認証後に付与するロールを選択します。")
+								.setDescription("付与する際に使用するロールを選択します。")
 								.setRequired(true)
 							)
 							.addBooleanOption(option => option
 								.setName("question")
-								.setDescription("認証をクリックした際に、計算問題を出すかどうかを選択します(通常は有効)")
+								.setDescription("認証をクリックした際に、計算問題を出すかどうかを決めます(通常は有効)")
 							)
 							.addStringOption(option => option
 								.setName("title")
-								.setDescription("認証ボタンのタイトルを入力します。")
+								.setDescription("埋め込みのタイトルを決めます。")
 							)
 							.addStringOption(option => option
 								.setName("description")
-								.setDescription("認証ボタンの説明を入力します。")
+								.setDescription("埋め込みの説明を決めます。")
+							),
+						new Discord.SlashCommandBuilder()
+							.setName("multirolebtn")
+							.setDescription("複数役職を付与したい場合に使用します。")
+							.addStringOption(option => option
+								.setName("roleids")
+								.setDescription("ロールIDをスペースで区切り、それを使用し複数ロールの付与をします。")
+								.setRequired(true)
+							)
+							.addStringOption(option => option
+								.setName("title")
+								.setDescription("埋め込みのタイトルを決めます。")
+							)
+							.addStringOption(option => option
+								.setName("description")
+								.setDescription("埋め込みの説明を決めます。")
 							)
 					]
 				}
@@ -641,12 +921,14 @@ namespace sumtool {
 			const progs = this.data.json[this.rtdata.name].programs
 			if (progs)
 				for (let i = 0; i !== progs.length; i++) {
-					if (!this.rtdata.program[progs[i]]) {
+					if (this.rtdata.program && !this.rtdata.program[progs[i]]) {
 						this.rtdata.program[progs[i]] = this.programs[progs[i]]
 					}
 				}
 		}
 		async login() {
+			if (!this.rtdata.status) return
+			if (!this.rtdata.client) return
 			const token = this.data.json[this.rtdata.name].token
 			if (!token) return
 			this.rtdata.status.logined = true
@@ -655,7 +937,8 @@ namespace sumtool {
 	}
 	interface sharpConvertEvents {
 		end: [void],
-		progress: [now: number, total: number]
+		progress: [now: number, total: number],
+		error: [Error]
 	}
 	export declare interface sharpConvert {
 		on<K extends keyof sharpConvertEvents>(s: K, listener: (...args: sharpConvertEvents[K]) => any): this
@@ -673,6 +956,7 @@ namespace sumtool {
 			pass: string
 		}[] = []
 		nameing = 1
+		type: 0 | 1 = 0
 		#maxconvert = 20
 		#interval: NodeJS.Timer
 		constructor() {
@@ -685,7 +969,7 @@ namespace sumtool {
 					if (this.#converting === this.#maxconvert) return
 					if (this.#convertPoint === this.processd.length) {
 						if (this.#converting === 0) {
-							this.emit("end", null)
+							this.emit("end", undefined)
 							resolve()
 						}
 						clearInterval(this.#interval)
@@ -700,7 +984,7 @@ namespace sumtool {
 					const point = this.processd[i].point
 					for (let i = 0; i !== point.length; i++) {
 						outfolders += point[i] + "/"
-						if (!(await exsits(this.afterPass + "/" + outfolders))) await mkdir(this.afterPass + "/" + outfolders)
+						if (!(await sfs.exsits(this.afterPass + "/" + outfolders))) await sfs.mkdir(this.afterPass + "/" + outfolders)
 					}
 					const Stream = fs.createWriteStream(this.afterPass + "/" + outfolders + [
 						this.processd[i].filename,
@@ -708,15 +992,31 @@ namespace sumtool {
 						this.processd[i].extension + " - " + this.processd[i].filename,
 						(i + 1) + "_" + this.processd[i].extension + " - " + this.processd[i].filename,
 						i + 1,
-					][this.nameing] + ".png")
+					][this.nameing] + "." + sharpConvert.extType[this.type])
 					this.emit("progress", this.#convertPoint, this.processd.length)
-					await new Promise(async resolve => {
-						const imageW = imageSize(this.processd[i].pass + fileName).width
-						sharp(this.processd[i].pass + fileName)
-							.resize((this.size < imageW) ? this.size : imageW)
-							.png()
-							.pipe(Stream)
-						Stream.on("finish", resolve)
+					await new Promise<void>(async resolve => {
+						try {
+							const image = imageSize(this.processd[i].pass + fileName)
+							if (image.width) {
+								const sha = sharp(this.processd[i].pass + fileName)
+								sha.resize((this.size < image.width) ? this.size : image.width)
+								switch (sharpConvert.extType[this.type]) {
+									case "png": sha.png(); break
+									case "jpg": sha.jpeg(); break
+								}
+								sha.pipe(Stream)
+								Stream.on("finish", resolve)
+							} else {
+								const e = new ReferenceError()
+								e.message = "width is undefined."
+								e.name = "imageSize"
+								this.emit("error", e)
+								resolve()
+							}
+						} catch (e) {
+							this.emit("error", e)
+							resolve()
+						}
 					})
 					this.#converting--
 					convert()
@@ -734,6 +1034,16 @@ namespace sumtool {
 			"[連番]_[元拡張子] - [ファイル名].png",
 			"[連番].png"
 		]
+		static extType = ["png", "jpg"]
+	}
+	export interface ffmpegConverterEvents {
+		end: [void]
+		progress: [any]
+		error: [Error]
+	}
+	export declare interface ffmpegConverter {
+		on<K extends keyof ffmpegConverterEvents>(s: K, listener: (...args: ffmpegConverterEvents[K]) => any): this
+		emit<K extends keyof ffmpegConverterEvents>(eventName: K, ...args: ffmpegConverterEvents[K]): boolean
 	}
 	export class ffmpegConverter extends EventEmitter {
 		#ffmpeg: ffmpeg.FfmpegCommand
@@ -746,16 +1056,23 @@ namespace sumtool {
 			await new Promise<void>(resolve => {
 				this.#ffmpeg.addOptions(this.preset)
 				this.#ffmpeg.save(savePass)
-				this.#ffmpeg.on("end", () => { resolve() })
-				this.#ffmpeg.on('progress', function (progress) {
-					console.log(progress);
-				});
+				this.#ffmpeg.on("end", () => {
+					resolve()
+					this.emit("end", undefined)
+				})
+				this.#ffmpeg.on("progress", progress => {
+					console.log(progress)
+					this.emit("progress", progress)
+				})
+				this.#ffmpeg.on("error", err => {
+					console.log(err)
+				})
 			})
 		}
 		addInput(pass: string) {
 			this.#ffmpeg.addInput(pass)
 		}
-		static async inputPreset(option?: { tagonly?: boolean }): Promise<{ name: string, ext: string, tag: string[] }> {
+		static async inputPreset(option?: { tagonly?: boolean }): Promise<{ name: string | null, ext: string, tag: string[] }> {
 			console.log("-からタグの入力を始めます。複数を１度に入力してはなりません。検知し警告します。\n空白で続行すると完了したことになります。")
 			const presets: string[] = []
 			while (true) {
@@ -1226,9 +1543,9 @@ namespace sumtool {
 			this.ccode = data.ccode ? data.ccode : "utf8"
 			this.#client = new net.Socket()
 			const client = this.#client
-			client.on("ready", () => this.emit("ready", null))
+			client.on("ready", () => this.emit("ready", undefined))
 			client.on("error", e => this.emit("error", e))
-			client.on("end", () => this.emit("end", null))
+			client.on("end", () => this.emit("end", undefined))
 		}
 		set speed(d) {
 			d = (d > 200) ? 200 : d
@@ -1342,15 +1659,14 @@ namespace sumtool {
 			const percent = this.now / this.total
 			const miniPercent = this.relativePercent.now / this.relativePercent.total
 			const oneDisplay = this.viewStr + "(" + this.now + "/" + this.total + ") " +
-				(percent * 100).toFixed() + "%["
+				((percent ? percent : 0) * 100).toFixed() + "%["
 			const twoDisplay = "]"
 			let progress = ""
 			const length = textLength(oneDisplay) + textLength(twoDisplay)
 			const progressLength = windowSize[0] - 3 - length
-			const displayProgress = Number((percent * progressLength).toFixed())
-			const miniDisplayProgress = Number(((miniPercent / this.total) * progressLength).toFixed())
-			for (let i = 0; i < (displayProgress + miniDisplayProgress); i++) progress += "#"
-			for (let i = 0; i < progressLength - (displayProgress + miniDisplayProgress); i++) progress += " "
+			const displayProgress = Number((((percent ? percent : 0) + ((miniPercent ? miniPercent : 0) / this.total)) * progressLength).toFixed())
+			for (let i = 0; i < displayProgress; i++) progress += "#"
+			for (let i = 0; i < progressLength - (displayProgress); i++) progress += " "
 			const display = oneDisplay + progress + twoDisplay
 			readline.cursorTo(process.stdout, 0)
 			process.stdout.clearLine(0)
@@ -1367,7 +1683,7 @@ namespace sumtool {
 			directory: boolean
 		}
 		data: dataiofiles,
-		pass: string,
+		pass: string | null,
 		smalldata?: {}
 	}
 	interface dataIOEvents { ready: [void] }
@@ -1377,7 +1693,7 @@ namespace sumtool {
 	}
 	export class dataIO extends EventEmitter {
 		#operation = false
-		#pass: string
+		#pass: string[]
 		#name: string
 		#jsonPass: string
 		#folderPass: string
@@ -1385,47 +1701,48 @@ namespace sumtool {
 		#passIndex: dataiofiles
 		constructor(pass: string, programName: string) {
 			super()
-			passCheck(pass).then(async data => {
-				if (data) this.#pass = data.pass
+			pathChecker(pass).then(async data => {
+				if (data) this.#pass = data
 				else throw new Error("パスが間違っています。")
 				if (programName === "dataIO") throw new Error("dataIOを利用することは出来ません")
 				this.#name = programName
-				if (!await exsits(this.#pass + "/dataIO.json")) await writeFile(this.#pass + "/dataIO.json", "[]")
-				const dataIOIndex: { [programName: string]: any } = JSON.parse(String(await readFile(this.#pass + "/dataIO.json")))
+				const path = slashPathStr(this.#pass)
+				if (!await sfs.exsits(path + "/dataIO.json")) await sfs.writeFile(path + "/dataIO.json", "[]")
+				const dataIOIndex: { [programName: string]: any } = JSON.parse(String(await sfs.readFile(path + "/dataIO.json")))
 				if (!dataIOIndex[programName]) dataIOIndex[programName] = true
-				await writeFile(this.#pass + "/dataIO.json", JSON.stringify(dataIOIndex))
-				this.#jsonPass = this.#pass + "/" + this.#name + ".json"
-				this.#folderPass = this.#pass + "/" + this.#name
+				await sfs.writeFile(path + "/dataIO.json", JSON.stringify(dataIOIndex))
+				this.#jsonPass = path + "/" + this.#name + ".json"
+				this.#folderPass = path + "/" + this.#name
 				const initValue = JSON.stringify({ json: {}, passIndex: {} })
-				if (!await exsits(this.#jsonPass)) await writeFile(this.#jsonPass, initValue)
-				if (!await exsits(this.#folderPass)) await mkdir(this.#folderPass)
+				if (!await sfs.exsits(this.#jsonPass)) await sfs.writeFile(this.#jsonPass, initValue)
+				if (!await sfs.exsits(this.#folderPass)) await sfs.mkdir(this.#folderPass)
 				const rawJSON: {
 					json: {},
 					passIndex: dataiofiles
-				} = await JSON.parse(String(await readFile(this.#jsonPass)))
+				} = await JSON.parse(String(await sfs.readFile(this.#jsonPass)))
 				this.json = rawJSON.json
 				this.#passIndex = rawJSON.passIndex
 				this.#operation = true
-				this.emit("ready", null)
+				this.emit("ready", undefined)
 			})
 		}
-		static async initer(programName: string): Promise<dataIO> {
+		static async initer(programName: string): Promise<dataIO | null> {
 			if (programName === "dataIO") {
 				console.log("クラス名と同じ名前を使用しないでください。\nこの名前は内部で予約されています。")
 				return null
 			}
-			if (!await exsits("passCache.json")) {
+			if (!await sfs.exsits("passCache.json")) {
 				console.log("passCache.jsonが存在しないため、プログラムを続行することが出来ません。\n設定を行ってください。")
 				return null
 			}
-			const io = new dataIO(JSON.parse(String(await readFile("passCache.json"))), programName)
+			const io = new dataIO(JSON.parse(String(await sfs.readFile("passCache.json"))), programName)
 			await new Promise<void>(resolve => io.on("ready", () => resolve()))
 			return io
 		}
 		get operation() { return this.#operation }
-		async passGet(pass: string[], name: string, option?: { extension?: string }): Promise<string> {
+		async passGet(pass: string[], name: string, option?: { extension?: string }): Promise<string | null> {
 			if (!this.#operation) return null
-			let extension: string
+			let extension: string | null = null
 			if (option) {
 				if (option.extension) extension = option.extension
 			}
@@ -1452,10 +1769,13 @@ namespace sumtool {
 			return obj[name].pass
 		}
 		async save() {
-			await writeFile(this.#jsonPass, JSON.stringify({ json: this.json, passIndex: this.#passIndex }))
+			await sfs.writeFile(this.#jsonPass, JSON.stringify({ json: this.json, passIndex: this.#passIndex }))
 		}
 	}
-	interface youtubeDownloaderEvents { ready: [void] }
+	interface youtubeDownloaderEvents {
+		ready: [void]
+		error: [Error]
+	}
 	interface ytdldataIOextJSON extends dataIO {
 		json: {
 			progress?: {
@@ -1486,58 +1806,113 @@ namespace sumtool {
 		emit<K extends keyof youtubeDownloaderEvents>(eventName: K, ...args: youtubeDownloaderEvents[K]): boolean
 	}
 	export class youtubeDownloader extends EventEmitter {
-		data: ytdldataIOextJSON
+		data: ytdldataIOextJSON | undefined
 		constructor() {
 			super()
-			this.pconst().then(() => this.emit("ready", null))
+			this.pconst().then(() => this.emit("ready", undefined))
 		}
 		private async pconst() {
-			this.data = await dataIO.initer("youtube-downloader")
+			const data = await dataIO.initer("youtube-downloader")
+			if (!data) {
+				const e = new ReferenceError()
+				e.message = "dataIOの準備ができませんでした。"
+				e.name = "YouTube Downloader"
+				this.emit("error", e)
+			}
 		}
 		async videoDataGet(videoId: string, type: "videoonly" | "audioonly") {
-			await new Promise<void>(async resolve => {
-				const youtubedl = ytdl(videoId, { filter: type, quality: "highest" })
-				const pass = await this.data.passGet(["youtubeSource", "temp", videoId], type)
-				const Stream = fs.createWriteStream(pass)
-				youtubedl.pipe(Stream)
-				youtubedl.on("progress", (chunkLength: number, downloaded: number, total: number) => {
-					const progress = this.data.json.progress[videoId]
-					progress.chunkLength = chunkLength
-					progress.downloaded = downloaded
-					progress.total = total
-					progress.status = "download"
-					progress.startTime = progress.startTime ? progress.startTime : Date.now()
-				})
-				youtubedl.on("end", async () => {
-					this.data.json.progress[videoId].status = "downloaded"
-					async function ffprobe(pass: string): Promise<ffmpeg.FfprobeData> {
-						return await new Promise(resolve => {
-							ffmpeg(pass).ffprobe((err, data) => { resolve(data) })
-						})
-					}
-					const data = await ffprobe(pass)
-					const video = data.streams[0]
-					const fps = (() => {
-						if (video.r_frame_rate.match("/")) { //もしfps値が「0」または「0/0」だった場合に自動で計算する関数
-							const data = video.r_frame_rate.split("/")
-							return Number(data[0]) / Number(data[1])
-						} else return Number(video.r_frame_rate)
-					})()
-					Object.assign(this.data.json.videoMeta, {
-						[videoId]: {
-							[video.codec_name]: {
-								[video.height]: {
-									[fps]: {}
-								}
+			if (!this.data) return
+			const youtubedl = ytdl(videoId, { filter: type, quality: "highest" })
+			const pass = await this.data.passGet(["youtubeSource", "temp", videoId], type)
+			if (!pass) return
+			const Stream = fs.createWriteStream(pass)
+			youtubedl.pipe(Stream)
+			youtubedl.on("progress", (chunkLength, downloaded, total) => {
+				if (!this.data) return
+				if (!this.data.json.progress) this.data.json.progress = {}
+				const progress = this.data.json.progress[videoId]
+				progress.chunkLength = chunkLength
+				progress.downloaded = downloaded
+				progress.total = total
+				progress.status = "download"
+				progress.startTime = progress.startTime ? progress.startTime : Date.now()
+			})
+			youtubedl.on("end", async () => {
+				if (!this.data) return
+				if (!this.data.json.progress) this.data.json.progress = {}
+				this.data.json.progress[videoId].status = "downloaded"
+				async function ffprobe(pass: string): Promise<ffmpeg.FfprobeData> {
+					return await new Promise(resolve => {
+						ffmpeg(pass).ffprobe((err, data) => { resolve(data) })
+					})
+				}
+				const data = await ffprobe(pass)
+				const video = data.streams[0]
+				const fps = (() => {
+					if (!video.r_frame_rate) return null
+					if (video.r_frame_rate.match("/")) { //もしfps値が「0」または「0/0」だった場合に自動で計算する関数
+						const data = video.r_frame_rate.split("/")
+						return Number(data[0]) / Number(data[1])
+					} else return Number(video.r_frame_rate)
+				})()
+				if (!this.data.json.videoMeta) this.data.json.videoMeta = {}
+				if (!video.codec_name) return
+				if (!video.height) return
+				if (!fps) return
+				Object.assign(this.data.json.videoMeta, {
+					[videoId]: {
+						[video.codec_name]: {
+							[video.height]: {
+								[fps]: {}
 							}
 						}
-					})
-					//これしか重複せず高速で、プログラムが入手したコーデック一覧を作る方法がわからない
-					this.data.json.codecType[video.codec_name] = true
-					resolve()
+					}
 				})
+				//これしか重複せず高速で、プログラムが入手したコーデック一覧を作る方法がわからない
+				if (!this.data.json.codecType) this.data.json.codecType = {}
+				this.data.json.codecType[video.codec_name] = true
 			})
 		}
+	}
+	/**
+	 * 動画や音声をスムーズにクライアントに送信する関数です
+	 * @param videopath パスを入力します
+	 * @param range リクエストのレンジを入力します
+	 * @param type Content-Typeに使用します
+	 * @param res response変数を入力します
+	 */
+	async function VASourceGet(videopath: string, range: string, type: string, res: any) {
+		const videoSize = fs.statSync(videopath).size //ファイルサイズ(byte)
+		const chunkSize = 1 * 1e7 //チャンクサイズ
+
+		const ranges = String(range).split("-")
+		if (ranges[0]) ranges[0] = ranges[0].replace(/\D/g, "")
+		if (ranges[1]) ranges[1] = ranges[1].replace(/\D/g, "")
+		//これは取得するデータ範囲を決定します。
+		const options = { start: 0, end: 0 }
+		options.start = Number(ranges[0]) //始まりの指定
+		options.end = Number(ranges[1]) || Math.min(options.start + chunkSize, videoSize - 1) //終わりの指定
+		if (!range) options.end = videoSize - 1
+
+		const headers: {
+			[name: string]: string
+		} = {} //ヘッダー
+		headers["Accept-Ranges"] = "bytes"
+		headers["Content-Length"] = String(videoSize)
+		if (range) headers["Content-Length"] = String(options.end - options.start + 1)
+		if (range) headers["Content-Range"] = "bytes " + options.start + "-" + options.end + "/" + videoSize
+		headers["Content-Range"] = "bytes " + options.start + "-" + options.end + "/" + videoSize
+		headers["Content-Type"] = type
+		console.log(options, ranges, range)
+		res.writeHead((range) ? 206 : 200, headers) //206を使用すると接続を続行することが出来る
+		const Stream = fs.createReadStream(videopath, options) //ストリームにし、範囲のデータを読み込む
+		Stream.on("error", error => {
+			console.log("Error reading file" + videopath + ".")
+			console.log(error)
+			res.sendStatus(500)
+		});
+		Stream.on("data", c => res.write(c))
+		Stream.on("end", () => res.end())
 	}
 	export async function cuiIO(shareData: {
 		discordBot?: {
@@ -1557,12 +1932,12 @@ namespace sumtool {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
 						}
-						const beforePass = await passCheck(await question("変換元の画像フォルダを指定してください。"))
+						const beforePass = await pathChecker(await question("変換元の画像フォルダを指定してください。"))
 						if (beforePass === null) {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
 						}
-						const afterPass = await passCheck(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
+						const afterPass = await pathChecker(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
 						if (afterPass === null) {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
@@ -1572,22 +1947,56 @@ namespace sumtool {
 							console.log("入力が間違っているようです。最初からやり直してください。")
 							return
 						}
+						const type = await choice(sharpConvert.extType, "拡張子一覧", "利用する拡張子と圧縮技術を選択してください。")
+						if (type === null) {
+							console.log("入力が間違っているようです。最初からやり直してください。")
+							return
+						}
+						if (type !== 1 && type !== 2) {
+							console.log("プログラム内で予期せぬエラーを回避するため、中断されました。")
+							return
+						}
 						const folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
-						const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"] })
+						const invFileIgnore = await booleanIO("最初に「.」が付くファイルを省略しますか？")
+						const listerOptions = {
+							macOSFileIgnote: false
+						}
+						if (!invFileIgnore) {
+							listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
+						}
+						const fileList = await fileLister(beforePass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFIleIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
+						if (!fileList) {
+							console.log("ファイルの取得ができなかったようです。")
+							return
+						}
 						console.log(
-							"変換元パス: " + beforePass.pass + "\n" +
-							"変換先パス: " + afterPass.pass + "\n" +
+							"変換元パス: " + slashPathStr(beforePass) + "\n" +
+							"変換先パス: " + slashPathStr(afterPass) + "\n" +
 							"変換先サイズ(縦): " + imageSize + "\n" +
 							"変換するファイル数: " + fileList.length + "\n" +
-							"命名方法: " + sharpConvert.type[nameing - 1]
+							"命名方法: " + sharpConvert.type[nameing - 1] + "\n" +
+							"拡張子タイプ: " + sharpConvert.extType[type - 1] + "\n" +
+							"ファイル除外方法: " + (() => {
+								const ignoreStrings: string[] = []
+								if (invFileIgnore) ignoreStrings.push("末端に「.」が付いたファイルを除外")
+								if (listerOptions.macOSFileIgnote) ignoreStrings.push("末端に「._」が付いたファイルを除外")
+								let str = ""
+								for (let i = 0; i !== ignoreStrings.length; i++) {
+									if (i !== 0) str += "、"
+									str += ignoreStrings[i]
+								}
+								if (str === "") return "除外しない"
+								return str
+							})()
 						)
 						const permission = await booleanIO("上記のデータで実行してもよろしいですか？yと入力すると続行します。")
 						if (permission) {
 							const convert = new sharpConvert()
-							convert.afterPass = afterPass.pass
+							convert.afterPass = afterPass[0]
 							convert.nameing = nameing - 1
 							convert.size = imageSize
 							convert.processd = fileList
+							convert.type = (type === 1) ? 0 : 1
 							const progressd = new progress()
 							progressd.viewStr = "変換中"
 							progressd.view()
@@ -1600,6 +2009,9 @@ namespace sumtool {
 								progressd.viewed = false
 								console.log("\n変換が完了しました。")
 							})
+							convert.on("error", e => {
+								console.log("エラーを確認しました。: ", e)
+							})
 							await convert.convert()
 						}
 					}
@@ -1611,7 +2023,12 @@ namespace sumtool {
 				{
 					name: "Discord Bot",
 					function: async () => {
-						const botNames = Object.keys(await discordBot.data())
+						const data = await discordBot.data()
+						if (!data) {
+							console.log("データの準備ができませんでした。")
+							return
+						}
+						const botNames = Object.keys(data)
 						for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
 							const programs: { [programName: string]: () => Promise<void> } = {
 								"botを利用する": async () => {
@@ -1624,6 +2041,7 @@ namespace sumtool {
 										console.log("入力が間違っているようです。最初からやり直してください。")
 										return
 									}
+									if (!shareData.discordBot) shareData.discordBot = {}
 									if (!shareData.discordBot[botNames[botChoice - 1]]) shareData.discordBot[botNames[botChoice - 1]] = {
 										name: botNames[botChoice - 1]
 									}
@@ -1672,6 +2090,7 @@ namespace sumtool {
 										console.log("入力が間違っているようです。最初からやり直してください。")
 										return
 									}
+									if (!shareData.discordBot) shareData.discordBot = {}
 									if (!shareData.discordBot[name]) shareData.discordBot[name] = {
 										name: name
 									}
@@ -1794,12 +2213,12 @@ namespace sumtool {
 								for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
 									const programs: { [programName: string]: () => Promise<void> } = {
 										"パスを指定しプリセットで変換": async () => {
-											const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
+											const beforePass = await pathChecker(await question("元のソースパスを入力してください。"))
 											if (beforePass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
 											}
-											const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+											const afterPass = await pathChecker(await question("保存先のフォルダパスを入力してください。"))
 											if (afterPass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
@@ -1812,9 +2231,13 @@ namespace sumtool {
 												})
 												return presetNames
 											})(), "プリセット一覧", "使用するプリセットを選択してください。")
+											if (!presetChoice) {
+												console.log("入力が間違っているようです。最初からやり直してください。")
+												return
+											}
 											console.log(
-												"変換元: " + beforePass.pass + "\n" +
-												"変換先: " + afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext + "\n" +
+												"変換元: " + slashPathStr(beforePass) + "\n" +
+												"変換先: " + slashPathStr(afterPass) + "/" + filename + "." + presets[presetChoice - 1].ext + "\n" +
 												"タグ: " + (() => {
 													let tags = ""
 													presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
@@ -1823,20 +2246,23 @@ namespace sumtool {
 											)
 											const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
 											if (permission) {
-												const convert = new ffmpegConverter(beforePass.pass)
+												const convert = new ffmpegConverter(slashPathStr(beforePass))
 												convert.preset = presets[presetChoice - 1].tag
 												console.log(convert.preset)
-												await convert.convert(afterPass.pass + "/" + filename + "." + presets[presetChoice - 1].ext)
+												if (await sfs.exsits(slashPathStr(afterPass))) {
+													if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) return
+												}
+												await convert.convert(slashPathStr(afterPass) + "/" + filename + "." + presets[presetChoice - 1].ext)
 												console.log("変換が完了しました！")
 											}
 										},
 										"タグを手入力し、詳細な設定を自分で行う": async () => {
-											const beforePass = await passCheck(await question("元のソースパスを入力してください。"))
+											const beforePass = await pathChecker(await question("元のソースパスを入力してください。"))
 											if (beforePass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
 											}
-											const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+											const afterPass = await pathChecker(await question("保存先のフォルダパスを入力してください。"))
 											if (afterPass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
@@ -1844,8 +2270,8 @@ namespace sumtool {
 											const filename = await question("書き出し先のファイル名を入力してください。")
 											const preset = await ffmpegConverter.inputPreset({ tagonly: true })
 											console.log(
-												"変換元: " + beforePass.pass + "\n" +
-												"変換先: " + afterPass.pass + "/" + filename + "." + preset.ext + "\n" +
+												"変換元: " + slashPathStr(beforePass) + "\n" +
+												"変換先: " + slashPathStr(afterPass) + "/" + filename + "." + preset.ext + "\n" +
 												"タグ: " + (() => {
 													let tags = ""
 													preset.tag.forEach(tag => tags += tag + " ")
@@ -1854,26 +2280,42 @@ namespace sumtool {
 											)
 											const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
 											if (permission) {
-												const convert = new ffmpegConverter(beforePass.pass)
+												const convert = new ffmpegConverter(slashPathStr(beforePass))
 												convert.preset = preset.tag
 												console.log(convert.preset)
-												await convert.convert(afterPass.pass + "/" + filename + "." + preset.ext)
+
+												if (await sfs.exsits(slashPathStr(afterPass))) {
+													if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) return
+												}
+												await convert.convert(slashPathStr(afterPass) + "/" + filename + "." + preset.ext)
 												console.log("変換が完了しました！")
 											}
 										},
 										"複数ファイルを一括変換": async () => {
-											const beforePass = await passCheck(await question("元のフォルダパスを入力してください。"))
+											const beforePass = await pathChecker(await question("元のフォルダパスを入力してください。"))
 											if (beforePass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
 											}
-											const afterPass = await passCheck(await question("保存先のフォルダパスを入力してください。"))
+											const afterPass = await pathChecker(await question("保存先のフォルダパスを入力してください。"))
 											if (afterPass === null) {
 												console.log("入力が間違っているようです。最初からやり直してください。")
 												return
 											}
 											const folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
-											const fileList = await fileLister(beforePass.pass, { contain: folderContain, extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts"] })
+											const invFileIgnore = await booleanIO("最初に「.」が付くファイルを省略しますか？")
+											const listerOptions = {
+												macOSFileIgnote: false
+											}
+											if (!invFileIgnore) {
+												listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
+											}
+											const fileList = await fileLister(beforePass, {
+												contain: folderContain,
+												extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "caf", "aif", "aiff", "m4r", "alac", "flac", "3gp", "3g2", "webm", "aac", "hevc"],
+												invFIleIgnored: invFileIgnore,
+												macosInvIgnored: listerOptions.macOSFileIgnote
+											})
 											const presetChoice = await choice((() => {
 												let presetNames: string[] = []
 												presets.forEach(preset => {
@@ -1881,9 +2323,13 @@ namespace sumtool {
 												})
 												return presetNames
 											})(), "プリセット一覧", "使用するプリセットを選択してください。")
+											if (!presetChoice) {
+												console.log("入力が間違っているようです。最初からやり直してください。")
+												return
+											}
 											console.log(
-												"変換元: " + beforePass.pass + "\n" +
-												"変換先: " + afterPass.pass + "\n" +
+												"変換元: " + slashPathStr(beforePass) + "\n" +
+												"変換先: " + slashPathStr(afterPass) + "\n" +
 												"タグ: " + (() => {
 													let tags = ""
 													presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
@@ -1899,18 +2345,26 @@ namespace sumtool {
 												progressd.total = fileList.length
 												for (let i = 0; i != fileList.length; i++) {
 													progressd.now = i
-													const convert = new ffmpegConverter(fileList[i].pass + fileList[i].filename + "." + fileList[i].extension)
+													const convert = new ffmpegConverter(fileList[i].pass + "/" + fileList[i].filename + "." + fileList[i].extension)
 													convert.preset = presets[presetChoice - 1].tag
 
-													await convert.convert(afterPass.pass + "/" + (await (async () => {
+													const convertedPass = slashPathStr(afterPass) + "/" + (await (async () => {
 														let outfolders = ""
 														const point = fileList[i].point
 														for (let i = 0; i !== point.length; i++) {
 															outfolders += point[i] + "/"
-															if (!(await exsits(afterPass.pass + "/" + outfolders))) await mkdir(afterPass.pass + "/" + outfolders)
+															if (!(await sfs.exsits(slashPathStr(afterPass) + "/" + outfolders))) await sfs.mkdir(slashPathStr(afterPass) + "/" + outfolders)
 														}
 														return outfolders
-													})()) + fileList[i].filename + "." + presets[presetChoice - 1].ext)
+													})()) + fileList[i].filename + "." + presets[presetChoice - 1].ext
+
+													if (await sfs.exsits(convertedPass)) {
+														progressd.viewed = false
+														if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) continue
+														progressd.view()
+													}
+
+													await convert.convert(convertedPass)
 												}
 												progressd.now = fileList.length
 												progressd.view()
@@ -1934,7 +2388,17 @@ namespace sumtool {
 								for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
 									const programs: { [programName: string]: () => Promise<void> } = {
 										"プリセット作成": async () => {
-											presets.push(await ffmpegConverter.inputPreset())
+											const preset = await ffmpegConverter.inputPreset()
+											const name = preset.name
+											if (name === null) {
+												console.log("名前を読み込めませんでした。")
+												return
+											}
+											presets.push({
+												name: name,
+												ext: preset.ext,
+												tag: preset.tag
+											})
 											await data.save()
 										},
 										"プリセット編集": async () => {
@@ -1959,8 +2423,19 @@ namespace sumtool {
 														let tags: string[] = []
 														presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
 														return tags
-													})(), "タグ一覧", "編集するタグを選択してください。")
-													presets[presetChoice - 1].tag[tagChoice - 1] = await question("新しいタグ名を入力してください。エラー検知はしません。")
+													})(), "タグ一覧", "編集するタグを選択してください。", true)
+													if (!tagChoice) {
+														console.log("入力が間違ってるようです。もう一度やり直してください。")
+														return
+													}
+													const tagName = await question("新しいタグ名を入力してください。エラー検知はしません。")
+													if (tagChoice > (presets[presetChoice - 1].tag.length - 1)) {
+														presets[presetChoice - 1].tag.push(tagName)
+													} else {
+														if (tagName === "") {
+															delete presets[presetChoice - 1].tag[tagChoice - 1]
+														} else presets[presetChoice - 1].tag[tagChoice - 1] = tagName
+													}
 												},
 												"タグを削除": async () => {
 													const tagChoice = await choice((() => {
@@ -1968,10 +2443,17 @@ namespace sumtool {
 														presets[presetChoice - 1].tag.forEach(tag => tags.push(tag))
 														return tags
 													})(), "タグ一覧", "削除するタグを選択してください。")
+													if (!tagChoice) {
+														console.log("入力が間違ってるようです。もう一度やり直してください。")
+														return
+													}
 													presets[presetChoice - 1].tag.splice(tagChoice - 1)
 												},
 												"プリセット名を変更": async () => {
 													presets[presetChoice - 1].name = await question("新しい名前を入力してください。")
+												},
+												"拡張子を変更": async () => {
+													presets[presetChoice - 1].ext = await question("拡張子を入力してください。")
 												},
 												"プリセットを削除": async () => {
 													const permission = await booleanIO("プリセットを削除してもよろしいですか？元に戻すことは出来ません。")
@@ -2066,6 +2548,89 @@ namespace sumtool {
 					}
 				},
 				{
+					name: "Folder Copy",
+					function: async () => {
+						console.log("このプログラムは想定外の入力に弱い傾向にあります。ご了承ください。")
+						const beforePass = await pathChecker(await question("移動元のフォルダを指定してください。"))
+						if (!beforePass) {
+							console.log("入力が間違ってるようです。もう一度やり直してください。")
+							return
+						}
+						const afterPass = await pathChecker(await question("移動先のフォルダを指定してください。"))
+						if (!afterPass) {
+							console.log("入力が間違ってるようです。もう一度やり直してください。")
+							return
+						}
+						const list = await fileLister(beforePass, { contain: true })
+						console.log("移動元のフォルダには" + list.length + "個のファイルたちがあります。")
+						if (await booleanIO("移動を開始しますか？")) {
+							try {
+								let errorNum = 0
+								let skipNum = 0
+								const prog = new progress()
+								prog.view()
+								prog.total = list.length
+								for (let i = 0; i !== list.length; i++) {
+									const point = list[i].point
+									let outfolders = ""
+									for (let i = 0; i !== point.length; i++) {
+										outfolders += point[i] + "/"
+										if (!(await sfs.exsits(slashPathStr(afterPass) + "/" + outfolders))) await sfs.mkdir(slashPathStr(afterPass) + "/" + outfolders)
+									}
+									const fileName = list[i].filename + (list[i].extension ? ("." + list[i].extension) : "")
+									const copyDataTo = slashPathStr(afterPass) + "/" + outfolders + fileName
+									prog.now = i
+									prog.viewStr = "移動中。スキップ[" + skipNum + "] エラー[" + errorNum + "]"
+									if (await sfs.exsits(list[i].pass + fileName)) {
+										await new Promise<void>(resolve => {
+											const Stream = fs.createReadStream(list[i].pass + fileName)
+											Stream.pipe(fs.createWriteStream(copyDataTo))
+											Stream.on("error", err => {
+												errorNum++
+											})
+											Stream.on("end", () => { resolve() })
+										})
+									} else {
+										skipNum++
+									}
+								}
+								prog.view()
+								prog.viewed = false
+							} catch (e) { }
+						}
+					}
+				},
+				{
+					name: "プログラムテスト",
+					function: async () => {
+						console.log("これを使用してしまうと、強制終了する以外にプログラムを抜ける方法が無くなります。")
+						const programs: {
+							name: string,
+							function: () => Promise<void>
+						}[] = [{
+							name: "passCheck",
+							function: async () => {
+								const pass = await question("パスを入力")
+								const checked = await pathChecker(pass)
+								console.log(checked ? slashPathStr(checked) : null)
+							}
+						}]
+						const programsName = (() => {
+							const programsName = []
+							for (let i = 0; i !== programs.length; i++) programsName.push(programs[i].name)
+							return programsName
+						})()
+						const programChoice = await choice(programsName, "利用可能なプログラム", "実行したいプログラムを選択してください。")
+						if (programChoice === null) {
+							console.log("入力が間違っているようです。最初からやり直してください。")
+							return
+						}
+						while (true) {
+							await programs[programChoice - 1].function()
+						}
+					}
+				},
+				{
 					name: "Cryptoによる暗号化",
 					function: async () => {
 						console.log("現在のところ未完成です。")
@@ -2104,6 +2669,89 @@ namespace sumtool {
 					}
 				},
 				{
+					name: "Discord BotToken情報収集",
+					function: async () => {
+						const token = await question("Botのトークンを入力してください。")
+						const {
+							Client,
+							Partials,
+							GatewayIntentBits
+						} = Discord
+						const client = new Client({
+							intents: [
+								GatewayIntentBits.GuildMembers,
+								GatewayIntentBits.MessageContent,
+								GatewayIntentBits.Guilds
+							],
+							partials: [
+								Partials.Channel,
+								Partials.GuildMember,
+								Partials.GuildScheduledEvent,
+								Partials.Message,
+								Partials.Reaction,
+								Partials.ThreadMember,
+								Partials.User
+							]
+						})
+						client.on(Discord.Events.Error, err => {
+							throw err
+						})
+						await client.login(token)
+						await new Promise<void>(resolve => {
+							client.on(Discord.Events.ClientReady, client => {
+								resolve()
+							})
+						})
+						const guilds: {
+							guildName: string
+							guildId: string
+							channels: {
+								channelName: string
+							}[]
+							users: {
+								displayName: string
+								nickName: string | null
+							}[]
+						}[] = []
+						const data = (await client.guilds.fetch())
+						data.map(data => {
+							data
+						})
+						client.guilds.cache.map(guild => guilds.push({
+							guildName: guild.name,
+							guildId: guild.id,
+							channels: (() => {
+								const channels: {
+									channelName: string
+								}[] = []
+								guild.channels.cache.map(channel => {
+									channels.push({
+										channelName: channel.name
+									})
+								})
+								return channels
+							})(),
+							users: (() => {
+								const users: {
+									displayName: string
+									nickName: string | null
+								}[] = []
+								guild.members.cache.map(member => {
+									users.push({
+										displayName: member.displayName,
+										nickName: member.nickname
+									})
+								})
+								return users
+							})()
+						}))
+						client.destroy()
+						console.log("情報が取得されました。")
+						while (true) {
+						}
+					}
+				},
+				{
 					name: "Various Programsの状態・設定",
 					function: async () => {
 						const programs: { [programName: string]: () => Promise<void> } = {
@@ -2119,15 +2767,15 @@ namespace sumtool {
 								)
 							},
 							"キャッシュデータ等のパス設定": async () => {
-								const data = await exsits("passCache.json") ? JSON.parse(String(await readFile("passCache.json"))) : null
+								const data = await sfs.exsits("passCache.json") ? JSON.parse(String(await sfs.readFile("passCache.json"))) : null
 								console.log("現在のキャッシュパス場所は" + (data ? data + "です。" : "設定されていません。"))
-								const pass = await passCheck(await question("キャッシュデータを保存するパスを入力してください。"))
+								const pass = await pathChecker(await question("キャッシュデータを保存するパスを入力してください。"))
 								if (pass === null) {
 									console.log("入力が間違っているようです。最初からやり直してください。")
 									return
 								}
-								await writeFile("passCache.json", JSON.stringify(pass.pass))
-								console.log(JSON.parse(String(await readFile("passCache.json"))) + "に変更されました。")
+								await sfs.writeFile("passCache.json", JSON.stringify(slashPathStr(pass)))
+								console.log(JSON.parse(String(await sfs.readFile("passCache.json"))) + "に変更されました。")
 							}
 						}
 						const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")

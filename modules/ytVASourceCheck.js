@@ -7,6 +7,8 @@ const wait = require("util").promisify(setTimeout)
  */
 module.exports.ytVASourceCheck = async ytIndex => {
     const savePass = require("../dataPass.json").default
+    if (ytIndex === {}) ytIndex = { videoIds: {} }
+    if (ytIndex.videoIds === {}) return
     const videoIds = Object.keys(ytIndex.videoIds)
     let time = Date.now()
     for (let i = 0; i != videoIds.length; i++) {
