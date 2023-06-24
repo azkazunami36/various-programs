@@ -1,5 +1,8 @@
+import readline from "readline"
 
-import readline from "readline";
+import textLength from "./textLength"
+import wait from "./wait"
+
 namespace consoleUIPrograms {
 	/**
 	 * ユーザーから文字列を受け取ります。
@@ -40,6 +43,72 @@ namespace consoleUIPrograms {
 			case "true": return true
 			case "ok": return true
 			default: return false
+		}
+	}
+	export class progress {
+		#viewed: boolean = false
+		/**
+		 * 現在の進行度または最大より小さい値を入力します。
+		 */
+		now: number = 0
+		/**
+		 * 100%を計算するために、最大値または合計値をここに入力します。
+		 */
+		total: number = 0
+		/**
+		 * プログレスバー更新間隔をms秒で入力します。
+		 */
+		interval: number = 100
+		/**
+		 * プログレスバーの左に説明を入れます。
+		 */
+		viewStr: string = "進行中..."
+		/**
+		 * プログレスバーに更なる小さな進行を表すためのものです。
+		 * メインのnow:2,total:4だとして、このエリアでのnow:3,total:6はnow:2.5,total:4となります。
+		 */
+		relativePercent: {
+			now: number,
+			total: number
+		} = {
+				now: 0,
+				total: 0
+			}
+		/**
+		 * プログレスバーの表示を開始します。
+		 */
+		view() {
+			if (!this.#viewed) this.#viewed = true
+			this.#view()
+		}
+		/**
+		 * プログレスバーの表示をするかを設定します。
+		 * trueを設定すると自動で表示を開始します。
+		 */
+		set viewed(type: boolean) {
+			this.#viewed = type
+			if (this.#viewed) this.#view
+		}
+		async #view() {
+			if (!this.#viewed) return
+			const windowSize = process.stdout.getWindowSize()
+			const percent = this.now / this.total
+			const miniPercent = this.relativePercent.now / this.relativePercent.total
+			const oneDisplay = this.viewStr + "(" + this.now + "/" + this.total + ") " +
+				((percent ? percent : 0) * 100).toFixed() + "%["
+			const twoDisplay = "]"
+			let progress = ""
+			const length = textLength(oneDisplay) + textLength(twoDisplay)
+			const progressLength = windowSize[0] - 3 - length
+			const displayProgress = Number((((percent ? percent : 0) + ((miniPercent ? miniPercent : 0) / this.total)) * progressLength).toFixed())
+			for (let i = 0; i < displayProgress; i++) progress += "#"
+			for (let i = 0; i < progressLength - (displayProgress); i++) progress += " "
+			const display = oneDisplay + progress + twoDisplay
+			readline.cursorTo(process.stdout, 0)
+			process.stdout.clearLine(0)
+			process.stdout.write(display)
+			await wait(this.interval)
+			this.#view()
 		}
 	}
 }
