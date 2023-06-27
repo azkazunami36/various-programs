@@ -32,5 +32,8 @@
     "yt-channel-info": "^3.2.1",
     "yt-search": "^2.10.3",
     "ytdl-core": "^4.11.2"
+  },
+  "devDependencies": {
+    "@types/request": "^2.48.8"
   }
 }
