@@ -23,7 +23,6 @@ export async function cuiIO(shareData: {
         [botName: string]: discordRealTimeData
     }
 }) {
-    const cuiIOtmp: {} = {}
     const programs: {
         name: string,
         function: () => Promise<void>
@@ -861,14 +860,6 @@ export async function cuiIO(shareData: {
                     const programs: { [programName: string]: () => Promise<void> } = {
                         "プロセスのメモリ使用率": async () => {
                             console.log("メモリ使用率(bytes): " + process.memoryUsage.rss())
-                        },
-                        "cuiIOデータをRaw表示": async () => {
-                            const tmp = JSON.parse(JSON.stringify(cuiIOtmp))
-                            delete tmp.cache
-                            console.log(
-                                "cuiIOtmpに入った不必要なデータは削除されています。\n" +
-                                JSON.stringify(tmp, null, "  ")
-                            )
                         },
                         "キャッシュデータ等のパス設定": async () => {
                             const data = await sfs.exsits("passCache.json") ? JSON.parse(String(await sfs.readFile("passCache.json"))) : null
