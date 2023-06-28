@@ -7,6 +7,11 @@
         "skipLibCheck": true,
         "target": "ESNext",
         "noImplicitAny": true,
-        "strictNullChecks": true
+        "strictNullChecks": true,
+        "paths": {
+            "@/*": [
+                "*"
+            ]
+        }
     },
 }
