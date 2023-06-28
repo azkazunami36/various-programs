@@ -387,4 +387,12 @@ export class discordBot extends EventEmitter {
         await this.rtdata.client.login(token)
     }
 }
+export function mentionIs(mentions: Discord.MessageMentions<boolean>, client?: Discord.Client<boolean>) {
+    const mainClient = client ? client : mentions.client
+    if (mainClient.user) {
+        if (mentions.users.has(mainClient.user.id)) return true
+        if (mentions.roles.some(r => { if (mainClient.user) return [mainClient.user.username].includes(r.name) })) return true
+    }
+    return false
+}
 export default discordBot
