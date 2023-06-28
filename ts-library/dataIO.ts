@@ -61,8 +61,8 @@ export class dataIO extends EventEmitter {
             return null
         }
         if (!await sfs.exsits("passCache.json")) {
-            console.log("passCache.jsonが存在しないため、プログラムを続行することが出来ません。\n設定を行ってください。")
-            return null
+            if (!await sfs.exsits("cache")) sfs.mkdir("cache")
+            await sfs.writeFile("passCache.json", "\"cache\"")
         }
         const io = new dataIO(JSON.parse(String(await sfs.readFile("passCache.json"))), programName)
         await new Promise<void>(resolve => io.on("ready", () => resolve()))

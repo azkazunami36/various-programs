@@ -15,6 +15,7 @@ import kanaConvert from "ts-library/kanaConvert"
 import discordBot from "ts-library/discord-bot"
 import ffmpegConverter from "ts-library/ffmpegConverter"
 import Bouyomi from "ts-library/bouyomi"
+import splitExt from "./splitExt"
 
 const { question, choice, booleanIO, progress } = consoleUIPrograms
 
@@ -326,7 +327,11 @@ export async function cuiIO(shareData: {
                                             console.log("入力が間違っているようです。最初からやり直してください。")
                                             return
                                         }
-                                        const filename = await question("書き出し先のファイル名を入力してください。")
+                                        const filename = await (async () => {
+                                            let filename = await question("書き出し先のファイル名を入力してください。")
+                                            if (filename === "") filename = splitExt(beforePass[beforePass.length - 1]).filename
+                                            return filename
+                                        })()
                                         const presetChoice = await choice((() => {
                                             let presetNames: string[] = []
                                             presets.forEach(preset => {
