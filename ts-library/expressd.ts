@@ -42,6 +42,9 @@ export class expressd {
             const passArray = url.split("/")
             const passdata = await type[passArray[1]]([...passArray])
         })
+        app.post("*", (req, res) => {
+        })
+        app.listen("80", () => {})
     }
 }
 export default expressd

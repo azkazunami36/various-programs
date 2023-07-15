@@ -2,6 +2,9 @@ import Discord from "discord.js"
 import EventEmitter from "events"
 
 import dataIO from "./dataIO"
+/**
+ * Discordのクライアントクラスやそれに関するデータ、例でいう可変するVCの利用状況などに常にアクセスできるように作成された関数です。
+ */
 export interface discordRealTimeData {
     name: string,
     client?: Discord.Client,
@@ -12,6 +15,9 @@ export interface discordRealTimeData {
         [programName: string]: discordProgram
     }
 }
+/**
+ * これらのイベントが利用できます。
+ */
 interface discordBotEvents {
     classReady: [void]
     djsClientReady: [Discord.Client]
@@ -19,10 +25,16 @@ interface discordBotEvents {
     interactionCreate: [Discord.Interaction]
     error: [Error]
 }
+/**
+ * Discordのメイン
+ */
 export declare interface discordBot {
     on<K extends keyof discordBotEvents>(s: K, listener: (...args: discordBotEvents[K]) => any): this
     emit<K extends keyof discordBotEvents>(eventName: K, ...args: discordBotEvents[K]): boolean
 }
+/**
+ * Botを管理するために使用するJSONの型定義です。
+ */
 interface discordData {
     [botName: string]: {
         programs?: string[],
@@ -30,6 +42,9 @@ interface discordData {
         clientOptions?: Discord.ClientOptions
     }
 }
+/**
+ * JSON型定義の上書き
+ */
 interface discordDataIOextJSON extends dataIO {
     json: discordData
 }

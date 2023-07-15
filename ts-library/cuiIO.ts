@@ -860,6 +860,19 @@ export async function cuiIO(shareData: {
                 }
             },
             {
+                name: "ファイル名リストtxt作成",
+                function: async () => {
+                    const folderPath = await pathChecker(await question("フォルダを入力してください。"))
+                    if (folderPath === null) return console.log("フォルダが見つかりませんでした。")
+                    const dotignore = await booleanIO("「.」から始まるファイルを省略しますか？")
+                    const list = await fileLister(folderPath, { invFIleIgnored: dotignore })
+                    let text = ""
+                    for (let i = 0; i !== list.length; i++) text += list[i].filename + "\n"
+                    const savePath = await pathChecker(await question("テキストの保存先フォルダを入力してください。"))
+                    if (savePath) sfs.writeFile(slashPathStr(savePath) + "/ファイル名リスト.txt", text)
+                }
+            },
+            {
                 name: "Various Programsの状態・設定",
                 function: async () => {
                     const programs: { [programName: string]: () => Promise<void> } = {
