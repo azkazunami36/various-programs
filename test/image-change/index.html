@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Page Title</title>
+    <style>
+        body {
+            height: 1920px;
+        }
+        #img1 {
+            opacity: 1;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        #img2 {
+            opacity: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+    </style>
+    <script>
+        document.addEventListener("scroll", e => {
+            console.log(e)
+            console.log("スクロール")
+        })
+        document.addEventListener("load", () => {
+            const img1 = document.getElementById("img1")
+            const img2 = document.getElementById("img2")
+        })
+    </script>
+</head>
+<body>
+    <div id="main">
+        <img id="img1" src="ねこちゃん-遊び.png">
+        <img id="img2" src="ねこちゃん.png">
+    </div>
+</body>
+</html>
