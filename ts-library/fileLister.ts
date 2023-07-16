@@ -1,6 +1,7 @@
+import fs from "fs"
+
 import pathChecker from "./pathChecker"
 import slashPathStr from "./slashPathStr"
-import fs from "fs"
 interface passInfo {
     /**
      * 拡張子を含まないファイル名が記載
