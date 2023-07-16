@@ -1,15 +1,17 @@
 {
     "compilerOptions": {
-        "moduleResolution": "node",
+        "moduleResolution": "Node",
+        "target": "ESNext",
+        "noEmit": true,
         "resolveJsonModule": true,
         "esModuleInterop": true,
-        "baseUrl": "./",
         "skipLibCheck": true,
-        "target": "ESNext",
+        "sourceMap": true,
         "noImplicitAny": true,
         "strictNullChecks": true,
+        "baseUrl": "./",
         "paths": {
-            "@/*": [
+            "./*": [
                 "*"
             ]
         }

@@ -6,7 +6,6 @@
 /bot/node_modules/*
 /bot/package-lock.json
 /bot/data/*
-/.vscode/*
 /test/cs-lang/obj/*
 /test/cs-lang/bin/*
 .DS_Store
