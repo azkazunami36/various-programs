@@ -2,19 +2,19 @@ import fs from "fs"
 import Discord from "discord.js"
 import crypto from "crypto"
 
-import sfs from "ts-library/fsSumwave"
-import time from "ts-library/time"
-import pathChecker from "ts-library/pathChecker"
-import slashPathStr from "ts-library/slashPathStr"
-import consoleUIPrograms from "ts-library/consoleUIPrograms"
-import fileLister from "ts-library/fileLister"
-import dataIO from "ts-library/dataIO"
-import { discordRealTimeData } from "ts-library/discord-bot"
-import sharpConvert from "ts-library/sharpConvert"
-import kanaConvert from "ts-library/kanaConvert"
-import discordBot from "ts-library/discord-bot"
-import ffmpegConverter from "ts-library/ffmpegConverter"
-import Bouyomi from "ts-library/bouyomi"
+import sfs from "./fsSumwave"
+import time from "./time"
+import pathChecker from "./pathChecker"
+import slashPathStr from "./slashPathStr"
+import consoleUIPrograms from "./consoleUIPrograms"
+import fileLister from "./fileLister"
+import dataIO from "./dataIO"
+import { discordRealTimeData } from "./discord-bot"
+import sharpConvert from "./sharpConvert"
+import kanaConvert from "./kanaConvert"
+import discordBot from "./discord-bot"
+import ffmpegConverter from "./ffmpegConverter"
+import Bouyomi from "./bouyomi"
 import splitExt from "./splitExt"
 
 const { question, choice, booleanIO, progress, funcSelect } = consoleUIPrograms
@@ -127,122 +127,113 @@ export async function cuiIO(shareData: {
             {
                 name: "Discord Bot",
                 function: async () => {
-                    const data = await discordBot.outputJSON()
-                    if (!data) {
-                        console.log("データの準備ができませんでした。")
-                        return
-                    }
-                    const botNames = Object.keys(data)
-                    for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
-                        const programs: { [programName: string]: () => Promise<void> } = {
-                            "botを利用する": async () => {
-                                if (botNames.length === 0) {
-                                    console.log("botが存在しません。新規作成をしてから実行してください。")
-                                    return
-                                }
-                                const botChoice = await choice(botNames, "bot一覧", "利用するbotを選択してください。")
-                                if (botChoice === null) {
-                                    console.log("入力が間違っているようです。最初からやり直してください。")
-                                    return
-                                }
-                                if (!shareData.discordBot) shareData.discordBot = {}
-                                if (!shareData.discordBot[botNames[botChoice - 1]]) shareData.discordBot[botNames[botChoice - 1]] = {
-                                    name: botNames[botChoice - 1]
-                                }
-                                const bot = await discordBot.initer(shareData.discordBot[botNames[botChoice - 1]])
-                                for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
-                                    const programs: { [programName: string]: () => Promise<void> } = {
-                                        "起動/停止": async () => {
-                                            if (bot.botStatus) {
-                                                await bot.login()
-                                                console.log("ログインしました。")
-                                            } else {
-                                                await bot.logout()
-                                                console.log("ログアウトに成功しました。")
-                                            }
+                    const fc = new funcSelect({
+                        "botを利用する": async () => {
+                            const data = await discordBot.outputJSON()
+                            if (!data) {
+                                console.log("データの準備ができませんでした。")
+                                return
+                            }
+                            const botNames = Object.keys(data)
+                            if (botNames.length === 0) {
+                                console.log("botが存在しません。新規作成をしてから実行してください。")
+                                return
+                            }
+                            const botChoice = await choice(botNames, "bot一覧", "利用するbotを選択してください。")
+                            if (botChoice === null) {
+                                console.log("入力が間違っているようです。最初からやり直してください。")
+                                return
+                            }
+                            if (!shareData.discordBot) shareData.discordBot = {}
+                            if (!shareData.discordBot[botNames[botChoice - 1]]) shareData.discordBot[botNames[botChoice - 1]] = {
+                                name: botNames[botChoice - 1]
+                            }
+                            const bot = await discordBot.initer(shareData.discordBot[botNames[botChoice - 1]])
+                            const fc = new funcSelect({
+                                "起動/停止": async () => {
+                                    if (!bot.botStatus) {
+                                        await bot.login()
+                                        if (bot.botStatus) console.log("ログインしました。")
+                                        else console.log("ログインできませんでした。")
+                                    } else {
+                                        await bot.logout()
+                                        if (!bot.botStatus) console.log("ログアウトに成功しました。")
+                                        else console.log("ログアウトできませんでした。")
+                                    }
+                                },
+                                "設定": async () => {
+                                    const fc = new funcSelect({
+                                        "Tokenを設定する": async () => {
+                                            const token = await question("Tokenを入力してください。")
+                                            await bot.token(token)
+                                            console.log("設定が完了しました。")
                                         },
-                                        "設定": async () => {
-                                            const programs: { [programName: string]: () => Promise<void> } = {
-                                                "Tokenを設定する": async () => {
-                                                    const token = await question("Tokenを入力してください。")
-                                                    await bot.token(token)
-                                                    console.log("設定が完了しました。")
-                                                },
-                                                "プログラムの選択": async () => {
-                                                    console.log((() => {
-                                                        const list = bot.programsNameList
-                                                        let str = ""
-                                                        for (let i = 0; i !== list.length; i++) str += (str ? "、" : "") + list[i]
-                                                        return str
-                                                    })() + "が既にBotに関連付けられています。")
-                                                    const programChoice = await choice(bot.programsNameList, "Bot用プリインストールプログラム一覧", "プログラムを選択してください。")
-                                                    if (!programChoice) {
-                                                        console.log("入力が間違っているようです。最初からやり直してください。")
-                                                        return
-                                                    }
-                                                    const programName = bot.programsNameList[programChoice - 1]
-                                                    funcSelect({
-                                                        "追加": async () => { 
-                                                            console.log(bot.programSetting.add(programName) ? "追加が完了しました。" : "何かしらの理由により、追加がスキップされました。")
-                                                        },
-                                                        "削除": async () => {
-                                                            console.log(bot.programSetting.add(programName) ? "削除が完了しました。" : "何かしらの理由により、削除がスキップされました。")
-                                                        },
-                                                        "戻る": async () => { }
-                                                    }, { message: {topMsg: "「" + programName + "」が選択されました。Botに加えたい変更を選択してください。"}, selectingFuncName: "DiscordBotのプログラム選択画面" })
-                                                    
-                                                },
-                                                "戻る": async () => { }
-                                            }
-                                            const programChoice = await choice(Object.keys(programs), "利用可能な操作一覧", "利用する機能を選択してください。")
-                                            if (programChoice === null) {
+                                        "プログラムの選択": async () => {
+                                            console.log(await (async () => {
+                                                const list = bot.programsNameList
+                                                let str = ""
+                                                const data = await discordBot.outputJSON()
+                                                if (!data) {
+                                                    console.log("データの準備ができませんでした。")
+                                                    return str
+                                                }
+                                                for (let i = 0; i !== list.length; i++) str += (str ? "、" : "") + list[i]
+                                                return str
+                                            })() + "が既にBotに関連付けられています。")
+                                            const programChoice = await choice(bot.programsNameList, "Bot用プリインストールプログラム一覧", "プログラムを選択してください。")
+                                            if (!programChoice) {
                                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                                 return
                                             }
-                                            const choiceProgramName = Object.keys(programs)[programChoice - 1]
-                                            await programs[choiceProgramName]()
+                                            const programName = bot.programsNameList[programChoice - 1]
+                                            const fc = new funcSelect({
+                                                "追加": async () => {
+                                                    console.log(await bot.programSetting.add(programName) ? "追加が完了しました。" : "何かしらの理由により、追加がスキップされました。")
+                                                },
+                                                "削除": async () => {
+                                                    console.log(await bot.programSetting.remove(programName) ? "削除が完了しました。" : "何かしらの理由により、削除がスキップされました。")
+                                                },
+                                                "戻る": async () => { fc.end = true }
+                                            })
+                                            fc.message.topMsg = "「" + programName + "」が選択されました。Botに加えたい変更を選択してください。"
+                                            fc.selectingFuncName = "DiscordBotのプログラム選択画面"
+                                            fc.errorView = true
+                                            await fc.view()
                                         },
-                                        "戻る": async () => {
-                                            i++
-                                        }
-                                    }
-                                    const programChoice = await choice(Object.keys(programs), "利用可能な操作一覧", "利用する機能を選択してください。")
-                                    if (programChoice === null) {
-                                        console.log("入力が間違っているようです。最初からやり直してください。")
-                                        return
-                                    }
-                                    const choiceProgramName = Object.keys(programs)[programChoice - 1]
-                                    await programs[choiceProgramName]()
+                                        "戻る": async () => { fc.end = true }
+                                    })
+                                    await fc.view()
+                                },
+                                "戻る": async () => {
+                                    fc.end = true
                                 }
-                            },
-                            "botの新規作成": async () => {
-                                const name = await question("botの名前を入力してください。")
-                                if (name === "") {
-                                    console.log("入力が間違っているようです。最初からやり直してください。")
-                                    return
-                                }
-                                if (!shareData.discordBot) shareData.discordBot = {}
-                                if (!shareData.discordBot[name]) shareData.discordBot[name] = {
-                                    name: name
-                                }
-                                await discordBot.initer(shareData.discordBot[name])
-                                console.log("botの生成が完了しました。\nbotの細かな設定を「botを利用する」から行い、Token等の設定をしてください。")
-                            },
-                            "botの削除": async () => {
-                                console.log("現在、botの削除を行うことが出来ません。botの動作中に削除を行った際にエラーが発生する可能性を否めません。")
-                            },
-                            "終了": async () => {
-                                i++
+                            })
+                            fc.selectingFuncName = "選択されたbotのホームメニュー"
+                            fc.loop = true
+                            await fc.view()
+                        },
+                        "botの新規作成": async () => {
+                            const name = await question("botの名前を入力してください。")
+                            if (name === "") {
+                                console.log("入力が間違っているようです。最初からやり直してください。")
+                                return
                             }
+                            if (!shareData.discordBot) shareData.discordBot = {}
+                            if (!shareData.discordBot[name]) shareData.discordBot[name] = {
+                                name: name
+                            }
+                            await discordBot.initer(shareData.discordBot[name])
+                            console.log("botの生成が完了しました。\nbotの細かな設定を「botを利用する」から行い、Token等の設定をしてください。")
+                        },
+                        "botの削除": async () => {
+                            console.log("現在、botの削除を行うことが出来ません。botの動作中に削除を行った際にエラーが発生する可能性を否めません。")
+                        },
+                        "終了": async () => {
+                            fc.end = true
                         }
-                        const programChoice = await choice(Object.keys(programs), "利用可能な操作一覧", "利用する機能を選択してください。")
-                        if (programChoice === null) {
-                            console.log("入力が間違っているようです。最初からやり直してください。")
-                            return
-                        }
-                        const choiceProgramName = Object.keys(programs)[programChoice - 1]
-                        await programs[choiceProgramName]()
-                    }
+                    })
+                    fc.loop = true
+                    await fc.view()
                 }
             },
             {
@@ -925,6 +916,11 @@ export async function cuiIO(shareData: {
                     }
                     const choiceProgramName = Object.keys(programs)[programChoice - 1]
                     await programs[choiceProgramName]()
+                }
+            }, {
+                name: "various-programsのシャットダウン",
+                function:async () => {
+                    console.log("現在はできません。")
                 }
             }
         ]

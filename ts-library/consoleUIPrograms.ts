@@ -112,51 +112,80 @@ namespace consoleUIPrograms {
 		}
 	}
 	/**
-	 * プログラムをユーザーが選択するためのプログラムです。プログラムの選択肢として簡潔にし、確定されると自動で実行されます。
-	 * @param functions 実行するプログラムの配列を入力します。
-	 * @param option オプションを設定します。
-	 * @returns 実行が完了するとtrue、例外を拾うとfalseを返します。
+	 * プログラムをユーザーが選択するための簡易クラスです。プログラムの選択肢として簡潔にし、確定されると自動で実行されます。
 	 */
-	export async function funcSelect(
-		functions: {
-			[programName: string]: (() => Promise<void>)
-		},
-		option?: {
-			/**
-			 * ユーザーに表示するメッセージを入力します。
-			 */
-			message?: {
-				topMsg?: string,
-				userToMsg?: string
-			},
-			/**
-			 * プログラム選択にこの関数を使用した場合、エラー時の特定となる名前を決定してください。
-			 */
-			selectingFuncName: string
-		}
-	): Promise<boolean> {
-		let message: {
+	export class funcSelect {
+		message: {
 			topMsg?: string,
 			userToMsg?: string
 		} = {}
-		let selectingFuncName: string
-
-		const programChoice = await choice(
-			Object.keys(functions), 
-			message.topMsg ? message.topMsg : "利用可能な操作一覧", 
-			message.userToMsg ? message.userToMsg : "利用する機能を選択してください。"
-			)
-		if (programChoice === null) {
-			console.log("選択された番号は利用できません。最初からやり直してください。")
-			return false
+		selectingFuncName: string = ""
+		errorView: boolean = false
+		loop: boolean = false
+		end: boolean = false
+		functions: {
+			[programName: string]: (() => Promise<void>)
+		} = {}
+		constructor(
+			functions: {
+				[programName: string]: (() => Promise<void>)
+			},
+			option?: {
+				/**
+				 * ユーザーに表示するメッセージを入力します。
+				 */
+				message?: {
+					topMsg?: string,
+					userToMsg?: string
+				},
+				/**
+				 * プログラム選択にこの関数を使用した場合、エラー時の特定となる名前を決定してください。
+				 */
+				selectingFuncName?: string,
+				/**
+				 * catchされたエラーをコンソールに直接出力しますか？※開発者向け
+				 */
+				errorView?: boolean,
+				/**
+				 * 繰り返しプログラム選択を刺せるかどうかを設定します。
+				 * この場合、クラス内のendを手動でtrueに置き換えることによってループを終了できます。
+				 */
+				loop?: boolean
+			}
+		) {
+			this.functions = functions
+			if (option) {
+				if (option.message) this.message = option.message
+				if (option.selectingFuncName) this.selectingFuncName = option.selectingFuncName
+				if (option.errorView) this.errorView = option.errorView
+				if (option.loop) this.loop = option.loop
+			}
 		}
-		const choiceProgramName = Object.keys(functions)[programChoice - 1]
-		try {
-			await functions[choiceProgramName]()
-			return true
-		} catch (e) {
-			console.log("「" + choiceProgramName + "」でエラーを確認しました。")
-			return false
+		async view() {
+			let stats = false
+			while (!this.end) {
+				const programChoice = await choice(
+					Object.keys(this.functions),
+					this.message.topMsg ? this.message.topMsg : "利用可能な操作一覧",
+					this.message.userToMsg ? this.message.userToMsg : "利用する機能を選択してください。"
+				)
+				if (programChoice === null) {
+					console.log("選択された番号は利用できません。最初からやり直してください。")
+					stats = false
+					continue
+				}
+				const choiceProgramName = Object.keys(this.functions)[programChoice - 1]
+				try {
+					await this.functions[choiceProgramName]()
+					stats = true
+				} catch (e) {
+					console.log("「" + choiceProgramName + "」でエラーを確認しました。" + (this.selectingFuncName ? "名称:" + this.selectingFuncName : ""))
+					if (this.errorView) console.log(e)
+					stats = false
+				}
+				if (!this.loop) this.loop = true
+			}
+			return stats
 		}
 	}
 }

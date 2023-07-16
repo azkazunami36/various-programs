@@ -2,6 +2,7 @@ import Discord from "discord.js"
 import EventEmitter from "events"
 
 import dataIO from "./dataIO"
+import arrayRandom from "./arrayRamdom"
 /**
  * Discordのクライアントクラスやそれに関するデータ、例でいう可変するVCの利用状況などに常にアクセスできるように作成された関数です。
  * ユーザーが不正に書き込んだりプログラムでむやみに操作しないようにしてください。エラーが発生したり重複が起こったり可能性があります。
@@ -182,9 +183,15 @@ export class discordBot extends EventEmitter {
         }
         this.data = data
         // JSONにBotの名前が存在しなかったら追加します。
-        if (!this.data.json[this.rtdata.name]) this.data.json[this.rtdata.name] = {}
+        if (!this.data.json[this.rtdata.name]) this.data.json[this.rtdata.name] = {
+            programs: [],
+            token: ""
+        }
+        // リアルタイムデータ内のprogramを初期化します。
+        this.rtdata.program = {}
         //リアルタイムデータ内に関数を保存します。
         await this.programSeting()
+        const th = this
         // ClientにBotのデータが入っていない場合は設定します。
         if (!this.rtdata.client) {
             /**
@@ -200,13 +207,13 @@ export class discordBot extends EventEmitter {
                 /**
                  * リアルタイムプログラム内に関数が入っていれば
                  */
-                if (this.rtdata.program) {
-                    const programStrings = Object.keys(this.rtdata.program)
+                if (th.rtdata.program) {
+                    const programStrings = Object.keys(th.rtdata.program)
                     /**
                      * 利用するとされているプログラムを実行
                      */
                     for (let i = 0; i !== programStrings.length; i++) {
-                        const program = this.rtdata.program[programStrings[i]]
+                        const program = th.rtdata.program[programStrings[i]]
                         if (program.message) await program.message(message)
                     }
                 }
@@ -215,27 +222,40 @@ export class discordBot extends EventEmitter {
                 /**
                  * リアルタイムプログラム内に関数が入っていれば
                  */
-                if (this.rtdata.program) {
-                    const programStrings = Object.keys(this.rtdata.program)
+                if (th.rtdata.program) {
+                    const programStrings = Object.keys(th.rtdata.program)
                     /**
                      * 利用するとされているプログラムを実行
                      */
                     for (let i = 0; i !== programStrings.length; i++) {
-                        const program = this.rtdata.program[programStrings[i]]
-                        if (program.interaction) await program.interaction(interaction)
+                        const program = th.rtdata.program[programStrings[i]]
+                        if (program.interaction) {
+                            await program.interaction(interaction)
+                        }
                     }
                 }
             })
         }
         const client = this.rtdata.client
         client.on(Discord.Events.ClientReady, client => {
-            this.emit("djsClientReady", client)
+            th.emit("djsClientReady", client)
+            client.application.commands.set((() => {
+                const program = th.rtdata.program
+                if (!program) return []
+                const keys = Object.keys(program)
+                let data: Omit<Discord.SlashCommandBuilder, "addSubcommandGroup" | "addSubcommand" | "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption">[] = []
+                for (let i = 0; i !== keys.length; i++) {
+                    const slashCommands = program[keys[i]].slashCommand
+                    if (slashCommands) for (let i = 0; i !== slashCommands.length; i++) data.push(slashCommands[i])
+                }
+                return data
+            })())
         })
         client.on(Discord.Events.MessageCreate, message => {
-            this.emit("messageCreate", message)
+            th.emit("messageCreate", message)
         })
         client.on(Discord.Events.InteractionCreate, interaction => {
-            this.emit("interactionCreate", interaction)
+            th.emit("interactionCreate", interaction)
         })
         await this.data.save()
     }
@@ -261,6 +281,11 @@ export class discordBot extends EventEmitter {
                             buttonNum: number,
                             calcType: number
                         }
+                    } | {
+                        type: "multirole",
+                        data: {
+                            roleId: string
+                        }
                     };
                     if (interaction.isChatInputCommand()) {
                         if (interaction.channel && interaction.channel.isTextBased() && !interaction.channel.isVoiceBased() && !interaction.channel.isThread() && !interaction.channel.isDMBased() && interaction.guild) {
@@ -272,15 +297,15 @@ export class discordBot extends EventEmitter {
                                     const question = interaction.options.getBoolean("question")
                                     const title = interaction.options.getString("title")
                                     const description = interaction.options.getString("description")
-                                    if (role === null || question === null) {
-                                        interaction.channel.send("必要なデータが不足または破損してしまっているようです。最初からやり直してください。")
+                                    if (role === null) {
+                                        await interaction.reply({ content: "必要なデータが不足または破損してしまっているようです。最初からやり直してください。", ephemeral: true })
                                         return
                                     }
                                     const data = {
                                         type: "buttoncreate",
                                         data: {
                                             roleId: role.id,
-                                            question: question
+                                            question: question ? true : false
                                         }
                                     }
                                     const components = new Discord.ActionRowBuilder<Discord.ButtonBuilder>()
@@ -310,6 +335,66 @@ export class discordBot extends EventEmitter {
                                 } else {
                                     await interaction.reply({ content: "コマンド発行者自身に管理者権限がないため、実行することが出来ません..." })
                                 }
+                            } else if (name === "multirolebtn") {
+                                const member = (await interaction.guild.members.fetch()).get(interaction.user.id)
+                                if (member && member.permissions.has(Discord.PermissionsBitField.Flags.Administrator)) {
+                                    const roleIDs = (() => {
+                                        const roleString = interaction.options.getString("roleids")
+                                        if (roleString) return roleString.split(" ")
+                                        return null
+                                    })()
+                                    const title = interaction.options.getString("title")
+                                    const description = interaction.options.getString("description")
+                                    const roles = await (async () => {
+                                        const roles: Discord.Role[] = []
+                                        if (!roleIDs) return roles;
+                                        for (let i = 0; i !== roleIDs.length; i++) {
+                                            if (interaction.guild !== null) {
+                                                const role = await interaction.guild.roles.fetch(roleIDs[i])
+                                                if (role) roles.push(role)
+                                            }
+                                        }
+                                        return roles
+                                    })()
+                                    if (roles.length === 0) {
+                                        await interaction.reply("有効なロールIDがありません。もう一度指定してください。");
+                                        return
+                                    }
+                                    const components = new Discord.ActionRowBuilder<Discord.ButtonBuilder>();
+                                    let roleNameStr = description || "既にロールが付いた状態でもう一度押すと、ロールを外すことが出来ます。"
+                                    for (let i = 0; i !== roles.length; i++) {
+                                        const data = {
+                                            type: "multirole",
+                                            data: {
+                                                roleId: roles[i].id
+                                            }
+                                        }
+                                        components.addComponents(
+                                            new Discord.ButtonBuilder()
+                                                .setLabel(String(i + 1))
+                                                .setStyle(Discord.ButtonStyle.Primary)
+                                                .setCustomId(JSON.stringify(data))
+                                        )
+                                        roleNameStr += "\n[" + (i + 1) + "] " + roles[i].name
+                                    }
+                                    const iconURL = interaction.guild.iconURL()
+                                    const embed = new Discord.EmbedBuilder()
+                                        .setTitle(title || "下の一覧から数字を選んで、自由なロールを付けよう！")
+                                        .setDescription(roleNameStr)
+                                        .setAuthor({
+                                            name: interaction.guild.name,
+                                            iconURL: iconURL ? iconURL : undefined
+                                        })
+                                    try {
+                                        await interaction.channel.send({ embeds: [embed], components: [components] })
+                                        await interaction.reply({ content: "作成が完了しました！", ephemeral: true })
+                                    } catch (e) {
+                                        await interaction.reply({
+                                            content: "エラーが確認されました。: `" + e.code + "/" + e.message,
+                                            ephemeral: true
+                                        })
+                                    }
+                                } else interaction.reply({ content: "コマンド発行者自身に管理者権限がないため、実行することが出来ません..." });
                             }
                         }
                     }
@@ -340,6 +425,13 @@ export class discordBot extends EventEmitter {
                                         typeof json.data.calcType === "number"
                                     )
                                 ) return null
+                                if (
+                                    json.type === "multirole" &&
+                                    !(
+                                        "roleId" in json.data &&
+                                        typeof json.data.roleId === "string"
+                                    )
+                                ) return null
                                 return json
                             }
                             catch (e) { return null } //JSONではない文字列の場合nullを返す
@@ -360,12 +452,7 @@ export class discordBot extends EventEmitter {
                                     ord.push({ type: "-", Num: num[0] - num[1] })
                                     ord.push({ type: "x", Num: num[0] * num[1] })
                                     const answer = Math.floor(Math.random() * ord.length - 1)
-                                    for (let i = 0; i !== ord.length - 1; i++) {
-                                        const random = Math.floor(Math.random() * i)
-                                        const tmp = ord[i]
-                                        ord[i] = ord[random]
-                                        ord[random] = tmp
-                                    }
+                                    arrayRandom(ord)
                                     embed.setTitle("問題！")
                                     embed.setDescription("下の計算を解くだけで認証が出来ます！")
                                     embed.addFields({
@@ -389,7 +476,7 @@ export class discordBot extends EventEmitter {
                                                 .setCustomId(JSON.stringify(data))
                                         )
                                     }
-                                    interaction.reply({
+                                    await interaction.reply({
                                         embeds: [embed],
                                         components: [components],
                                         ephemeral: true
@@ -402,32 +489,64 @@ export class discordBot extends EventEmitter {
                                     content: "あぁ...答えが違いますよ...\nもっかいクリックしてやりなおしましょ！",
                                     ephemeral: true
                                 })
+                            } else if (data.type = "multirole") {
+                                const { roleId } = data.data
+                                if (!interaction.guild) {
+                                    return
+                                }
+                                const role = await interaction.guild.roles.fetch(roleId)
+                                const member = interaction.guild.members.cache.get(interaction.user.id)
+                                if (!role || !member) {
+                                    return
+                                }
+                                if (member.roles.cache.has(roleId)) {
+                                    try {
+                                        await member.roles.remove(role)
+                                        await interaction.reply({
+                                            content: "ロールをはく奪してやりました！",
+                                            ephemeral: true
+                                        })
+                                    } catch (e) {
+                                        await interaction.reply({
+                                            content: "認証でエラーが発生してしまいました...\nエラーは管理者が確認し修正します。",
+                                            ephemeral: true
+                                        })
+                                    }
+                                } else {
+                                    try {
+                                        await member.roles.add(role)
+                                        await interaction.reply({
+                                            content: "ロールを付与しました！",
+                                            ephemeral: true
+                                        })
+                                    } catch (e) {
+                                        await interaction.reply({
+                                            content: "認証でエラーが発生してしまいました...\nエラーは管理者が確認し修正します。",
+                                            ephemeral: true
+                                        })
+                                    }
+                                }
                             }
                         if (roleGive.give && roleGive.roleId !== null && interaction.channel) {
                             try {
                                 if (interaction.guild) {
                                     const member = interaction.guild.members.cache.get(interaction.user.id)
                                     const role = await interaction.guild.roles.fetch(roleGive.roleId)
-                                    if (member && role) member.roles.add(role)
+                                    if (member && role) {
+                                        member.roles.add(role)
+                                        await  interaction.reply({
+                                            content: "ロールを付与しました！",
+                                            ephemeral: true
+                                        })
+                                    }
                                 } else {
-                                    interaction.reply({
-                                        content: "ロールを付与しました！",
-                                        ephemeral: true
-                                    })
                                 }
                             }
                             catch (e) {
-                                if (e.code) {
-                                    interaction.reply({
-                                        content: "エラー確認: " + e.code + "\nこのエラーコードを管理人に報告してくれると、一時的に対処が行われます。",
-                                        ephemeral: true
-                                    })
-                                } else {
-                                    interaction.reply({
+                                await   interaction.reply({
                                         content: "認証でエラーが発生してしまいました...\nエラーは管理者が確認し修正します。",
                                         ephemeral: true
                                     })
-                                }
                             }
                         }
                     }
@@ -472,10 +591,10 @@ export class discordBot extends EventEmitter {
                 ]
             }
         }
-        /**
-         * トークンを設定し、保存します。
-         * @param token トークンを設定します。
-         */
+    /**
+     * トークンを設定し、保存します。
+     * @param token トークンを設定します。
+     */
     async token(token: string) {
         this.data.json[this.rtdata.name].token = token
         await this.data.save()
@@ -491,14 +610,25 @@ export class discordBot extends EventEmitter {
     }
     get programSetting() {
         const data = this
+        if (!data.data.json[data.rtdata.name].programs) data.data.json[data.rtdata.name].programs = []
         const progs = data.data.json[data.rtdata.name].programs
         return {
-            add(programName: string) {
-                if (programName in data.programs && progs && !progs.includes(programName)) { progs.push(programName); return true }
+            async add(programName: string) {
+                if (programName in data.programs && progs && !progs.includes(programName)) {
+                    progs.push(programName)
+                    await data.data.save()
+                    await data.programSeting()
+                    return true
+                }
                 return false
             },
-            remove(programName: string) {
-                if (programName in data.programs && progs && progs.includes(programName)) { progs.splice(progs.indexOf(programName), 1); return true }
+            async remove(programName: string) {
+                if (programName in data.programs && progs && progs.includes(programName)) {
+                    progs.splice(progs.indexOf(programName), 1)
+                    await data.data.save()
+                    if (data.rtdata.program && data.rtdata.program[programName]) delete data.rtdata.program[programName]
+                    return true
+                }
                 return false
             }
         }
@@ -510,15 +640,15 @@ export class discordBot extends EventEmitter {
         if (this.rtdata.status.logined) return
         const token = this.data.json[this.rtdata.name].token
         if (!token) return
-        this.rtdata.status.logined = true
         await this.rtdata.client.login(token)
+        this.rtdata.status.logined = true
     }
     async logout() {
         if (!this.rtdata.status) return
         if (!this.rtdata.client) return
         if (!this.rtdata.status.logined) return
-        this.rtdata.status.logined = false
         this.rtdata.client.destroy()
+        this.rtdata.status.logined = false
     }
     get botStatus() {
         if (this.rtdata.status) return this.rtdata.status.logined ? true : false
