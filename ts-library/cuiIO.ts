@@ -17,7 +17,7 @@ import ffmpegConverter from "ts-library/ffmpegConverter"
 import Bouyomi from "ts-library/bouyomi"
 import splitExt from "./splitExt"
 
-const { question, choice, booleanIO, progress } = consoleUIPrograms
+const { question, choice, booleanIO, progress, funcSelect } = consoleUIPrograms
 
 export async function cuiIO(shareData: {
     discordBot?: {
@@ -127,7 +127,7 @@ export async function cuiIO(shareData: {
             {
                 name: "Discord Bot",
                 function: async () => {
-                    const data = await discordBot.data()
+                    const data = await discordBot.outputJSON()
                     if (!data) {
                         console.log("データの準備ができませんでした。")
                         return
@@ -153,8 +153,13 @@ export async function cuiIO(shareData: {
                                 for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
                                     const programs: { [programName: string]: () => Promise<void> } = {
                                         "起動/停止": async () => {
-                                            await bot.login()
-                                            console.log("ログインしました。停止機能はまだ未検証のため、2度目の起動は行わないでください。")
+                                            if (bot.botStatus) {
+                                                await bot.login()
+                                                console.log("ログインしました。")
+                                            } else {
+                                                await bot.logout()
+                                                console.log("ログアウトに成功しました。")
+                                            }
                                         },
                                         "設定": async () => {
                                             const programs: { [programName: string]: () => Promise<void> } = {
@@ -164,6 +169,28 @@ export async function cuiIO(shareData: {
                                                     console.log("設定が完了しました。")
                                                 },
                                                 "プログラムの選択": async () => {
+                                                    console.log((() => {
+                                                        const list = bot.programsNameList
+                                                        let str = ""
+                                                        for (let i = 0; i !== list.length; i++) str += (str ? "、" : "") + list[i]
+                                                        return str
+                                                    })() + "が既にBotに関連付けられています。")
+                                                    const programChoice = await choice(bot.programsNameList, "Bot用プリインストールプログラム一覧", "プログラムを選択してください。")
+                                                    if (!programChoice) {
+                                                        console.log("入力が間違っているようです。最初からやり直してください。")
+                                                        return
+                                                    }
+                                                    const programName = bot.programsNameList[programChoice - 1]
+                                                    funcSelect({
+                                                        "追加": async () => { 
+                                                            console.log(bot.programSetting.add(programName) ? "追加が完了しました。" : "何かしらの理由により、追加がスキップされました。")
+                                                        },
+                                                        "削除": async () => {
+                                                            console.log(bot.programSetting.add(programName) ? "削除が完了しました。" : "何かしらの理由により、削除がスキップされました。")
+                                                        },
+                                                        "戻る": async () => { }
+                                                    }, { message: {topMsg: "「" + programName + "」が選択されました。Botに加えたい変更を選択してください。"}, selectingFuncName: "DiscordBotのプログラム選択画面" })
+                                                    
                                                 },
                                                 "戻る": async () => { }
                                             }

@@ -4,13 +4,29 @@ import EventEmitter from "events"
 import dataIO from "./dataIO"
 /**
  * Discordのクライアントクラスやそれに関するデータ、例でいう可変するVCの利用状況などに常にアクセスできるように作成された関数です。
+ * ユーザーが不正に書き込んだりプログラムでむやみに操作しないようにしてください。エラーが発生したり重複が起こったり可能性があります。
  */
 export interface discordRealTimeData {
+    /**
+     * Botの名前を入力します。
+     */
     name: string,
+    /**
+     * DiscordのClientクラスが入ります。Botの状態にアクセスするにはここからアクセスすることができます。
+     */
     client?: Discord.Client,
+    /**
+     * ステータスです。
+     */
     status?: {
+        /**
+         * Botが動作中かどうかを確認できます。
+         */
         logined?: boolean
     },
+    /**
+     * 利用するプログラムが格納されます。
+     */
     program?: {
         [programName: string]: discordProgram
     }
@@ -48,20 +64,46 @@ interface discordData {
 interface discordDataIOextJSON extends dataIO {
     json: discordData
 }
+/**
+ * botの動作に利用できるプログラムや情報を入力します。
+ */
 interface discordProgram {
+    /**
+     * messageイベントを受信し、処理するためのものです。
+     * @param message イベントを受信します。
+     * @returns 
+     */
     message?: (message: Discord.Message) => Promise<void>,
+    /**
+     * messageイベントを受信し、処理するためのものです。
+     * @param interaction イベントを受信します。
+     * @returns 
+     */
     interaction?: (interaction: Discord.Interaction) => Promise<void>,
+    /**
+     * スラッシュコマンドを登録できます。
+     */
     slashCommand?: Omit<Discord.SlashCommandBuilder, "addSubcommandGroup" | "addSubcommand" | "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption">[]
 }
+/**
+ * DiscordのBotを動かすためのクラスです。１つのクラスにつき1つまでのbotを稼働できます。
+ * initerを使ったクラスの利用をお勧めします。クラスを削除しても、リアルタイムデータを入力すると再度操作が可能になります。
+ * 
+ * 利用方法。initerに次のようなJSONを入力します。
+ * ```ts
+ * discordBot.initer({name: "Botの名前"})
+ * ```
+ * その後はtoken関数を使い、トークンを入力します。
+ */
 export class discordBot extends EventEmitter {
     /**
      * バッググラウンドで動作するために一時的に参照する固定の変数です。ここにVCや状態を書き込みます。
      */
-    rtdata: discordRealTimeData
+    private rtdata: discordRealTimeData
     /**
      * 保存するために入力します。
      */
-    data: discordDataIOextJSON
+    private data: discordDataIOextJSON
     /**
      * @param data bot名のみを入れます。すると、class内で自動的にデータを読み込みます。
      */
@@ -71,19 +113,32 @@ export class discordBot extends EventEmitter {
         if (!this.rtdata.status) this.rtdata.status = {}
         this.pconst().then(() => this.emit("classReady"))
     }
+    /**
+     * クラスを安定的に初期化します。おすすめです。
+     * @param data 
+     * @returns 
+     */
     static async initer(data: discordRealTimeData) {
         return await new Promise<discordBot>(resolve => {
             const djs = new discordBot(data)
             djs.on("classReady", () => resolve(djs))
         })
     }
-    static async data() {
+    /**
+     * 全てのDiscord Botに関するデータを読み込みます。
+     * @returns データを返します。
+     */
+    static async outputJSON() {
         const data = await dataIO.initer("discordBot")
         if (!data) return null
         const json: discordData = data.json
 
         return <discordData>JSON.parse(JSON.stringify(json))
     }
+    /**
+     * Discord Botクラスの準備を整えます。
+     * @returns 
+     */
     private async pconst() {
         const { GatewayIntentBits, Partials } = Discord
         const newClientOption = {
@@ -126,14 +181,30 @@ export class discordBot extends EventEmitter {
             return
         }
         this.data = data
+        // JSONにBotの名前が存在しなかったら追加します。
         if (!this.data.json[this.rtdata.name]) this.data.json[this.rtdata.name] = {}
+        //リアルタイムデータ内に関数を保存します。
+        await this.programSeting()
+        // ClientにBotのデータが入っていない場合は設定します。
         if (!this.rtdata.client) {
+            /**
+             * dataIOのJSONに入ったBotのデータを定義
+             */
             const json = this.data.json[this.rtdata.name]
+            /**
+             * Discord.jsの準備
+             */
             this.rtdata.client = new Discord.Client(json.clientOptions !== undefined ? json.clientOptions : newClientOption)
             const client = this.rtdata.client
             client.on(Discord.Events.MessageCreate, async message => {
+                /**
+                 * リアルタイムプログラム内に関数が入っていれば
+                 */
                 if (this.rtdata.program) {
                     const programStrings = Object.keys(this.rtdata.program)
+                    /**
+                     * 利用するとされているプログラムを実行
+                     */
                     for (let i = 0; i !== programStrings.length; i++) {
                         const program = this.rtdata.program[programStrings[i]]
                         if (program.message) await program.message(message)
@@ -141,8 +212,14 @@ export class discordBot extends EventEmitter {
                 }
             })
             client.on(Discord.Events.InteractionCreate, async interaction => {
+                /**
+                 * リアルタイムプログラム内に関数が入っていれば
+                 */
                 if (this.rtdata.program) {
                     const programStrings = Object.keys(this.rtdata.program)
+                    /**
+                     * 利用するとされているプログラムを実行
+                     */
                     for (let i = 0; i !== programStrings.length; i++) {
                         const program = this.rtdata.program[programStrings[i]]
                         if (program.interaction) await program.interaction(interaction)
@@ -161,25 +238,16 @@ export class discordBot extends EventEmitter {
             this.emit("interactionCreate", interaction)
         })
         await this.data.save()
-        await this.programSeting()
     }
 
+    /**
+     * Discord Botで利用できる専用プログラムです。
+     */
     private programs: {
         [programName: string]: discordProgram
     } = {
             "簡易認証": {
                 interaction: async interaction => {
-                    interface ttts {
-                        buttoncreate: {
-                            roleId: string
-                            question: boolean
-                        }
-                        calc: {
-                            roleId: string
-                            buttonNum: number
-                            calcType: number
-                        }
-                    };
                     type ttt = {
                         type: "buttoncreate",
                         data: {
@@ -208,7 +276,7 @@ export class discordBot extends EventEmitter {
                                         interaction.channel.send("必要なデータが不足または破損してしまっているようです。最初からやり直してください。")
                                         return
                                     }
-                                    const data: ttt = {
+                                    const data = {
                                         type: "buttoncreate",
                                         data: {
                                             roleId: role.id,
@@ -247,8 +315,33 @@ export class discordBot extends EventEmitter {
                     }
                     if (interaction.isButton()) {
                         const customId = interaction.customId
-                        const data = ((): ttt | null => {
-                            try { return JSON.parse(customId) }
+                        const data = (() => {
+                            try {
+                                const json = JSON.parse(customId) as ttt
+                                if (typeof json !== "object" || json === null) return null
+                                if (!("type" in json && "data" in json && typeof json.data === "object")) return null
+                                if (
+                                    json.type === "buttoncreate" &&
+                                    !(
+                                        "roleId" in json.data &&
+                                        "question" in json.data &&
+                                        typeof json.data.roleId === "string" &&
+                                        typeof json.data.question === "boolean"
+                                    )
+                                ) return null
+                                if (
+                                    json.type === "calc" &&
+                                    !(
+                                        "roleId" in json.data &&
+                                        "buttonNum" in json.data &&
+                                        "calcType" in json.data &&
+                                        typeof json.data.roleId === "string" &&
+                                        typeof json.data.buttonNum === "number" &&
+                                        typeof json.data.calcType === "number"
+                                    )
+                                ) return null
+                                return json
+                            }
                             catch (e) { return null } //JSONではない文字列の場合nullを返す
                         })()
                         let roleGive: { give: boolean, roleId: string | null } = {
@@ -281,7 +374,7 @@ export class discordBot extends EventEmitter {
                                     })
                                     const components = new Discord.ActionRowBuilder<Discord.ButtonBuilder>()
                                     for (let i = 0; ord.length != i; i++) {
-                                        const data: ttt = {
+                                        const data = {
                                             type: "calc",
                                             data: {
                                                 roleId: roleId,
@@ -318,7 +411,7 @@ export class discordBot extends EventEmitter {
                                     if (member && role) member.roles.add(role)
                                 } else {
                                     interaction.reply({
-                                        content: "",
+                                        content: "ロールを付与しました！",
                                         ephemeral: true
                                     })
                                 }
@@ -379,35 +472,76 @@ export class discordBot extends EventEmitter {
                 ]
             }
         }
-
+        /**
+         * トークンを設定し、保存します。
+         * @param token トークンを設定します。
+         */
     async token(token: string) {
         this.data.json[this.rtdata.name].token = token
         await this.data.save()
     }
+    /**
+     * リアルタイムJSONにプログラムを配置。クラスを削除してもプログラムが実行できるようにします。(未検証)
+     */
     private async programSeting() {
         const progs = this.data.json[this.rtdata.name].programs
         if (progs)
-            for (let i = 0; i !== progs.length; i++) {
-                if (this.rtdata.program && !this.rtdata.program[progs[i]]) {
-                    this.rtdata.program[progs[i]] = this.programs[progs[i]]
-                }
-            }
+            for (let i = 0; i !== progs.length; i++)
+                if (this.rtdata.program && !this.rtdata.program[progs[i]]) this.rtdata.program[progs[i]] = this.programs[progs[i]]
     }
+    get programSetting() {
+        const data = this
+        const progs = data.data.json[data.rtdata.name].programs
+        return {
+            add(programName: string) {
+                if (programName in data.programs && progs && !progs.includes(programName)) { progs.push(programName); return true }
+                return false
+            },
+            remove(programName: string) {
+                if (programName in data.programs && progs && progs.includes(programName)) { progs.splice(progs.indexOf(programName), 1); return true }
+                return false
+            }
+        }
+    }
+    get programsNameList() { return Object.keys(this.programs) }
     async login() {
         if (!this.rtdata.status) return
         if (!this.rtdata.client) return
+        if (this.rtdata.status.logined) return
         const token = this.data.json[this.rtdata.name].token
         if (!token) return
         this.rtdata.status.logined = true
         await this.rtdata.client.login(token)
     }
-}
-export function mentionIs(mentions: Discord.MessageMentions<boolean>, client?: Discord.Client<boolean>) {
-    const mainClient = client ? client : mentions.client
-    if (mainClient.user) {
-        if (mentions.users.has(mainClient.user.id)) return true
-        if (mentions.roles.some(r => { if (mainClient.user) return [mainClient.user.username].includes(r.name) })) return true
+    async logout() {
+        if (!this.rtdata.status) return
+        if (!this.rtdata.client) return
+        if (!this.rtdata.status.logined) return
+        this.rtdata.status.logined = false
+        this.rtdata.client.destroy()
     }
-    return false
+    get botStatus() {
+        if (this.rtdata.status) return this.rtdata.status.logined ? true : false
+        return false
+    }
+}
+/**
+ * 便利なDiscordに関するツールを集めました。
+ */
+export namespace tool {
+    /**
+     * Botをメンションしたメッセージかどうかを判別します。
+     * @param mentions 
+     * @param client 
+     * @returns 
+     */
+    export function mentionIs(mentions: Discord.MessageMentions<boolean>, client?: Discord.Client<boolean>) {
+        const mainClient = client ? client : mentions.client
+        if (mainClient.user) {
+            if (mentions.users.has(mainClient.user.id)) return true
+            if (mentions.roles.some(r => { if (mainClient.user) return [mainClient.user.username].includes(r.name) })) return true
+        }
+        return false
+    }
 }
 export default discordBot
