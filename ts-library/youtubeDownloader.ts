@@ -8,20 +8,28 @@ interface youtubeDownloaderEvents {
     ready: [void]
     error: [Error]
 }
-interface sourceMetadata {
+export interface sourceMetadata {
     /**
-     * 取得元を書きます。
-     * YouTube Downloaderからの場合、ytdlと書かれ重複ダウンロードを回避します。
+     * 保存された場所を入力します。dataIOに利用されるため、配列形式のパスを入力してください。  
+     * 実際とは異なるパスが入力されていた場合、データを失う恐れがあります。
+     */
+    path: {
+        path: string[]
+        name: string
+    }
+    /**
+     * 取得元を書きます。  
+     * YouTube Downloaderからの場合、ytdlと書かれ重複ダウンロードを回避します。  
      * User追加は`Apple Music` `Spotify` `Original Author` となります。
      */
     source: "ytdl" | "Apple Music" | "Spotify" | "Original Author"
     /**
-     * YouTubeのオリジナル動画であるかを決定します。
+     * YouTubeのオリジナル動画であるかを決定します。  
      * FFmpeg等で変換した場合はFalse、ytdlでダイレクト入手したデータのみがTrueになります。
      */
     original: boolean
     /**
-     * オリジナルが存在しない場合、Trueにすることができます。
+     * オリジナルが存在しない場合、Trueにすることができます。  
      * オリジナルが入手できた場合は自動でFalseに設定されます。
      */
     userOriginal: boolean
@@ -38,30 +46,31 @@ interface sourceMetadata {
      */
     height: number | null
     /**
-     * 音声のビット深度です。動画などの場合はnullになります。
+     * 音声のビット深度です。動画などの場合はnullになります。  
+     * まだ未検証ですが、fltpという深度表示になった場合は深度表示を利用できないことがあります。
      */
-    bits: number | null
+    bits: string | null
     /**
      * サンプルレートです。動画などの場合はnullになります。
      */
-    samplelate: number | null
+    samplerate: number | null
     /**
-     * オリジナルとのズレを数字で記録します。
+     * オリジナルとのズレを数字で記録します。  
      * １秒過ぎている場合は1000、１秒送れている場合は-1000です。
      */
     latency: number
     /**
-     * オリジナルデータに近いか同じ場合はTrueです。
+     * オリジナルデータに近いか同じ場合はTrueです。  
      * そうでない場合はFalseです。音楽などのデータを記録する際、YouTubeにエンディング音声が含まれている場合はFalseとする場合が多いです。
      */
     sameAsOriginal: boolean
     /**
-     * 曲のアルバムアートワークである場合はアルバム名をセットします。自動で関連付けられます。
+     * 曲のアルバムアートワークである場合はアルバム名をセットします。自動で関連付けられます。  
      * 画像以外の場合は意味を成しませんので、nullになるようにしてください。バグが起こることはありません。
      */
     albumArtwork: string | null
 }
-interface videoMetadata {
+export interface videoMetadata {
     /**
      * VideoIDに関連付けられたYouTubeでのタイトルです。
      */
@@ -88,10 +97,11 @@ interface videoMetadata {
     ytdlRawData: ytdl.MoreVideoDetails
     /**
      * 様々な品質や種類のデータが入っています。
+     * noには番号を入力しますが、管理方法はytdlのクラスに任せてください。勝手に操作をするとデータを失う恐れがあり、番号を変更しないでください。
      */
-    datas: sourceMetadata[]
+    datas: { [no: string]: sourceMetadata }
     /**
-     * ミュージックソフトでアルバムを作成するための情報です。
+     * ミュージックソフトでアルバムを作成するための情報です。  
      * アルバム名はdatasに入っている画像と照合し、一致するものを使用されます。
      */
     mp3Tag?: {
@@ -178,7 +188,7 @@ interface ytdldataIOextJSON extends dataIO {
      */
     json: {
         /**
-         * 進行状況をJSONに書き込んでいます。完了した場合はdownloadedとなり、利用できる可能性が上がっています。
+         * 進行状況をJSONに書き込んでいます。完了した場合はdownloadedとなり、利用できる可能性が上がっています。  
          * 進行中に中断された場合、検知し削除されるようにしています。
          */
         progress?: {
@@ -219,6 +229,8 @@ export declare interface youtubeDownloader {
 }
 /**
  * YouTube Downloaderメインクラスです。
+ * ディスク領域を豪快に使う設計なため、予め大容量のドライブに空き容量を作った状態で利用してください。
+ * 今後データ管理機能が完成し、容量の参照が出来たり節約ができる設計が完成した際には、改善が試みられる予定です。
  */
 export class youtubeDownloader extends EventEmitter {
     data: ytdldataIOextJSON
@@ -253,15 +265,33 @@ export class youtubeDownloader extends EventEmitter {
      * @param type 動画を入手するか音声を入手するかを決めます。
      * @returns 
      */
-    async videoDataGet(videoId: string, type: "videoonly" | "audioonly") {
-        if (!this.data) return // dataIOが初期化されていない場合リターン
+    async playSourceGet(videoId: string, type: "videoonly" | "audioonly") {
+        if (!this.data) {
+            const e = new ReferenceError()
+            e.message = "dataIOの準備ができませんでした。"
+            e.name = "YouTube Downloader"
+            this.emit("error", e)
+            return
+        } // dataIOが初期化されていない場合リターン
         const youtubedl = ytdl(videoId, { filter: type, quality: "highest" }) //ytdlに指定
         const pass = await this.data.passGet(["youtubeSource", "temp", videoId], type) // 保存パスを指定
-        if (!pass) return // パスが存在しない場合リターン
+        if (!pass) { // パスが存在しない場合リターン
+            const error = new ReferenceError()
+            error.message = "dataIOの疑似パスの取得に失敗しました。"
+            error.name = "YouTube Downloader"
+            this.emit("error", error)
+            return
+        }
         const Stream = fs.createWriteStream(pass) // パス先に書き込みストリームを作成
         youtubedl.pipe(Stream) // ダウンロードを開始
         youtubedl.on("progress", (chunkLength, downloaded, total) => { //進行状況を作成
-            if (!this.data) return
+            if (!this.data) {
+                const e = new ReferenceError()
+                e.message = "dataIOの準備ができませんでした。"
+                e.name = "YouTube Downloader"
+                this.emit("error", e)
+                return
+            }
             if (!this.data.json.progress) this.data.json.progress = {}
             const progress = this.data.json.progress[videoId]
             progress.chunkLength = chunkLength
@@ -271,7 +301,13 @@ export class youtubeDownloader extends EventEmitter {
             progress.startTime = progress.startTime ? progress.startTime : Date.now() // 書き込まれていない場合のみ現在時刻を入れ、開始時間とする。
         })
         youtubedl.on("end", async () => { //操作が完了すると
-            if (!this.data) return // dataIOが初期化されていない場合リターン
+            if (!this.data) { // dataIOが初期化されていない場合リターン
+                const e = new ReferenceError()
+                e.message = "dataIOの準備ができませんでした。"
+                e.name = "YouTube Downloader"
+                this.emit("error", e)
+                return
+            }
             if (!this.data.json.progress) this.data.json.progress = {} // 進行状況が空の場合作成
             this.data.json.progress[videoId].status = "downloaded" // ダウンロード済みとする
             async function ffprobe(pass: string): Promise<ffmpeg.FfprobeData> { // FFprobeの関数
@@ -281,16 +317,64 @@ export class youtubeDownloader extends EventEmitter {
             }
             const data = await ffprobe(pass) // FFprobeで情報を入手
             const video = data.streams[0]
-            const fps = (() => { // もしfps値が「0」または「0/0」だった場合に自動で計算する関数
-                if (!video.r_frame_rate) return null
-                if (video.r_frame_rate.match("/")) {
-                    const data = video.r_frame_rate.split("/")
-                    return Number(data[0]) / Number(data[1])
-                } else return Number(video.r_frame_rate)
-            })()
             if (!this.data.json.videoMeta) this.data.json.videoMeta = {}
-            const getIs = await this.getInfo(videoId)
-            this.data.json.videoMeta[videoId].datas
+            const getIs = await this.getInfo(videoId) // VideoIDのデータを取得し初期化
+            if (!getIs) {
+                const error = new ReferenceError()
+                error.message = "YouTubeから情報を取得できませんでした。"
+                error.name = "YouTube Downloader"
+                this.emit("error", error)
+                return
+            }
+            if (!video.codec_name) { // コーデック名が不明だと後々面倒なのでエラー
+                const error = new ReferenceError()
+                error.message = "コーデックが確認できませんでした。"
+                error.name = "YouTube Downloader"
+                this.emit("error", error)
+                return
+            }
+            const no = (() => { // 空きのある番号を確認する
+                let i = 0
+                let loopIs = true
+                while (loopIs) {
+                    if (!this.data.json.videoMeta[videoId].datas[String(i)]) loopIs = false
+                    else i++
+                }
+                return String(i)
+            })()
+            const path = await this.data.passGet(["youtubeSource", "sources", videoId], no)
+            if (!path) {
+                const error = new ReferenceError()
+                error.message = "dataIOの疑似パスの取得に失敗しました。"
+                error.name = "YouTube Downloader"
+                this.emit("error", error)
+                return
+            }
+            const Stream = fs.createReadStream(pass)
+            Stream.pipe(fs.createWriteStream(path))
+            this.data.json.videoMeta[videoId].datas[0] = {
+                path: {
+                    path: ["youtubeSource", "sources", videoId],
+                    name: no
+                },
+                source: "ytdl",
+                original: true,
+                userOriginal: false,
+                codec: video.codec_name,
+                fps: (() => { // もしfps値が「0」または「0/0」だった場合に自動で計算する関数
+                    if (!video.r_frame_rate) return null
+                    if (video.r_frame_rate.match("/")) {
+                        const data = video.r_frame_rate.split("/")
+                        return Number(data[0]) / Number(data[1])
+                    } else return Number(video.r_frame_rate)
+                })(),
+                height: video.height ? video.height : null,
+                bits: video.sample_fmt ? video.sample_fmt : null,
+                samplerate: video.sample_rate ? video.sample_rate : null,
+                latency: 0,
+                sameAsOriginal: true,
+                albumArtwork: null
+            }
         })
     }
     /**
@@ -320,7 +404,7 @@ export class youtubeDownloader extends EventEmitter {
                     return videoDetails.thumbnails[largeImageArray].url
                 })(),
                 ytdlRawData: videoDetails,
-                datas: []
+                datas: {}
             }
             return true
         } catch (e) {
