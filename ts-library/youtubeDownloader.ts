@@ -8,13 +8,23 @@ interface youtubeDownloaderEvents {
     ready: [void]
     error: [Error]
 }
+/**
+ * 保存するソースのデータのガイドです。保存されると思われるデータは主に動画、音声、画像です。  
+ * それ以外のファイルが保存された場合、除外するためのコードを追加します。
+ */
 export interface sourceMetadata {
     /**
-     * 保存された場所を入力します。dataIOに利用されるため、配列形式のパスを入力してください。  
-     * 実際とは異なるパスが入力されていた場合、データを失う恐れがあります。
+     * 保存された場所を入力します。dataIOでpassGetをする際に利用しているデータを入力してください。
+     * ユーザーが操作を加えないようにしてください。基本的にこのデータを変更すると例外が起こることがあります。
      */
     path: {
+        /**
+         * フォルダパスです。
+         */
         path: string[]
+        /**
+         * ファイル名です。
+         */
         name: string
     }
     /**
@@ -391,7 +401,7 @@ export class youtubeDownloader extends EventEmitter {
                 description: videoDetails.description ? videoDetails.description : "",
                 author: videoDetails.author,
                 category: videoDetails.category,
-                thumbnailURL: await (async () => {
+                thumbnailURL: await (async () => { // 最も大きいサムネイルを探し、URLを返す
                     let largeImageArray: number = 0
                     let largeImageHeight: number = 0
                     for (let i = 0; i !== videoDetails.thumbnails.length; i++) {
