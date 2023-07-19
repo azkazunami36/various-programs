@@ -2,6 +2,7 @@ import express from "express"
 import http from "http"
 
 import { discordRealTimeData } from "./discord-bot"
+import { vpManageClass } from "./vpManageClass"
 
 export interface expressApp {
     app?: express.Express
@@ -23,15 +24,7 @@ export class expressd {
      * もしここの関数のみで完成した場合、classを削除しfunctionに置き換えます。
      * ※sourcedフォルダにデータを入れていますが、main.jsのプログラムを全てここに入れ終えたら、sourcesに名前を変更します。
      */
-    static async main(shareData: {
-        discordBot?: {
-            [botName: string]: discordRealTimeData
-        }
-        expressApp?: expressApp
-        cuiIO?: {
-            programLoop?: boolean
-        }
-    }): Promise<void> {
+    static async main(shareData: vpManageClass.shareData): Promise<void> {
         if (!shareData.expressApp) shareData.expressApp = {}
         shareData.expressApp.app = express()
         const app = shareData.expressApp.app

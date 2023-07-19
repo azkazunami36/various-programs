@@ -18,18 +18,11 @@ import Bouyomi from "./bouyomi"
 import splitExt from "./splitExt"
 import { expressApp } from "./expressd"
 import wait from "./wait"
+import { vpManageClass } from "./vpManageClass"
 
 const { question, choice, booleanIO, progress, funcSelect } = consoleUIPrograms
 
-export async function cuiIO(shareData: {
-    discordBot?: {
-        [botName: string]: discordRealTimeData
-    }
-    expressApp?: expressApp
-    cuiIO?: {
-        programLoop?: boolean
-    }
-}) {
+export async function cuiIO(shareData: vpManageClass.shareData) {
     const programs: {
         name: string,
         function: () => Promise<void>
@@ -926,35 +919,43 @@ export async function cuiIO(shareData: {
             }, {
                 name: "Various Programsのシャットダウン",
                 function: async () => {
+                    if (!await booleanIO("Various Programsをシャットダウンしてもよろしいでしょうか？")) return
                     console.log("shareData内の常時実行プログラムを終了します。")
-                    if (shareData.discordBot) {
-                        console.log("Discord Botを終了しています...")
-                        const botNames = Object.keys(shareData.discordBot)
-                        for (let i = 0; i !== botNames.length; i++) {
-                            console.log("終了しているBot: " + botNames[i])
-                            const bot = shareData.discordBot[botNames[i]]
-                            if (bot.status && bot.status.logined && bot.client) bot.client.destroy()
+                    vpManageClass.shutdown(shareData, {
+                        message: message => {
+                            switch (message.type) {
+                                case "discordBotExit": {
+                                    switch (message.status) {
+                                        case "start": console.log("Discord Botプログラムを終了しています。"); break
+                                        case "working": if (message.string) console.log("終了中のBot: " + message.string); break
+                                        case "end": console.log("Discord Botプログラムを全て終了しました。"); break
+                                    }
+                                    break
+                                }
+                                case "expressdExit": {
+                                    switch (message.status) {
+                                        case "start": console.log("expressdを終了しています。"); break
+                                        case "end": console.log("expressdが正常に終了しました。"); break
+                                    }
+                                    break
+                                }
+                                case "wait": {
+                                    switch (message.status) {
+                                        case "start": console.log("待機しています。"); break
+                                        case "end": console.log("待機時間が経過しました。"); break
+                                    }
+                                    break
+                                }
+                                case "exited": {
+                                    switch (message.status) {
+                                        case "start": console.log("終了処理の最終段階を行なっています。"); break
+                                        case "end": console.log("終了処理が完了しました。"); break
+                                    }
+                                    break
+                                }
+                            }
                         }
-                    }
-                    if (shareData.expressApp) {
-                        console.log("expressdを終了しています...")
-                        if (shareData.expressApp.app && shareData.expressApp.server) {
-                            shareData.expressApp.server.close()
-                            console.log("ポート閉鎖、サーバークローズに成功。")
-                        }
-                    }
-                    console.log("全ての終了処理が完了しました。")
-                    if (await booleanIO("終了しきれなかったプログラムごと強制終了しますか？これによる副作用はありません。")) {
-                        console.log("5秒後にプロセスを終了します。\n残った常駐プログラムは強制終了されます。")
-                        await wait(5000)
-                        process.exit(0)
-                    } else {
-                        if (shareData.cuiIO && shareData.cuiIO.programLoop) shareData.cuiIO.programLoop = false
-                        console.log(
-                            "これによりアイドル状態のプロセスとなりました。通常は終了されます。\n" +
-                            "しかし、プログラムミスにより処理が残っている場合、反応なしのプロセスとなります。"
-                        )
-                    }
+                    })
                 }
             }
         ]
