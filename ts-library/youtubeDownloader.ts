@@ -294,7 +294,7 @@ export class youtubeDownloader extends EventEmitter {
         }
         const Stream = fs.createWriteStream(pass) // パス先に書き込みストリームを作成
         youtubedl.pipe(Stream) // ダウンロードを開始
-        youtubedl.on("progress", (chunkLength, downloaded, total) => { //進行状況を作成
+        youtubedl.on("progress", (chunkLength, downloaded, total) => { //進行状況を作成・保存
             if (!this.data) {
                 const e = new ReferenceError()
                 e.message = "dataIOの準備ができませんでした。"
