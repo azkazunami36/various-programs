@@ -1,6 +1,12 @@
 import express from "express"
+import http from "http"
 
 import { discordRealTimeData } from "./discord-bot"
+
+export interface expressApp {
+    app?: express.Express
+    server?: http.Server
+}
 
 /**
  * expressdは名前の通りexpressを利用しますが、少し変わった点があります。  
@@ -21,8 +27,14 @@ export class expressd {
         discordBot?: {
             [botName: string]: discordRealTimeData
         }
+        expressApp?: expressApp
+        cuiIO?: {
+            programLoop?: boolean
+        }
     }): Promise<void> {
-        const app = express()
+        if (!shareData.expressApp) shareData.expressApp = {}
+        shareData.expressApp.app = express()
+        const app = shareData.expressApp.app
         app.get("*", async (req, res) => {
             /**
              * リクエスト(要求)された場所
@@ -44,7 +56,7 @@ export class expressd {
         })
         app.post("*", (req, res) => {
         })
-        app.listen("80", () => {})
+        shareData.expressApp.server = app.listen("80", () => { })
     }
 }
 export default expressd

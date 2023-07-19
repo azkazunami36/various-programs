@@ -16,12 +16,18 @@ import discordBot from "./discord-bot"
 import ffmpegConverter from "./ffmpegConverter"
 import Bouyomi from "./bouyomi"
 import splitExt from "./splitExt"
+import { expressApp } from "./expressd"
+import wait from "./wait"
 
 const { question, choice, booleanIO, progress, funcSelect } = consoleUIPrograms
 
 export async function cuiIO(shareData: {
     discordBot?: {
         [botName: string]: discordRealTimeData
+    }
+    expressApp?: expressApp
+    cuiIO?: {
+        programLoop?: boolean
     }
 }) {
     const programs: {
@@ -918,14 +924,45 @@ export async function cuiIO(shareData: {
                     await programs[choiceProgramName]()
                 }
             }, {
-                name: "various-programsのシャットダウン",
-                function:async () => {
-                    console.log("現在はできません。")
+                name: "Various Programsのシャットダウン",
+                function: async () => {
+                    console.log("shareData内の常時実行プログラムを終了します。")
+                    if (shareData.discordBot) {
+                        console.log("Discord Botを終了しています...")
+                        const botNames = Object.keys(shareData.discordBot)
+                        for (let i = 0; i !== botNames.length; i++) {
+                            console.log("終了しているBot: " + botNames[i])
+                            const bot = shareData.discordBot[botNames[i]]
+                            if (bot.status && bot.status.logined && bot.client) bot.client.destroy()
+                        }
+                    }
+                    if (shareData.expressApp) {
+                        console.log("expressdを終了しています...")
+                        if (shareData.expressApp.app && shareData.expressApp.server) {
+                            shareData.expressApp.server.close()
+                            console.log("ポート閉鎖、サーバークローズに成功。")
+                        }
+                    }
+                    console.log("全ての終了処理が完了しました。")
+                    if (await booleanIO("終了しきれなかったプログラムごと強制終了しますか？これによる副作用はありません。")) {
+                        console.log("5秒後にプロセスを終了します。\n残った常駐プログラムは強制終了されます。")
+                        await wait(5000)
+                        process.exit(0)
+                    } else {
+                        if (shareData.cuiIO && shareData.cuiIO.programLoop) shareData.cuiIO.programLoop = false
+                        console.log(
+                            "これによりアイドル状態のプロセスとなりました。通常は終了されます。\n" +
+                            "しかし、プログラムミスにより処理が残っている場合、反応なしのプロセスとなります。"
+                        )
+                    }
                 }
             }
         ]
     console.log(process.env.npm_package_name + " v" + process.env.npm_package_version)
-    while (true) {
+    shareData.cuiIO = {
+        programLoop: true
+    }
+    while (shareData.cuiIO.programLoop) {
         const programsName = (() => {
             const programsName = []
             for (let i = 0; i !== programs.length; i++) programsName.push(programs[i].name)
