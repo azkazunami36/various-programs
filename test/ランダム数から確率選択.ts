@@ -1,7 +1,20 @@
-//ランダム数を何かしらのプログラムで生成。１以上にするとエラーになる
+/**
+ * ランダム数を何かしらのプログラムで生成。どんな数字でも構わないが、極端になるとうまく動かない可能性あり。
+ */
 const randomNum = 0.43281;
-//dataに内容、numに確率を入力する。
-const data: { data: any, num: number }[] = [
+/**
+ * 確率で出したいデータを入力。
+ */
+const data: { 
+    /**
+     * データや内容などを入力
+     */
+    data: any, 
+    /**
+     * 確率を入力。大きいほどそれが出る。
+     */
+    num: number
+}[] = [
     {
         data: "yahoo",
         num: 120
@@ -23,6 +36,9 @@ const data: { data: any, num: number }[] = [
         num: 1000
     }
 ];
+/**
+ * 上のデータのnumの合計値を算出。
+ */
 const randomMaxNum = (() => {
     let num = 0;
     for (let i = 0; i !== data.length; i++) num += data[i].num;
@@ -30,6 +46,9 @@ const randomMaxNum = (() => {
 })();
 console.log(
     data[(() => {
+        /**
+         * 入力されたランダムな値をMaxNumで割る。
+         */
         const randomSelected = randomNum * randomMaxNum;
         let selected: { num: number, no: number } | null = null;
         let maxNum: { num: number, no: number } | null = null;
