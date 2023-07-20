@@ -2,6 +2,7 @@ import { discordRealTimeData } from "./discord-bot"
 import { expressApp } from "./expressd"
 import consoleUIPrograms from "./consoleUIPrograms"
 import wait from "./wait"
+import youtubeDownloader from "./youtubeDownloader"
 
 const { booleanIO } = consoleUIPrograms
 
@@ -21,6 +22,7 @@ export namespace vpManageClass {
         cuiIO?: {
             programLoop?: boolean
         }
+        youtubedl?: youtubeDownloader
     }
     /**
      * Various Programsの常駐プログラムをすべて終了します。

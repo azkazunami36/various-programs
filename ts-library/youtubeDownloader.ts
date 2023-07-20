@@ -4,6 +4,7 @@ import fs from "fs"
 import ffmpeg from "fluent-ffmpeg"
 
 import dataIO from "./dataIO"
+import { vpManageClass } from "./vpManageClass"
 interface youtubeDownloaderEvents {
     ready: [void]
     error: [Error]
@@ -106,10 +107,47 @@ export interface videoMetadata {
      */
     ytdlRawData: ytdl.MoreVideoDetails
     /**
+     * このメタデータの作成時間をDate.now()で入力してください。履歴の作成に使用されます。
+     */
+    setTime: number
+    /**
      * 様々な品質や種類のデータが入っています。
      * noには番号を入力しますが、管理方法はytdlのクラスに任せてください。勝手に操作をするとデータを失う恐れがあり、番号を変更しないでください。
      */
     datas: { [no: string]: sourceMetadata }
+    /**
+     * 過去のデータ(変更前のもの)を履歴として保存します。  
+     * RAWデータの保存は行いません。アップデートで必要になった際、一斉にデータの要求が増すため、全体のデータアップデートの際に履歴が作成される恐れがありますが、問題はありません。  
+     * ですが、履歴として保存するというトリガが引かれた際には必ず上書きを行います。
+     */
+    history: {
+        /**
+         * msでの入力を行います。Number型からString型に変換しましょう。
+         * 時間ごとに追跡する場合、大なり小なりで計算を行ってください。
+         */
+        [time: string]: {
+            /**
+             * VideoIDに関連付けられたYouTubeでのタイトルです。
+             */
+            title: string
+            /**
+             * YouTubeでの説明です。
+             */
+            description: string
+            /**
+             * ytdl管理のユーザー情報を丸ごと格納しています。
+             */
+            author: ytdl.Author
+            /**
+             * カテゴリ名を格納しています
+             */
+            category: string
+            /**
+             * YouTubeサムネイル画像のURLを格納しています。
+             */
+            thumbnailURL: string
+        }
+    }
     /**
      * ミュージックソフトでアルバムを作成するための情報です。  
      * アルバム名はdatasに入っている画像と照合し、一致するものを使用されます。
@@ -238,7 +276,7 @@ export declare interface youtubeDownloader {
     emit<K extends keyof youtubeDownloaderEvents>(eventName: K, ...args: youtubeDownloaderEvents[K]): boolean
 }
 /**
- * YouTube Downloaderメインクラスです。
+ * YouTube Downloaderメインクラスです。shareDataで利用を推奨しています。
  * ディスク領域を豪快に使う設計なため、予め大容量のドライブに空き容量を作った状態で利用してください。
  * 今後データ管理機能が完成し、容量の参照が出来たり節約ができる設計が完成した際には、改善が試みられる予定です。
  */
@@ -260,11 +298,10 @@ export class youtubeDownloader extends EventEmitter {
         this.data = data
     }
     /**
-     * クラスを安定して初期化します。
-     * @returns クラスを返します。
+     * YouTube Downloaderの準備を行います。
      */
-    static async initer() {
-        return await new Promise<youtubeDownloader>(resolve => {
+    static async initer(shareData: vpManageClass.shareData) {
+        shareData.youtubedl = await new Promise<youtubeDownloader>(resolve => {
             const youtubedl = new youtubeDownloader()
             youtubedl.on("ready", () => resolve(youtubedl))
         })
@@ -396,25 +433,51 @@ export class youtubeDownloader extends EventEmitter {
         try {
             const { videoDetails } = await ytdl.getInfo(videoId) // データを取得
             if (!this.data.json.videoMeta) this.data.json.videoMeta = {} // 存在しない場合初期化
-            this.data.json.videoMeta[videoId] = { // データのセット 履歴作成には対応していないため、後々変更する必要がある
+            const thumbnailURLGet = (videoDetails: ytdl.MoreVideoDetails) => { // 最も大きいサムネイルを探し、URLを返す
+                let largeImageArray: number = 0
+                let largeImageHeight: number = 0
+                for (let i = 0; i !== videoDetails.thumbnails.length; i++) {
+                    const thumbnail = videoDetails.thumbnails[i]
+                    if (largeImageHeight < thumbnail.height) {
+                        largeImageArray = i
+                        largeImageHeight = thumbnail.height
+                    }
+                }
+                return videoDetails.thumbnails[largeImageArray].url
+            }
+            if (!this.data.json.videoMeta[videoId]) this.data.json.videoMeta[videoId] = { // 初期化データのセット
                 title: videoDetails.title,
                 description: videoDetails.description ? videoDetails.description : "",
                 author: videoDetails.author,
                 category: videoDetails.category,
-                thumbnailURL: await (async () => { // 最も大きいサムネイルを探し、URLを返す
-                    let largeImageArray: number = 0
-                    let largeImageHeight: number = 0
-                    for (let i = 0; i !== videoDetails.thumbnails.length; i++) {
-                        const thumbnail = videoDetails.thumbnails[i]
-                        if (largeImageHeight < thumbnail.height) {
-                            largeImageArray = i
-                            largeImageHeight = thumbnail.height
-                        }
-                    }
-                    return videoDetails.thumbnails[largeImageArray].url
-                })(),
+                setTime: Date.now(),
+                thumbnailURL: thumbnailURLGet(videoDetails),
                 ytdlRawData: videoDetails,
-                datas: {}
+                datas: {},
+                history: {}
+            }
+            const data = this.data.json.videoMeta[videoId]
+            if ((() => {
+                if (data.title !== videoDetails.title) return true
+                if (data.description !== videoDetails.description ? videoDetails.description : "") return true
+                if (data.author !== videoDetails.author) return true
+                if (data.category !== videoDetails.category) return true
+                if (data.thumbnailURL !== thumbnailURLGet(videoDetails)) return true
+            })()) {
+                data.history[String(data.setTime)] = {
+                    title: data.title,
+                    description: data.description,
+                    author: data.author,
+                    category: data.category,
+                    thumbnailURL: data.thumbnailURL
+                }
+                data.title = videoDetails.title
+                data.description = videoDetails.description ? videoDetails.description : ""
+                data.author = videoDetails.author
+                data.category = videoDetails.category
+                data.thumbnailURL = thumbnailURLGet(videoDetails)
+                data.setTime = Date.now()
+                data.ytdlRawData = videoDetails
             }
             return true
         } catch (e) {
