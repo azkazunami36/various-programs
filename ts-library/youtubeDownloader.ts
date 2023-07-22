@@ -4,7 +4,7 @@ import fs from "fs"
 import ffmpeg from "fluent-ffmpeg"
 
 import dataIO from "./dataIO"
-import { vpManageClass } from "./vpManageClass"
+import vpManageClass from "./vpManageClass"
 interface youtubeDownloaderEvents {
     ready: [void]
     error: [Error]

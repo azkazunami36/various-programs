@@ -2,7 +2,7 @@ import express from "express"
 import http from "http"
 
 import { discordRealTimeData } from "./discord-bot"
-import { vpManageClass } from "./vpManageClass"
+import vpManageClass from "./vpManageClass"
 
 export interface expressApp {
     app?: express.Express

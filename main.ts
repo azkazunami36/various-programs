@@ -1,7 +1,6 @@
-import { discordRealTimeData } from "./ts-library/discord-bot"
 import cuiIO from "./ts-library/cuiIO"
-import { expressd, expressApp } from "./ts-library/expressd"
-import { vpManageClass } from "./ts-library/vpManageClass"
+import expressd  from "./ts-library/expressd"
+import vpManageClass from "./ts-library/vpManageClass"
 /**
  * 改善する前に、README.mdをお読みください。
  * しかし、読まなくても僕がコードを確認するので、重要事項ではないことはご了承ください。

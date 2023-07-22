@@ -18,7 +18,7 @@ import Bouyomi from "./bouyomi"
 import splitExt from "./splitExt"
 import { expressApp } from "./expressd"
 import wait from "./wait"
-import { vpManageClass } from "./vpManageClass"
+import vpManageClass from "./vpManageClass"
 
 const { question, choice, booleanIO, progress, funcSelect } = consoleUIPrograms
 

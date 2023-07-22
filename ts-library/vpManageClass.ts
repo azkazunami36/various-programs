@@ -90,3 +90,4 @@ export namespace vpManageClass {
     }
 
 }
+export default vpManageClass
