@@ -1,5 +1,5 @@
 import cuiIO from "./ts-library/cuiIO"
-import expressd  from "./ts-library/expressd"
+import expressd from "./ts-library/expressd"
 import vpManageClass from "./ts-library/vpManageClass"
 /**
  * 改善する前に、README.mdをお読みください。
