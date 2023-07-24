@@ -1,5 +1,4 @@
-import numfiller from "./numFiller"
-import wait from "./wait"
+import handyTool from "./handyTool"
 
 export interface tempTime {
     sec: number,
@@ -76,12 +75,12 @@ export class time {
             if (up === 1) while (num < seconds) {
                 this.setting(true)
                 num++
-                await wait(1)
+                await handyTool.wait(1)
             }
             if (up === -1) while (seconds < num) {
                 this.setting(false)
                 num--
-                await wait(1)
+                await handyTool.wait(1)
             }
         } else {
             this.#secRaw = seconds
@@ -175,11 +174,11 @@ export class time {
         if (outputRaw.days && days !== 0) timeString = 3
         if (outputRaw.year && year !== 0) timeString = 4
         if (option && option.timeString !== undefined) timeString = option.timeString
-        return (3 < timeString ? numfiller(year, fill.fillnum) + counter.year : "") +
-            (2 < timeString ? numfiller(days, fill.fillnum) + counter.days : "") +
-            (1 < timeString ? numfiller(hour, fill.fillnum) + counter.hour : "") +
-            (0 < timeString ? numfiller(min, fill.fillnum) + counter.min : "") +
-            numfiller(sec, fill.fillnum) + counter.sec
+        return (3 < timeString ? handyTool.numFiller(year, fill.fillnum) + counter.year : "") +
+            (2 < timeString ? handyTool.numFiller(days, fill.fillnum) + counter.days : "") +
+            (1 < timeString ? handyTool.numFiller(hour, fill.fillnum) + counter.hour : "") +
+            (0 < timeString ? handyTool.numFiller(min, fill.fillnum) + counter.min : "") +
+            handyTool.numFiller(sec, fill.fillnum) + counter.sec
     }
     toJSON(): tempTime {
         return {

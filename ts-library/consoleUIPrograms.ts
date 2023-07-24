@@ -1,7 +1,7 @@
 import readline from "readline"
 
-import textLength from "./textLength"
-import wait from "./wait"
+import handyTool from "./handyTool"
+
 
 namespace consoleUIPrograms {
 	/**
@@ -98,7 +98,7 @@ namespace consoleUIPrograms {
 				((percent ? percent : 0) * 100).toFixed() + "%["
 			const twoDisplay = "]"
 			let progress = ""
-			const length = textLength(oneDisplay) + textLength(twoDisplay)
+			const length = handyTool.textLength(oneDisplay) + handyTool.textLength(twoDisplay)
 			const progressLength = windowSize[0] - 3 - length
 			const displayProgress = Number((((percent ? percent : 0) + ((miniPercent ? miniPercent : 0) / this.total)) * progressLength).toFixed())
 			for (let i = 0; i < displayProgress; i++) progress += "#"
@@ -107,7 +107,7 @@ namespace consoleUIPrograms {
 			readline.cursorTo(process.stdout, 0)
 			process.stdout.clearLine(0)
 			process.stdout.write(display)
-			await wait(this.interval)
+			await handyTool.wait(this.interval)
 			this.#view()
 		}
 	}

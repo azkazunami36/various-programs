@@ -1,8 +1,9 @@
 import { discordRealTimeData } from "./discord-bot"
-import { expressApp } from "./expressd"
+import expressd from "./expressd"
 import consoleUIPrograms from "./consoleUIPrograms"
-import wait from "./wait"
 import youtubeDownloader from "./youtubeDownloader"
+import handyTool from "./handyTool"
+import dataIO from "./dataIO"
 
 const { booleanIO } = consoleUIPrograms
 
@@ -18,11 +19,12 @@ export namespace vpManageClass {
         discordBot?: {
             [botName: string]: discordRealTimeData
         }
-        expressApp?: expressApp
+        expressApp?: expressd.expressApp
         cuiIO?: {
             programLoop?: boolean
         }
         youtubedl?: youtubeDownloader
+        dataIO?: dataIO.dataIO
     }
     /**
      * Various Programsの常駐プログラムをすべて終了します。
@@ -80,7 +82,7 @@ export namespace vpManageClass {
         message({type: "exited", status: "start"})
         if (option.forced) {
             message({type: "wait", status: "start"})
-            await wait(5000)
+            await handyTool.wait(5000)
             message({type: "wait", status: "end"})
             process.exit(0)
         } else {

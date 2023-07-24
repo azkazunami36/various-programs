@@ -5,6 +5,7 @@ import ffmpeg from "fluent-ffmpeg"
 
 import dataIO from "./dataIO"
 import vpManageClass from "./vpManageClass"
+import musicManager from "./musicManager"
 interface youtubeDownloaderEvents {
     ready: [void]
     error: [Error]
@@ -152,85 +153,12 @@ export interface videoMetadata {
      * ミュージックソフトでアルバムを作成するための情報です。  
      * アルバム名はdatasに入っている画像と照合し、一致するものを使用されます。
      */
-    mp3Tag?: {
-        /**
-         * 曲名を入力します。
-         */
-        title: string
-        /**
-         * 曲名の読みを入力します
-         */
-        readTitle: string
-        /**
-         * アーティスト名を入力します。
-         */
-        artist: string
-        /**
-         * アーティスト名の読みを入力します。
-         */
-        readArtist: string
-        /**
-         * アルバム名を入力します。
-         */
-        albumTitle: string
-        /**
-         * アルバム名の読みを入力します。
-         */
-        readAlbumTitle: string
-        /**
-         * アルバムの作成者を入力します。
-         */
-        albumArtist: string
-        /**
-         * アルバムの作成者の読みを入力します。
-         */
-        readAlbumArtist: string
-        /**
-         * 作曲者名を入力します。
-         */
-        composer: string
-        /**
-         * 作曲者名の読みを入力します。
-         */
-        readComposer: string
-        /**
-         * トラック番号を入力します。
-         */
-        trackNo: number
-        /**
-         * トータルのトラック数を入力します。
-         */
-        totalTrackNo: number
-        /**
-         * ディスク番号を入力します
-         */
-        diskNo: number
-        /**
-         * トータルのディスク数を入力します。
-         */
-        totalDiskNo: number
-        /**
-         * 作成した年を入力します。
-         */
-        year: number
-        /**
-         * BPMを入力します。
-         */
-        bpm: number
-        /**
-         * ジャンルを入力します。
-         */
-        genre: string
-        /**
-         * コピーライトを入力します。
-         */
-        copyright: string
-    }
+    mp3Tag?: musicManager.mp3Tag
 }
 /**
  * ytdlで使用するJSONの型です。
  */
-interface ytdldataIOextJSON extends dataIO {
+interface ytdldataIOextJSON extends dataIO.dataIO {
     /**
      * YouTube Downloaderにまつわるデータを全て格納します。
      */
@@ -287,7 +215,7 @@ export class youtubeDownloader extends EventEmitter {
         this.pconst().then(() => this.emit("ready", undefined))
     }
     private async pconst() {
-        const data = await dataIO.initer("youtube-downloader")
+        const data = await dataIO.dataIO.initer("youtube-downloader")
         if (!data) {
             const e = new ReferenceError()
             e.message = "dataIOの準備ができませんでした。"
@@ -380,14 +308,12 @@ export class youtubeDownloader extends EventEmitter {
                 this.emit("error", error)
                 return
             }
-            const no = (() => { // 空きのある番号を確認する
+            const no = (() => { // VideoIDのJSON内にあるソースデータJSONに空きのある番号を確認する
                 let i = 0
-                let loopIs = true
-                while (loopIs) {
-                    if (!this.data.json.videoMeta[videoId].datas[String(i)]) loopIs = false
+                while (true) {
+                    if (!this.data.json.videoMeta[videoId].datas[String(i)]) return String(i)
                     else i++
                 }
-                return String(i)
             })()
             const path = await this.data.passGet(["youtubeSource", "sources", videoId], no)
             if (!path) {
@@ -397,9 +323,10 @@ export class youtubeDownloader extends EventEmitter {
                 this.emit("error", error)
                 return
             }
-            const Stream = fs.createReadStream(pass)
-            Stream.pipe(fs.createWriteStream(path))
-            this.data.json.videoMeta[videoId].datas[0] = {
+            const Stream = fs.createReadStream(pass) // 読み込みストリーム
+            Stream.pipe(fs.createWriteStream(path)) // 書き込みストリームを使い書き込む
+            Stream.on("end", () => {})
+            this.data.json.videoMeta[videoId].datas[no] = {
                 path: {
                     path: ["youtubeSource", "sources", videoId],
                     name: no

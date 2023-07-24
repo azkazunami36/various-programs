@@ -4,20 +4,13 @@ import crypto from "crypto"
 
 import sfs from "./fsSumwave"
 import time from "./time"
-import pathChecker from "./pathChecker"
-import slashPathStr from "./slashPathStr"
 import consoleUIPrograms from "./consoleUIPrograms"
-import fileLister from "./fileLister"
 import dataIO from "./dataIO"
-import { discordRealTimeData } from "./discord-bot"
 import sharpConvert from "./sharpConvert"
 import kanaConvert from "./kanaConvert"
 import discordBot from "./discord-bot"
 import ffmpegConverter from "./ffmpegConverter"
-import Bouyomi from "./bouyomi"
-import splitExt from "./splitExt"
-import { expressApp } from "./expressd"
-import wait from "./wait"
+import bouyomi from "./bouyomi"
 import vpManageClass from "./vpManageClass"
 
 const { question, choice, booleanIO, progress, funcSelect } = consoleUIPrograms
@@ -35,12 +28,12 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
                         return
                     }
-                    const beforePass = await pathChecker(await question("変換元の画像フォルダを指定してください。"))
+                    const beforePass = await dataIO.pathChecker(await question("変換元の画像フォルダを指定してください。"))
                     if (beforePass === null) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
                         return
                     }
-                    const afterPass = await pathChecker(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
+                    const afterPass = await dataIO.pathChecker(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
                     if (afterPass === null) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
                         return
@@ -67,14 +60,14 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                     if (!invFileIgnore) {
                         listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
                     }
-                    const fileList = await fileLister(beforePass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFIleIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
+                    const fileList = await dataIO.fileLister(beforePass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFIleIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
                     if (!fileList) {
                         console.log("ファイルの取得ができなかったようです。")
                         return
                     }
                     console.log(
-                        "変換元パス: " + slashPathStr(beforePass) + "\n" +
-                        "変換先パス: " + slashPathStr(afterPass) + "\n" +
+                        "変換元パス: " + dataIO.slashPathStr(beforePass) + "\n" +
+                        "変換先パス: " + dataIO.slashPathStr(afterPass) + "\n" +
                         "変換先サイズ(縦): " + imageSize + "\n" +
                         "変換するファイル数: " + fileList.length + "\n" +
                         "命名方法: " + sharpConvert.type[nameing - 1] + "\n" +
@@ -268,7 +261,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
             {
                 name: "FFmpeg Converter",
                 function: async () => {
-                    const data = await dataIO.initer("ffmpeg-converter")
+                    const data = await dataIO.dataIO.initer("ffmpeg-converter")
                     if (data === null) return
                     if (!data.json.presets) {
                         data.json.presets = [
@@ -334,19 +327,19 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                             for (let i = 0; i === 0;) { //終了(ループ脱出)をするにはiの値を0以外にします。
                                 const programs: { [programName: string]: () => Promise<void> } = {
                                     "パスを指定しプリセットで変換": async () => {
-                                        const beforePass = await pathChecker(await question("元のソースパスを入力してください。"))
+                                        const beforePass = await dataIO.pathChecker(await question("元のソースパスを入力してください。"))
                                         if (beforePass === null) {
                                             console.log("入力が間違っているようです。最初からやり直してください。")
                                             return
                                         }
-                                        const afterPass = await pathChecker(await question("保存先のフォルダパスを入力してください。"))
+                                        const afterPass = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
                                         if (afterPass === null) {
                                             console.log("入力が間違っているようです。最初からやり直してください。")
                                             return
                                         }
                                         const filename = await (async () => {
                                             let filename = await question("書き出し先のファイル名を入力してください。")
-                                            if (filename === "") filename = splitExt(beforePass[beforePass.length - 1]).filename
+                                            if (filename === "") filename = dataIO.splitExt(beforePass[beforePass.length - 1]).filename
                                             return filename
                                         })()
                                         const presetChoice = await choice((() => {
@@ -361,8 +354,8 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                             return
                                         }
                                         console.log(
-                                            "変換元: " + slashPathStr(beforePass) + "\n" +
-                                            "変換先: " + slashPathStr(afterPass) + "/" + filename + "." + presets[presetChoice - 1].ext + "\n" +
+                                            "変換元: " + dataIO.slashPathStr(beforePass) + "\n" +
+                                            "変換先: " + dataIO.slashPathStr(afterPass) + "/" + filename + "." + presets[presetChoice - 1].ext + "\n" +
                                             "タグ: " + (() => {
                                                 let tags = ""
                                                 presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
@@ -371,23 +364,23 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                         )
                                         const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
                                         if (permission) {
-                                            const convert = new ffmpegConverter(slashPathStr(beforePass))
+                                            const convert = new ffmpegConverter(dataIO.slashPathStr(beforePass))
                                             convert.preset = presets[presetChoice - 1].tag
                                             console.log(convert.preset)
-                                            if (await sfs.exsits(slashPathStr(afterPass))) {
+                                            if (await sfs.exsits(dataIO.slashPathStr(afterPass))) {
                                                 if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) return
                                             }
-                                            await convert.convert(slashPathStr(afterPass) + "/" + filename + "." + presets[presetChoice - 1].ext)
+                                            await convert.convert(dataIO.slashPathStr(afterPass) + "/" + filename + "." + presets[presetChoice - 1].ext)
                                             console.log("変換が完了しました！")
                                         }
                                     },
                                     "タグを手入力し、詳細な設定を自分で行う": async () => {
-                                        const beforePass = await pathChecker(await question("元のソースパスを入力してください。"))
+                                        const beforePass = await dataIO.pathChecker(await question("元のソースパスを入力してください。"))
                                         if (beforePass === null) {
                                             console.log("入力が間違っているようです。最初からやり直してください。")
                                             return
                                         }
-                                        const afterPass = await pathChecker(await question("保存先のフォルダパスを入力してください。"))
+                                        const afterPass = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
                                         if (afterPass === null) {
                                             console.log("入力が間違っているようです。最初からやり直してください。")
                                             return
@@ -395,8 +388,8 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                         const filename = await question("書き出し先のファイル名を入力してください。")
                                         const preset = await ffmpegConverter.inputPreset({ tagonly: true })
                                         console.log(
-                                            "変換元: " + slashPathStr(beforePass) + "\n" +
-                                            "変換先: " + slashPathStr(afterPass) + "/" + filename + "." + preset.ext + "\n" +
+                                            "変換元: " + dataIO.slashPathStr(beforePass) + "\n" +
+                                            "変換先: " + dataIO.slashPathStr(afterPass) + "/" + filename + "." + preset.ext + "\n" +
                                             "タグ: " + (() => {
                                                 let tags = ""
                                                 preset.tag.forEach(tag => tags += tag + " ")
@@ -405,24 +398,24 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                         )
                                         const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
                                         if (permission) {
-                                            const convert = new ffmpegConverter(slashPathStr(beforePass))
+                                            const convert = new ffmpegConverter(dataIO.slashPathStr(beforePass))
                                             convert.preset = preset.tag
                                             console.log(convert.preset)
 
-                                            if (await sfs.exsits(slashPathStr(afterPass))) {
+                                            if (await sfs.exsits(dataIO.slashPathStr(afterPass))) {
                                                 if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) return
                                             }
-                                            await convert.convert(slashPathStr(afterPass) + "/" + filename + "." + preset.ext)
+                                            await convert.convert(dataIO.slashPathStr(afterPass) + "/" + filename + "." + preset.ext)
                                             console.log("変換が完了しました！")
                                         }
                                     },
                                     "複数ファイルを一括変換": async () => {
-                                        const beforePass = await pathChecker(await question("元のフォルダパスを入力してください。"))
+                                        const beforePass = await dataIO.pathChecker(await question("元のフォルダパスを入力してください。"))
                                         if (beforePass === null) {
                                             console.log("入力が間違っているようです。最初からやり直してください。")
                                             return
                                         }
-                                        const afterPass = await pathChecker(await question("保存先のフォルダパスを入力してください。"))
+                                        const afterPass = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
                                         if (afterPass === null) {
                                             console.log("入力が間違っているようです。最初からやり直してください。")
                                             return
@@ -435,7 +428,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                         if (!invFileIgnore) {
                                             listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
                                         }
-                                        const fileList = await fileLister(beforePass, {
+                                        const fileList = await dataIO.fileLister(beforePass, {
                                             contain: folderContain,
                                             extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "caf", "aif", "aiff", "m4r", "alac", "flac", "3gp", "3g2", "webm", "aac", "hevc"],
                                             invFIleIgnored: invFileIgnore,
@@ -453,8 +446,8 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                             return
                                         }
                                         console.log(
-                                            "変換元: " + slashPathStr(beforePass) + "\n" +
-                                            "変換先: " + slashPathStr(afterPass) + "\n" +
+                                            "変換元: " + dataIO.slashPathStr(beforePass) + "\n" +
+                                            "変換先: " + dataIO.slashPathStr(afterPass) + "\n" +
                                             "タグ: " + (() => {
                                                 let tags = ""
                                                 presets[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
@@ -473,12 +466,12 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                                 const convert = new ffmpegConverter(fileList[i].pass + "/" + fileList[i].filename + "." + fileList[i].extension)
                                                 convert.preset = presets[presetChoice - 1].tag
 
-                                                const convertedPass = slashPathStr(afterPass) + "/" + (await (async () => {
+                                                const convertedPass = dataIO.slashPathStr(afterPass) + "/" + (await (async () => {
                                                     let outfolders = ""
                                                     const point = fileList[i].point
                                                     for (let i = 0; i !== point.length; i++) {
                                                         outfolders += point[i] + "/"
-                                                        if (!(await sfs.exsits(slashPathStr(afterPass) + "/" + outfolders))) await sfs.mkdir(slashPathStr(afterPass) + "/" + outfolders)
+                                                        if (!(await sfs.exsits(dataIO.slashPathStr(afterPass) + "/" + outfolders))) await sfs.mkdir(dataIO.slashPathStr(afterPass) + "/" + outfolders)
                                                     }
                                                     return outfolders
                                                 })()) + fileList[i].filename + "." + presets[presetChoice - 1].ext
@@ -636,7 +629,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
             {
                 name: "棒読みちゃん読み上げ",
                 function: async () => {
-                    const data = await dataIO.initer("bouyomi")
+                    const data = await dataIO.dataIO.initer("bouyomi")
                     if (data === null) return
                     if (!data.json.temp) data.json.temp = null
                     const msg = await question("読み上げたい内容を入力してください。")
@@ -657,7 +650,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                         }
                         await data.save()
                     }
-                    const client = new Bouyomi(data.json.temp)
+                    const client = new bouyomi.bouyomi(data.json.temp)
                     await new Promise<void>(resolve => {
                         client.on("ready", () => console.log("送信を開始します。"))
                         client.on("error", e => {
@@ -676,17 +669,17 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                 name: "Folder Copy",
                 function: async () => {
                     console.log("このプログラムは想定外の入力に弱い傾向にあります。ご了承ください。")
-                    const beforePass = await pathChecker(await question("移動元のフォルダを指定してください。"))
+                    const beforePass = await dataIO.pathChecker(await question("移動元のフォルダを指定してください。"))
                     if (!beforePass) {
                         console.log("入力が間違ってるようです。もう一度やり直してください。")
                         return
                     }
-                    const afterPass = await pathChecker(await question("移動先のフォルダを指定してください。"))
+                    const afterPass = await dataIO.pathChecker(await question("移動先のフォルダを指定してください。"))
                     if (!afterPass) {
                         console.log("入力が間違ってるようです。もう一度やり直してください。")
                         return
                     }
-                    const list = await fileLister(beforePass, { contain: true })
+                    const list = await dataIO.fileLister(beforePass, { contain: true })
                     console.log("移動元のフォルダには" + list.length + "個のファイルたちがあります。")
                     if (await booleanIO("移動を開始しますか？")) {
                         try {
@@ -700,10 +693,10 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                 let outfolders = ""
                                 for (let i = 0; i !== point.length; i++) {
                                     outfolders += point[i] + "/"
-                                    if (!(await sfs.exsits(slashPathStr(afterPass) + "/" + outfolders))) await sfs.mkdir(slashPathStr(afterPass) + "/" + outfolders)
+                                    if (!(await sfs.exsits(dataIO.slashPathStr(afterPass) + "/" + outfolders))) await sfs.mkdir(dataIO.slashPathStr(afterPass) + "/" + outfolders)
                                 }
                                 const fileName = list[i].filename + (list[i].extension ? ("." + list[i].extension) : "")
-                                const copyDataTo = slashPathStr(afterPass) + "/" + outfolders + fileName
+                                const copyDataTo = dataIO.slashPathStr(afterPass) + "/" + outfolders + fileName
                                 prog.now = i
                                 prog.viewStr = "移動中。スキップ[" + skipNum + "] エラー[" + errorNum + "]"
                                 if (await sfs.exsits(list[i].pass + fileName)) {
@@ -736,8 +729,8 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                         name: "passCheck",
                         function: async () => {
                             const pass = await question("パスを入力")
-                            const checked = await pathChecker(pass)
-                            console.log(checked ? slashPathStr(checked) : null)
+                            const checked = await dataIO.pathChecker(pass)
+                            console.log(checked ? dataIO.slashPathStr(checked) : null)
                         }
                     }]
                     const programsName = (() => {
@@ -879,14 +872,14 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
             {
                 name: "ファイル名リストtxt作成",
                 function: async () => {
-                    const folderPath = await pathChecker(await question("フォルダを入力してください。"))
+                    const folderPath = await dataIO.pathChecker(await question("フォルダを入力してください。"))
                     if (folderPath === null) return console.log("フォルダが見つかりませんでした。")
                     const dotignore = await booleanIO("「.」から始まるファイルを省略しますか？")
-                    const list = await fileLister(folderPath, { invFIleIgnored: dotignore })
+                    const list = await dataIO.fileLister(folderPath, { invFIleIgnored: dotignore })
                     let text = ""
                     for (let i = 0; i !== list.length; i++) text += list[i].filename + "\n"
-                    const savePath = await pathChecker(await question("テキストの保存先フォルダを入力してください。"))
-                    if (savePath) sfs.writeFile(slashPathStr(savePath) + "/ファイル名リスト.txt", text)
+                    const savePath = await dataIO.pathChecker(await question("テキストの保存先フォルダを入力してください。"))
+                    if (savePath) sfs.writeFile(dataIO.slashPathStr(savePath) + "/ファイル名リスト.txt", text)
                 }
             },
             {
@@ -899,12 +892,12 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                         "キャッシュデータ等のパス設定": async () => {
                             const data = await sfs.exsits("passCache.json") ? JSON.parse(String(await sfs.readFile("passCache.json"))) : null
                             console.log("現在のキャッシュパス場所は" + (data ? data + "です。" : "設定されていません。"))
-                            const pass = await pathChecker(await question("キャッシュデータを保存するパスを入力してください。"))
+                            const pass = await dataIO.pathChecker(await question("キャッシュデータを保存するパスを入力してください。"))
                             if (pass === null) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
-                            await sfs.writeFile("passCache.json", JSON.stringify(slashPathStr(pass)))
+                            await sfs.writeFile("passCache.json", JSON.stringify(dataIO.slashPathStr(pass)))
                             console.log(JSON.parse(String(await sfs.readFile("passCache.json"))) + "に変更されました。")
                         }
                     }

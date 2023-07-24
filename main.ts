@@ -14,5 +14,5 @@ import vpManageClass from "./ts-library/vpManageClass"
 (async () => {
 	const shareData: vpManageClass.shareData = {}
 	cuiIO(shareData) //コンソール画面で直接操作するためのプログラムです。
-	expressd.main(shareData) //ブラウザ等から直感的に操作するためのプログラムです。
+	expressd.expressd.main(shareData) //ブラウザ等から直感的に操作するためのプログラムです。
 })()

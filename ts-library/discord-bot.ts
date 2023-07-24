@@ -2,7 +2,7 @@ import Discord from "discord.js"
 import EventEmitter from "events"
 
 import dataIO from "./dataIO"
-import arrayRandom from "./arrayRamdom"
+import handyTool from "./handyTool"
 /**
  * Discordのクライアントクラスやそれに関するデータ、例でいう可変するVCの利用状況などに常にアクセスできるように作成された関数です。
  * ユーザーが不正に書き込んだりプログラムでむやみに操作しないようにしてください。エラーが発生したり重複が起こったり可能性があります。
@@ -62,7 +62,7 @@ interface discordData {
 /**
  * JSON型定義の上書き
  */
-interface discordDataIOextJSON extends dataIO {
+interface discordDataIOextJSON extends dataIO.dataIO {
     json: discordData
 }
 /**
@@ -130,7 +130,7 @@ export class discordBot extends EventEmitter {
      * @returns データを返します。
      */
     static async outputJSON() {
-        const data = await dataIO.initer("discordBot")
+        const data = await dataIO.dataIO.initer("discordBot")
         if (!data) return null
         const json: discordData = data.json
 
@@ -173,7 +173,7 @@ export class discordBot extends EventEmitter {
                 Partials.User
             ]
         }
-        const data = await dataIO.initer("discordBot")
+        const data = await dataIO.dataIO.initer("discordBot")
         if (!data) {
             const e = new ReferenceError()
             e.message = "dataIOの準備ができませんでした。"
@@ -452,7 +452,7 @@ export class discordBot extends EventEmitter {
                                     ord.push({ type: "-", Num: num[0] - num[1] })
                                     ord.push({ type: "x", Num: num[0] * num[1] })
                                     const answer = Math.floor(Math.random() * ord.length - 1)
-                                    arrayRandom(ord)
+                                    handyTool.arrayRandom(ord)
                                     embed.setTitle("問題！")
                                     embed.setDescription("下の計算を解くだけで認証が出来ます！")
                                     embed.addFields({

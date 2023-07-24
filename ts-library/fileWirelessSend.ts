@@ -1,7 +1,7 @@
 import express from "express"
 import request from "request"
 
-import fileLister from "./fileLister"
+import dataIO from "./dataIO"
 
 export const fileWirelessSend = class {
     constructor() {
