@@ -6,14 +6,14 @@
 export const assertions = {
     /**
      * @param { any } element 
-     * @return { HTMLElement }
+     * @return { HTMLElement | null }
      */
     HTMLElement: (element) => {
         return element
     },
     /**
      * @param { any } element 
-     * @return { HTMLInputElement }
+     * @return { HTMLInputElement | null }
      */
     HTMLInputElement: (element) => {
         return element

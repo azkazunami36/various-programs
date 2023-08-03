@@ -70,6 +70,7 @@ export class windowSystem {
      * clientX: number
      * clientY: number
      * windowBarLeftLength: number
+     * windowBarRightLength: number
      * } | null}
      */
     #resizeingWindow = null
@@ -312,9 +313,9 @@ export class windowSystem {
         // 主にresizewindowゾーンをクリックされている場合に利用
         let id = null
         if (e.parentElement?.parentElement?.className === "window-master")
-            id = assertions.HTMLInputElement(e.parentElement.parentElement.getElementsByClassName("window-body")[0]).id
+            id = assertions.HTMLInputElement(e.parentElement.parentElement.getElementsByClassName("window-body")[0])?.id
         else if (e.parentElement?.parentElement?.parentElement?.className === "window-master")
-            id = assertions.HTMLInputElement(e.parentElement.parentElement.parentElement.getElementsByClassName("window-body")[0]).id
+            id = assertions.HTMLInputElement(e.parentElement.parentElement.parentElement.getElementsByClassName("window-body")[0])?.id
         if (id && this.#windows[id]) return id // 上のifに一致したらリターン
 
         while (elementTemp) if (elementTemp.parentElement) if (
@@ -343,57 +344,69 @@ export class windowSystem {
         // ウィンドウドラッグ処理
         const target = (() => { // タイトルバーのクリック範囲を歪ませます。
             const target = assertions.HTMLElement(e.target)
-            if (target.className === "window-bar-left") {
-                return assertions.HTMLElement(target.parentElement)
-            }
-            if (target.className === "window-title") {
-                return assertions.HTMLElement(target.parentElement?.parentElement)
+            if (target) {
+                if (target.className === "window-bar-left") {
+                    return assertions.HTMLElement(target.parentElement)
+                }
+                if (target.className === "window-title") {
+                    return assertions.HTMLElement(target.parentElement?.parentElement)
+                }
             }
             return target
         })()
-        const clickWindowId = this.#clickWindowId(assertions.HTMLElement(target))
-        const clickWindowIdOnly = this.#clickWindowId(assertions.HTMLElement(target), true)
-            if (target.className === "window-bar" && target.parentElement) {
-                const stat = this.#windows[target.parentElement.id]
-                if (stat) {
-                    this.#moveingWindow = {
-                        name: target.parentElement.id,
-                        top: e.clientY - stat.top,
-                        left: e.clientX - stat.left
+        if (target) {
+            const tar = assertions.HTMLElement(target)
+            if (tar) {
+                const clickWindowId = this.#clickWindowId(tar)
+                const clickWindowIdOnly = this.#clickWindowId(tar, true)
+                if (target.className === "window-bar" && target.parentElement) {
+                    const stat = this.#windows[target.parentElement.id]
+                    if (stat) {
+                        this.#moveingWindow = {
+                            name: target.parentElement.id,
+                            top: e.clientY - stat.top,
+                            left: e.clientX - stat.left
+                        }
+                    }
+                    if (doubleClick) {
+                        console.log("ダブルクリックされました。")
+                        if (clickWindowIdOnly) {
+                            this.#moveingWindow = null
+                            this.fullscreenSetting(clickWindowIdOnly, true)
+                        }
                     }
                 }
-                if (doubleClick) {
-                    console.log("ダブルクリックされました。")
-                    if (clickWindowIdOnly) {
-                        this.#moveingWindow = null
-                        this.fullscreenSetting(clickWindowIdOnly, true)
-                    }
-                }
-            }
-        if (clickWindowId) {
-            this.#windowDepthManage.windowDepthChange(clickWindowId)
-            if (target.className === "window-max") this.#fullscreenBtn = clickWindowId // ウィンドウ最大化処理
-            // ウィンドウサイズ変更処理
-            if ((() => {
-                const obj = Object.keys(this.#windowSizeID)
-                for (let i = 0; i !== obj.length; i++) if (this.#windowSizeID[obj[i]] === target.className) return true
-                return false
-            })()) {
-                const clickWindowId = this.#clickWindowId(assertions.HTMLElement(target), true)
                 if (clickWindowId) {
-                    const stat = this.#windows[clickWindowId]
-                    if (stat) this.#resizeingWindow = {
-                        name: clickWindowId,
-                        type: target.className,
-                        top: stat.top,
-                        left: stat.left,
-                        topSize: stat.topSize,
-                        leftSize: stat.leftSize,
-                        clientTop: e.clientY - stat.top,
-                        clientLeft: e.clientX - stat.left,
-                        clientX: e.clientX,
-                        clientY: e.clientY,
-                        windowBarLeftLength: assertions.HTMLElement(stat.element.getElementsByClassName("window-bar-left")[0]).clientWidth
+                    this.#windowDepthManage.windowDepthChange(clickWindowId)
+                    if (target.className === "window-max") this.#fullscreenBtn = clickWindowId // ウィンドウ最大化処理
+                    // ウィンドウサイズ変更処理
+                    if ((() => {
+                        const obj = Object.keys(this.#windowSizeID)
+                        for (let i = 0; i !== obj.length; i++) if (this.#windowSizeID[obj[i]] === target.className) return true
+                        return false
+                    })()) {
+                        const clickWindowId = this.#clickWindowId(tar, true)
+                        if (clickWindowId) {
+                            const stat = this.#windows[clickWindowId]
+                            if (stat) {
+                                const left = assertions.HTMLElement(stat.element.getElementsByClassName("window-bar-left")[0])
+                                const right = assertions.HTMLElement(stat.element.getElementsByClassName("window-bar-right")[0])
+                                if (left && right) this.#resizeingWindow = {
+                                    name: clickWindowId,
+                                    type: target.className,
+                                    top: stat.top,
+                                    left: stat.left,
+                                    topSize: stat.topSize,
+                                    leftSize: stat.leftSize,
+                                    clientTop: e.clientY - stat.top,
+                                    clientLeft: e.clientX - stat.left,
+                                    clientX: e.clientX,
+                                    clientY: e.clientY,
+                                    windowBarLeftLength: left.clientWidth,
+                                    windowBarRightLength: right.clientWidth
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -420,6 +433,9 @@ export class windowSystem {
             const ids = this.#windowSizeID
             const stat = this.#windows[this.#resizeingWindow.name]
             if (stat) {
+                const rewin = this.#resizeingWindow
+                const windowBarLength = 30
+                const windowHeightLowLenght = (rewin.windowBarLeftLength + rewin.windowBarRightLength) + 24
                 if (
                     type === ids.top
                     || type === ids.topLeft
@@ -427,11 +443,11 @@ export class windowSystem {
                     || type === ids.topRight
                     || type === ids.rightTop
                 ) {
-                    stat.top = e.clientY - this.#resizeingWindow.clientTop
-                    stat.topSize = this.#resizeingWindow.topSize - (e.clientY - this.#resizeingWindow.clientY)
-                    if (stat.topSize < 42) {
-                        stat.top = (e.clientY - this.#resizeingWindow.clientTop) + (this.#resizeingWindow.topSize - (e.clientY - this.#resizeingWindow.clientY)) - 42
-                        stat.topSize = 42
+                    stat.top = e.clientY - rewin.clientTop
+                    stat.topSize = rewin.topSize - (e.clientY - rewin.clientY)
+                    if (stat.topSize < 30) {
+                        stat.top = (e.clientY - rewin.clientTop) + (rewin.topSize - (e.clientY - rewin.clientY)) - 30
+                        stat.topSize = windowBarLength
                     }
                 }
                 if (
@@ -441,8 +457,12 @@ export class windowSystem {
                     || type === ids.bottomLeft
                     || type === ids.leftBottom
                 ) {
-                    stat.left = e.clientX - this.#resizeingWindow.clientLeft
-                    stat.leftSize = this.#resizeingWindow.leftSize - (e.clientX - this.#resizeingWindow.clientX)
+                    stat.left = e.clientX - rewin.clientLeft
+                    stat.leftSize = rewin.leftSize - (e.clientX - rewin.clientX)
+                    if (stat.leftSize < windowHeightLowLenght) {
+                        stat.left = (e.clientX - rewin.clientLeft) + (rewin.leftSize - (e.clientX - rewin.clientX)) - windowHeightLowLenght
+                        stat.leftSize = windowHeightLowLenght
+                    }
                 }
                 if (
                     type === ids.right
@@ -452,6 +472,9 @@ export class windowSystem {
                     || type === ids.rightTop
                 ) {
                     stat.leftSize = this.#resizeingWindow.leftSize + (e.clientX - this.#resizeingWindow.clientX)
+                    if (stat.leftSize < windowHeightLowLenght) {
+                        stat.leftSize = windowHeightLowLenght
+                    }
                 }
                 if (
                     type === ids.bottom
@@ -461,6 +484,9 @@ export class windowSystem {
                     || type === ids.leftBottom
                 ) {
                     stat.topSize = this.#resizeingWindow.topSize + (e.clientY - this.#resizeingWindow.clientY)
+                    if (stat.topSize < 30) {
+                        stat.topSize = windowBarLength
+                    }
                 }
                 this.viewReflash(this.#resizeingWindow.name)
             }
@@ -476,7 +502,7 @@ export class windowSystem {
         // フルスクリーンボタンのイベント
         const target = assertions.HTMLElement(e.target)
         if (
-            target.className === "window-max"
+            target?.className === "window-max"
             && target.parentElement
             && target.parentElement.parentElement
             && target.parentElement.parentElement.parentElement
@@ -500,13 +526,15 @@ export class windowSystem {
             stat.left = stat.full.left
             stat.topSize = stat.full.topSize
             stat.leftSize = stat.full.leftSize
-            const style1 = assertions.HTMLElement(stat.element.getElementsByClassName("window-body")[0]).style
-            style1.borderRadius = ""
-            style1.width = ""
-            style1.height = ""
-            const style2 = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-center")[0]).style
-            style2.width = ""
-            style2.height = ""
+            const style1 = assertions.HTMLElement(stat.element.getElementsByClassName("window-body")[0])?.style
+            const style2 = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-center")[0])?.style
+            if (style1 && style2) {
+                style1.borderRadius = ""
+                style1.width = ""
+                style1.height = ""
+                style2.width = ""
+                style2.height = ""
+            }
             this.viewReflash(id)
             await wait(255)
             if (!stat.full.is) {
@@ -518,7 +546,7 @@ export class windowSystem {
                         const parentElement = rB[i].parentElement
                         if (
                             parentElement?.parentElement?.className === "window-master"
-                            && assertions.HTMLElement(parentElement.parentElement.getElementsByClassName("window-body")[0]).id === id
+                            && assertions.HTMLElement(parentElement.parentElement.getElementsByClassName("window-body")[0])?.id === id
                         ) return rB[i]
                     }
                 })())
@@ -529,14 +557,14 @@ export class windowSystem {
                         if (
                             parentElement
                             && parentElement.className === "window-master"
-                            && assertions.HTMLElement(parentElement.getElementsByClassName("window-body")[0]).id === id
+                            && assertions.HTMLElement(parentElement.getElementsByClassName("window-body")[0])?.id === id
                         ) return rB[i]
                     }
                 })())
-                resizeTop.style.display = ""
-                resizeLeft.style.display = ""
-                resizeRight.style.display = ""
-                resizeBottom.style.display = ""
+                if (resizeTop) resizeTop.style.display = ""
+                if (resizeLeft) resizeLeft.style.display = ""
+                if (resizeRight) resizeRight.style.display = ""
+                if (resizeBottom) resizeBottom.style.display = ""
                 stat.element.style.transition = ""
             }
         } else {
@@ -550,13 +578,15 @@ export class windowSystem {
             stat.left = 0
             stat.topSize = this.#body.offsetHeight
             stat.leftSize = this.#body.offsetWidth
-            const style1 = assertions.HTMLElement(stat.element.getElementsByClassName("window-body")[0]).style
-            style1.borderRadius = "0"
-            style1.width = "100%"
-            style1.height = "100%"
-            const style2 = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-center")[0]).style
-            style2.width = "100%"
-            style2.height = "100%"
+            const style1 = assertions.HTMLElement(stat.element.getElementsByClassName("window-body")[0])?.style
+            const style2 = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-center")[0])?.style
+            if (style1 && style2) {
+                style1.borderRadius = "0"
+                style1.width = "100%"
+                style1.height = "100%"
+                style2.width = "100%"
+                style2.height = "100%"
+            }
             const resizeTop = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-top")[0])
             const resizeLeft = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-left")[0])
             const resizeRight = assertions.HTMLElement((() => {
@@ -565,7 +595,7 @@ export class windowSystem {
                     const parentElement = rB[i].parentElement
                     if (
                         parentElement?.parentElement?.className === "window-master"
-                        && assertions.HTMLElement(parentElement.parentElement.getElementsByClassName("window-body")[0]).id === id
+                        && assertions.HTMLElement(parentElement.parentElement.getElementsByClassName("window-body")[0])?.id === id
                     ) return rB[i]
                 }
             })())
@@ -576,14 +606,14 @@ export class windowSystem {
                     if (
                         parentElement
                         && parentElement.className === "window-master"
-                        && assertions.HTMLElement(parentElement.getElementsByClassName("window-body")[0]).id === id
+                        && assertions.HTMLElement(parentElement.getElementsByClassName("window-body")[0])?.id === id
                     ) return rB[i]
                 }
             })())
-            resizeTop.style.display = "none"
-            resizeLeft.style.display = "none"
-            resizeRight.style.display = "none"
-            resizeBottom.style.display = "none"
+            if (resizeTop) resizeTop.style.display = "none"
+            if (resizeLeft) resizeLeft.style.display = "none"
+            if (resizeRight) resizeRight.style.display = "none"
+            if (resizeBottom) resizeBottom.style.display = "none"
             this.viewReflash(id)
         }
     }

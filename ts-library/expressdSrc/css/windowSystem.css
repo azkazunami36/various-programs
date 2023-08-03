@@ -9,7 +9,7 @@
 .window-body {
     border: 1px solid black;
     border-radius: 10px;
-    width: calc(100% - 14px);
+    width: calc(100% - 24px);
     height: 100%;
     overflow: hidden;
     position: relative;
@@ -22,8 +22,7 @@
 .window-resize-tR-zone,
 .window-resize-rT-zone,
 .window-resize-bL-zone,
-.window-resize-lB-zone
- {
+.window-resize-lB-zone {
     cursor: nesw-resize;
 }
 
@@ -36,7 +35,7 @@
 
 .window-resize-top-zone,
 .window-resize-bottom-zone {
-    width: calc(100% - 24px);
+    width: calc(100% - 34px);
     height: 100%;
     cursor: ns-resize;
 }
@@ -67,19 +66,39 @@
 .window-resize-top,
 .window-resize-bottom {
     display: flex;
+    justify-content: center;
     width: 100%;
-    height: 6px;
+    height: 10px;
+    position: relative;
 }
+
 
 .window-resize-left,
 .window-resize-right {
-    width: 6px;
+    width: 10px;
     height: 100%;
+    position: relative;
+}
+
+.window-resize-top {
+    top: 5px;
+}
+
+.window-resize-bottom {
+    top: -5px;
+}
+
+.window-resize-left {
+    left: 5px;
+}
+
+.window-resize-right {
+    left: -5px;
 }
 
 .window-resize-center {
     width: 100%;
-    height: calc(100% - 12px);
+    height: calc(100%);
     display: flex;
     justify-content: center;
     align-items: center;
