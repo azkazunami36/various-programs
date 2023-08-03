@@ -184,30 +184,56 @@ export class windowSystem {
     }
     /**
      * ウィンドウの重ね合わせを管理します。
-     * @param {string} id 手前にしたいウィンドウを選択します。
+     * 機能と独特のデータが多いため、クラス化しました。
      */
-    async #windowDepthChange(id) {
+    #windowDepthManage = new class {
         /**
-         * 奥行順にidを並べ替えています。
-         * @type {{
-         * [num: string]: string
-         * }}
+         * @param {windowSystem} windowSystem 
          */
-        const depthList = {}
-        const ids = Object.keys(this.#windows)
-        for (let i = 0; i !== ids.length; i++) {
-            const window = this.#windows[ids[i]]
-            if (window && !depthList[String(window.depth)]) depthList[String(window.depth)] = ids[i]
-            else {
-                const front = frontID()
-                if (front) depthList[String(front.num + 1)] = ids[i]
+        constructor(windowSystem) {
+            this.#windowSystem = windowSystem
+        }
+        /** @type {{[num: string]: string} | null} */
+        #depthListTemp = null
+        depthList() {
+            /**
+             * 奥行順にidを並べ替えています。
+             * @type {{[num: string]: string}}
+             */
+            const depthList = {}
+            const ids = Object.keys(this.#windowSystem.#windows)
+            for (let i = 0; i !== ids.length; i++) {
+                const window = this.#windowSystem.#windows[ids[i]]
+                if (window && !depthList[String(window.depth)]) depthList[String(window.depth)] = ids[i]
+                else {
+                    const front = this.#frontID(depthList)
+                    if (front) depthList[String(front.num + 1)] = ids[i]
+                }
             }
+            return depthList
         }
         /**
          * ウィンドウが最も手前にあるものをIDとして返します。
          * @returns 最も手前だったウィンドウのIDと番号を出力します。
          */
-        function frontID() {
+        frontID() {
+            this.windowDepthChange()
+            if (this.#depthListTemp) return this.#frontID(this.#depthListTemp)
+        }
+        /**
+         * depthListからidを元に現状の奥行を取得します。
+         * @param {string} id 
+         */
+        getDepth(id) {
+            this.windowDepthChange()
+            if (this.#depthListTemp) return this.#getDepth(this.#depthListTemp, id)
+        }
+        /**
+         * ウィンドウが最も手前にあるものをIDとして返します。
+         * @param {{[num: string]: string}} depthList
+         * @returns 最も手前だったウィンドウのIDと番号を出力します。
+         */
+        #frontID(depthList) {
             let num = 0 // 最も手前のウィンドウの値を保存していく
             const depths = Object.keys(depthList)
 
@@ -220,16 +246,18 @@ export class windowSystem {
         }
         /**
          * depthListからidを元に現状の奥行を取得します。
+         * @param {{[num: string]: string}} depthList
          * @param {string} id 
          */
-        function getDepth(id) {
+        #getDepth(depthList, id) {
             const depthLen = Object.keys(depthList)
             for (let i = 0; i !== depthLen.length; i++) if (depthList[depthLen[i]] === id) return depthLen[i]
         }
         /**
          * depthList内の数字と数字の間に間隔がある場合、詰めます
+         * @param {{[num: string]: string}} depthList
          */
-        function packmove() {
+        #packmove(depthList) {
             const depths = Object.keys(depthList)
             const length = depths.length
             for (let i = 0; i !== length; i++) {
@@ -239,21 +267,35 @@ export class windowSystem {
                 }
             }
         }
-        const nowWindowDepth = getDepth(id)
-        const front = frontID()
-        if (nowWindowDepth && front) {
-            depthList[String(front.num + 1)] = depthList[nowWindowDepth]
-            delete depthList[nowWindowDepth]
+        /**
+         * @type {windowSystem}
+         */
+        #windowSystem
+        /**
+         * ウィンドウの重ね合わせを管理します。
+         * @param {string} [id] 手前にしたいウィンドウを選択します。
+         */
+        async windowDepthChange(id) {
+            const depthList = this.depthList()
+            this.#depthListTemp = depthList
+            if (id) {
+                const nowWindowDepth = this.#getDepth(depthList, id)
+                const front = this.#frontID(depthList)
+                if (nowWindowDepth && front) {
+                    depthList[String(front.num + 1)] = depthList[nowWindowDepth]
+                    delete depthList[nowWindowDepth]
+                }
+            }
+            this.#packmove(depthList)
+            // 適用
+            const depthLen = Object.keys(depthList)
+            for (let i = 0; i !== depthLen.length; i++) {
+                const window = this.#windowSystem.#windows[depthList[depthLen[i]]]
+                if (window) window.depth = Number(depthLen[i])
+            }
+            this.#windowSystem.viewReflash() // 反映
         }
-        packmove()
-        // 適用
-        const depthLen = Object.keys(depthList)
-        for (let i = 0; i !== depthLen.length; i++) {
-            const window = this.#windows[depthList[depthLen[i]]]
-            if (window) window.depth = Number(depthLen[i])
-        }
-        this.viewReflash() // 反映
-    }
+    }(this)
     /**
      * 触れた要素の親要素がここで管理されているウィンドウであるかどうかを自動で確認します。
      * @param {HTMLElement} e 触れられた要素を入力
@@ -329,7 +371,7 @@ export class windowSystem {
                 }
             }
         if (clickWindowId) {
-            this.#windowDepthChange(clickWindowId)
+            this.#windowDepthManage.windowDepthChange(clickWindowId)
             if (target.className === "window-max") this.#fullscreenBtn = clickWindowId // ウィンドウ最大化処理
             // ウィンドウサイズ変更処理
             if ((() => {
@@ -665,6 +707,7 @@ export class windowSystem {
         barRight.appendChild(mini)
         barRight.appendChild(max)
         barRight.appendChild(close)
+        const front = this.#windowDepthManage.frontID()
         // 保存
         this.#windows["window" + name] = {
             element: master,
@@ -679,7 +722,7 @@ export class windowSystem {
                 topSize: 0,
                 leftSize: 0
             },
-            depth: 1
+            depth: front ? front.num + 1 : 50
         }
         this.#windowInitPosition.top += 50
         this.#windowInitPosition.left += 50

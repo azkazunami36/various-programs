@@ -11,23 +11,28 @@ addEventListener("load",async () => {
      */
     const shareData = {}
     shareData.windowSystem = new windowSystem(document.body)
-    const ee = document.createElement("div")
-    shareData.windowSystem.createWindow("ofuzakewindow", ee, {
+    const mainWindow = document.createElement("div")
+    shareData.windowSystem.createWindow("mainWindow", mainWindow, {
         size: {
             top: 600,
             left: 900
         },
-        title: "おふざけウィンドウ"
+        title: "メインウィンドウ"
     })
-    const ese = new windowSystem(ee)
-    for (let i = 0; i !== 5; i++) {
-        const window = document.createElement("div")
-        await ese.createWindow("konnnitiha" + i, window, {
+    const createButton = document.createElement("div")
+    createButton.style.padding = "5px"
+    createButton.style.width = "fit-content"
+    createButton.style.background = "white"
+    createButton.style.borderRadius = "10px"
+    createButton.innerText = "新しいウィンドウ"
+    createButton.addEventListener("click", () => {
+        shareData.windowSystem?.createWindow(String(Date.now()), document.createElement("div"), {
             size: {
-                top: 300,
-                left: 400
+                top: 600,
+                left: 900
             },
-            title: "こんにちは。" + i
+            title: "サブウィンドウ"
         })
-    } 
+    })
+    mainWindow.appendChild(createButton)
 })
