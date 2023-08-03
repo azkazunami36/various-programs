@@ -1,7 +1,11 @@
+import dataIO from "./dataIO"
+import sfs from "./fsSumwave"
+
 /**
  * # Handy Tool
  * 名前の通り、日本語で便利ツールです。様々な便利関数がまとまっています。
  * どこの名前空間にも属さない、汎用ツールをここに格納しています。
+ * 裏(プログラム内)でしか活躍しない関数もあれば、表面(実作業)でも使える関数もあります。
  */
 export namespace handyTool {
     /**
@@ -73,6 +77,87 @@ export namespace handyTool {
         let length = 0
         for (let i = 0; i !== string.length; i++) string[i].match(/[ -~]/) ? length += 1 : length += 2
         return length
+    }
+    /**
+     * フォルダ内のファイルの名前をリストとしてテキスト出力または保存します。
+     * @param folderPath フォルダパスを入力します。
+     * @param listerOption File Listerに入力するオプションを入力します。
+     * @returns ファイル名をリスト化したテキストを出力します。
+     */
+    export async function fileNameTextList(folderPath: string[], listerOption?: {
+        contain?: boolean | undefined;
+        extensionFilter?: string[] | undefined;
+        invFIleIgnored?: boolean | undefined;
+        macosInvIgnored?: boolean | undefined;
+    }, savePath?: string[]) {
+        const list = await dataIO.fileLister(folderPath, listerOption)
+        let text = ""
+        for (let i = 0; i !== list.length; i++) text += list[i].filename + "\n"
+        if (savePath) sfs.writeFile(dataIO.slashPathStr(savePath) + "/ファイル名リスト.txt", text)
+        return text
+    }
+    /**
+     * 特定の個所を特定の文字列に置き換えます。
+     * @param string 置き換え元の文字列を入力
+     * @param num 置き換えたい箇所の番号
+     * @param replaceStr 置き換えられる文字列
+     * @returns 置き換えられた文字列
+     */
+    export function replaces(string: string, num: number, replaceStr: string) {
+        const start = string.slice(0, num)
+        const end = string.slice(num + replaceStr.length, string.length)
+        return start + replaceStr + end
+    }
+    /**
+     * ランダムな英数字の文字列を生成可能です。
+     * @param length 文字列の長さを入力します。
+     * @param option 様々なオプションをつけることが出来ます。
+     */
+    export function randomStringCreate(length: number, option: {
+        /**
+         * 小文字の英字を含めるかを決めます。
+         */
+        str?: boolean
+        /**
+         * 大文字の英字を含めるかを決めます。
+         */
+        num?: boolean
+        /**
+         * 数字を含めるかを決めます。
+         */
+        upstr?: boolean
+        /**
+         * ランダム文字列に含めたい文字を文字列で入力します。
+         */
+        originalString?: string
+        /**
+         * 特定の個所に特定の文字列を置きたい場合に指定でき、複数個所を指定することが出来ます。
+         * 場合によっては指定した文字列の長さを超える可能性があります。
+         */
+        setStr?: {
+            /**
+             * どこの箇所を置き換えるかを指定します。0からカウントされます。
+             */
+            setNum: number
+            /**
+             * 何の文字にするかを指定します。１文字推奨です。
+             */
+            string: string
+        }[]
+    }) {
+        const str = "abcdefghijklmnopqrstuvwxyz"
+        const num = "0123456789"
+        const upstr = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        let conster = ""
+        if (option.str) conster += str
+        if (option.num) conster += num 
+        if (option.upstr) conster += upstr
+        if (option.originalString) conster += option.originalString
+        if (conster === "") return ""
+        let string = ""
+        for (let i = 0; i !== length; i++) string += conster[Math.floor(Math.random() * conster.length)]
+        if (option.setStr) for (let i = 0; i !== option.setStr.length; i++) string = replaces(string, option.setStr[i].setNum, option.setStr[i].string)
+        return string
     }
 }
 export default handyTool

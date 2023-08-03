@@ -2,7 +2,6 @@ import readline from "readline"
 
 import handyTool from "./handyTool"
 
-
 namespace consoleUIPrograms {
 	/**
 	 * ユーザーから文字列を受け取ります。
@@ -115,13 +114,29 @@ namespace consoleUIPrograms {
 	 * プログラムをユーザーが選択するための簡易クラスです。プログラムの選択肢として簡潔にし、確定されると自動で実行されます。
 	 */
 	export class funcSelect {
+		/**
+		 * ユーザーに表示するメッセージを入力します。
+		 */
 		message: {
 			topMsg?: string,
 			userToMsg?: string
 		} = {}
+		/**
+		 * プログラム選択にこの関数を使用した場合、エラー時の特定となる名前を決定してください。
+		 */
 		selectingFuncName: string = ""
+		/**
+		 * catchされたエラーをコンソールに直接出力しますか？※開発者向け
+		 */
 		errorView: boolean = false
+		/**
+		 * 繰り返しプログラム選択を刺せるかどうかを設定します。
+		 * この場合、クラス内のendを手動でtrueに置き換えることによってループを終了できます。
+		 */
 		loop: boolean = false
+		/**
+		 * loopが有効になっている場合、これをtrueにすると停止します。
+		 */
 		end: boolean = false
 		functions: {
 			[programName: string]: (() => Promise<void>)

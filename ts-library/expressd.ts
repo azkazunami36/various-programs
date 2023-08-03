@@ -1,14 +1,19 @@
-import express from "express"
+import express, { Request, Response } from "express"
 import http from "http"
 import fs from "fs"
 
-import vpManageClass from "./vpManageClass"
-
+import sfs from "./fsSumwave"
+import { EventEmitter } from "events"
+import dataIO from "./dataIO"
 
 export namespace expressd {
-    export interface expressApp {
-        app?: express.Express
-        server?: http.Server
+    /**
+     * 利用出来るイベントです。
+     */
+    interface expressdEvents { ready: [void], error: [Error] }
+    export declare interface expressd {
+        on<K extends keyof expressdEvents>(s: K, listener: (...args: expressdEvents[K]) => any): this
+        emit<K extends keyof expressdEvents>(eventName: K, ...args: expressdEvents[K]): boolean
     }
     /**
      * expressdは名前の通りexpressを利用しますが、少し変わった点があります。  
@@ -18,40 +23,49 @@ export namespace expressd {
      * そのため、今後cuiIOとguiIOのプログラム内容の同期を行うための、新しい方法を試行錯誤しておきます。
      * が、それまではプログラムは全く別になり、同じ操作方法を保証することはないです。
      */
-    export class expressd {
-        constructor() { }
-        /**
-         * 未完成のため、ここの関数で実行されます。
-         * もしここの関数のみで完成した場合、classを削除しfunctionに置き換えます。
-         * ※sourcedフォルダにデータを入れていますが、main.jsのプログラムを全てここに入れ終えたら、sourcesに名前を変更します。
-         */
-        static async main(shareData: vpManageClass.shareData): Promise<void> {
-            if (!shareData.expressApp) shareData.expressApp = {}
-            shareData.expressApp.app = express()
-            const app = shareData.expressApp.app
-            app.get("*", async (req, res) => {
-                /**
-                 * リクエスト(要求)された場所
-                 */
-                const url = req.url
-                /**
-                 * 応答の種類です。
-                 * sourcesフォルダにアクセスするか、その他のデータにアクセスするかを確認し、それに合ったプログラムを実行します。
-                 * pass内に「/」で分割し、それを利用してファイル先へアクセスする手がかりにします。
-                 * 戻り値にファイルパスを入れる必要があります。
-                 */
-                const type: { [type: string]: (pass: string[]) => Promise<string> } = {
-                    "sources": async pass => {
-                        return ""
-                    }
-                }
-                const passArray = url.split("/")
-                const passdata = await type[passArray[1]]([...passArray])
-            })
-            app.post("*", (req, res) => {
-            })
-            shareData.expressApp.server = app.listen("80", () => { })
+    export class expressd extends EventEmitter {
+        app?: express.Express
+        server?: http.Server
+        #port = "80"
+        constructor() {
+            super();
+            (async () => {
+                this.app = express()
+                const app = this.app
+                app.get("*", async (req, res) => this.#get(req, res))
+                app.post("*", (req, res) => this.#post(req, res))
+                await new Promise<void>(resolve => this.server = app.listen(this.#port, () => { resolve() }))
+                this.emit("ready", undefined)
+            })()
         }
+        static async initer() {
+            const exp = new expressd()
+            await new Promise<void>(resolve => exp.on("ready", () => resolve()))
+            return exp
+        }
+        async #get(req: Request | http.IncomingMessage, res: Response) {
+            if (req.url !== undefined) {
+                const url = (req.url !== "/") ? req.url : "/index.html"
+                const contentType = (() => {
+                    switch (dataIO.splitExt(url).extension) {
+                        case "html": return "text/html"
+                        case "css": return "text/css"
+                        case "js": return "application/javascript"
+                        case "json": return "application/json"
+                    }
+                })()
+                res.header("Content-Type", contentType + ";charset=utf-8")
+                if (await dataIO.pathChecker("./ts-library/expressdSrc" + url)) {
+                    const stream = fs.createReadStream("./ts-library/expressdSrc" + url)
+                    stream.on("data", chunk => res.write(chunk))
+                    stream.on("end", () => res.end())
+                } else {
+                    res.status(404)
+                    res.end()
+                }
+            }
+        }
+        async #post(req: Request | http.IncomingMessage, res: Response | http.ServerResponse) { }
     }
     /**
      * 動画や音声をスムーズにクライアントに送信する関数です

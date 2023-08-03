@@ -2,6 +2,8 @@ import EventEmitter from "events"
 import fs from "fs"
 
 import sfs from "./fsSumwave"
+import vpManageClass from "./vpManageClass"
+import handyTool from "./handyTool"
 
 /**
  * # dataIO
@@ -197,6 +199,153 @@ export namespace dataIO {
          */
         async save() {
             await sfs.writeFile(this.#jsonPass, JSON.stringify({ json: this.json, passIndex: this.#passIndex }))
+        }
+    }
+    export declare interface ny {
+        on<K extends keyof dataIOEvents>(s: K, listener: (...args: dataIOEvents[K]) => any): this
+        emit<K extends keyof dataIOEvents>(eventName: K, ...args: dataIOEvents[K]): boolean
+    }
+    /**
+     * dataIO.jsonの型定義です。
+     */
+    interface dataIOJSON {
+        /**
+         * dataIOにアクセスしたプログラムの情報です。
+         */
+        manageProgramData?: {
+            /**
+             * プログラム名です。
+             */
+            [name: string]: {
+                folderPath: string[],
+                jsonPath: string[]
+            }
+        }
+    }
+    /**
+     * # dataIO
+     * pathCache.jsonが自動でvarious-programsフォルダ内に作成されます。
+     */
+    export class ny {
+        /**
+         * dataIOが利用できるかのステータスの状況
+         */
+        #dataIOstatus = false
+        constructor() {
+            (async () => {
+                // パスが保存されたjsonがあるかどうかで、初期化する
+                if (!await sfs.exsits("pathCache.json")) {
+                    if (!await sfs.exsits("cache")) sfs.mkdir("cache")
+                    await sfs.writeFile("pathCache.json", "\"cache\"")
+                }
+                const dataIOjsonPath = await this.#dataIOjsonPath()
+                // 取得できない、またはパスが存在しなかったらreturn
+                if (!dataIOjsonPath || !sfs.exsits(dataIOjsonPath)) return
+                if (!sfs.exsits(dataIOjsonPath + "/dataIO.json")) sfs.writeFile(dataIOjsonPath + "/dataIO.json", JSON.stringify({}))
+                this.#dataIOstatus = true // 利用可能としてマークする
+                this.emit("ready", undefined)
+            })
+        }
+        /**
+         * クラス定義時に非同期関数をawaitで待機できるようにしたもの
+         * @returns 
+         */
+        static async initer() {
+            const dataIO = new ny()
+            await new Promise<void>(resolve => dataIO.on("ready", () => resolve()))
+            return dataIO
+        }
+        /**
+         * dataIOが現在利用できるかどうかを確認できます。
+         */
+        get dataIOStatus() {
+            return this.#dataIOstatus
+        }
+        /**
+         * dataIOのインデックスが入ったJSON等の場所を記したパス
+         */
+        async #dataIOjsonPath() {
+            const str = JSON.parse(String(await sfs.readFile("pathCache.json")))
+            if (typeof str === "string" && await sfs.exsits(str)) return str as string
+            const e = new Error("pathCache.jsonを処理できませんでした。削除してやり直してください。")
+            e.name = "dataIO"
+            this.emit("error", e)
+        }
+        /**
+         * JSONデータを取得します。
+         * 型定義を自己で行ってください。
+         * ```ts
+         * (await dataio.json<{
+         *   data: {
+         *     gba: number,
+         *     index?: string[]
+         *   }
+         * }>(dataioclient)).data.gba
+         * ```
+         * @param client dataIOClientを入力します。
+         */
+        async json<T>(client: dataIOClient): Promise<T> {
+            return JSON.parse("")
+        }
+        /**
+         * dataIOClientクラスの初期化に使用されます。
+         * クライアント側は利用せずお使いいただけます。
+         */
+        async clientdataiosetting(dataIOClient: dataIOClient, password: string) {
+            const data = dataIOClient.data(password)
+            if (!data) return
+            const dataIOjsonPath = await this.#dataIOjsonPath()
+            // 取得できない、またはパスが存在しなかったらreturn
+            if (!dataIOjsonPath || !sfs.exsits(dataIOjsonPath)) return
+            const json = JSON.parse(String(sfs.readFile(dataIOjsonPath + "/dataIO.json"))) as dataIOJSON
+            if (json.manageProgramData !== undefined && data.name) {
+                if (!json.manageProgramData[data.name]) json.manageProgramData[data.name] = {
+                    folderPath: [],
+                    jsonPath: [""]
+                }
+            }
+        }
+
+    }
+    export declare interface dataIOClient {
+        on<K extends keyof dataIOEvents>(s: K, listener: (...args: dataIOEvents[K]) => any): this
+        emit<K extends keyof dataIOEvents>(eventName: K, ...args: dataIOEvents[K]): boolean
+    }
+    /**
+     * これはdataIOにプログラムのデータを簡単に渡すためのクラスです。  
+     * このクラスをdataIOの操作する関数に入力すると、自動で情報を取得しプログラム用のデータを提供します。
+     * 名前、設定にアクセスすることができ、基本クラスの内容を書き換えることは避けてください。
+     */
+    export class dataIOClient extends EventEmitter {
+        /**
+         * クラス内の内容を書き換えるために利用される文字列です。特定の関数に入力し一致することで書き換えが可能になります。
+         */
+        #accessKey: string
+        #data: {
+            name?: string
+        } = {}
+        constructor(name: string, shareData: vpManageClass.shareData) {
+            super();
+            (async () => {
+                this.#accessKey = handyTool.randomStringCreate(10, {
+                    str: true,
+                    num: true,
+                    upstr: true
+                }) // キーをセット
+                if (!shareData.dataIO) shareData.dataIO = await ny.initer()
+                this.#data.name = name
+                await shareData.dataIO.clientdataiosetting(this, this.#accessKey)
+                this.emit("ready", undefined)
+            })
+        }
+        static async initer(name: string, shareData: vpManageClass.shareData) {
+            const d = new dataIOClient(name, shareData)
+            await new Promise<void>(resolve => d.on("ready", () => resolve()))
+            return d
+        }
+        data(accessKey: string) {
+            if (this.#accessKey === accessKey) return this.#data
+            return null
         }
     }
     /**

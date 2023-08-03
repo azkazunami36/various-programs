@@ -5,8 +5,6 @@ import youtubeDownloader from "./youtubeDownloader"
 import handyTool from "./handyTool"
 import dataIO from "./dataIO"
 
-const { booleanIO } = consoleUIPrograms
-
 /**
  * Various Programsを動かす上で共通で利用されるインターフェイスや関数をまとめています。
  * 主にcuiIO、expressdが利用するものです。
@@ -19,12 +17,12 @@ export namespace vpManageClass {
         discordBot?: {
             [botName: string]: discordRealTimeData
         }
-        expressApp?: expressd.expressApp
+        expressd?: expressd.expressd
         cuiIO?: {
-            programLoop?: boolean
+            funcSelect?: consoleUIPrograms.funcSelect
         }
         youtubedl?: youtubeDownloader
-        dataIO?: dataIO.dataIO
+        dataIO?: dataIO.ny
     }
     /**
      * Various Programsの常駐プログラムをすべて終了します。
@@ -72,10 +70,10 @@ export namespace vpManageClass {
             }
             message({ type: "discordBotExit", status: "end" })
         }
-        if (shareData.expressApp) {
+        if (shareData.expressd) {
             message({ type: "expressdExit", status: "start" })
-            if (shareData.expressApp.app && shareData.expressApp.server) {
-                shareData.expressApp.server.close()
+            if (shareData.expressd.app && shareData.expressd.server) {
+                shareData.expressd.server.close()
             }
             message({ type: "expressdExit", status: "end" })
         }
@@ -86,10 +84,9 @@ export namespace vpManageClass {
             message({type: "wait", status: "end"})
             process.exit(0)
         } else {
-            if (shareData.cuiIO && shareData.cuiIO.programLoop) shareData.cuiIO.programLoop = false
+            if (shareData.cuiIO && shareData.cuiIO.funcSelect) shareData.cuiIO.funcSelect.end = true
             message({type: "exited", status: "end"})
         }
     }
-
 }
 export default vpManageClass
