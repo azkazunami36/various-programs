@@ -87,6 +87,16 @@ export class windowSystem {
      */
     #fullscreenBtn = null
     /**
+     * 最小化ボタンを最初から押しているかどうかの判定をします。
+     * @type {string | null}
+     */
+    #miniwindowBtn = null
+    /**
+     * 閉じるボタンを最初から押しているかどうかの判定をします。
+     * @type {string | null}
+     */
+    #closeBtn = null
+    /**
      * ウィンドウサイズ変更要素のID(ClassName)
      */
     #windowSizeID = {
@@ -312,14 +322,14 @@ export class windowSystem {
 
         // 主にresizewindowゾーンをクリックされている場合に利用
         let id = null
-        if (e.parentElement?.parentElement?.className === "window-master")
+        if (e.parentElement?.parentElement?.classList.contains("window-master"))
             id = assertions.HTMLInputElement(e.parentElement.parentElement.getElementsByClassName("window-body")[0])?.id
-        else if (e.parentElement?.parentElement?.parentElement?.className === "window-master")
+        else if (e.parentElement?.parentElement?.parentElement?.classList.contains("window-master"))
             id = assertions.HTMLInputElement(e.parentElement.parentElement.parentElement.getElementsByClassName("window-body")[0])?.id
         if (id && this.#windows[id]) return id // 上のifに一致したらリターン
 
         while (elementTemp) if (elementTemp.parentElement) if (
-            elementTemp.parentElement.className === "window-body"
+            elementTemp.parentElement.classList.contains("window-body")
             && !only
             && this.#windows[elementTemp.parentElement.id]
         ) {
@@ -345,10 +355,10 @@ export class windowSystem {
         const target = (() => { // タイトルバーのクリック範囲を歪ませます。
             const target = assertions.HTMLElement(e.target)
             if (target) {
-                if (target.className === "window-bar-left") {
+                if (target.classList.contains("window-bar-left")) {
                     return assertions.HTMLElement(target.parentElement)
                 }
-                if (target.className === "window-title") {
+                if (target.classList.contains("window-title")) {
                     return assertions.HTMLElement(target.parentElement?.parentElement)
                 }
             }
@@ -359,7 +369,7 @@ export class windowSystem {
             if (tar) {
                 const clickWindowId = this.#clickWindowId(tar)
                 const clickWindowIdOnly = this.#clickWindowId(tar, true)
-                if (target.className === "window-bar" && target.parentElement) {
+                if (target.classList.contains("window-bar") && target.parentElement) {
                     const stat = this.#windows[target.parentElement.id]
                     if (stat) {
                         this.#moveingWindow = {
@@ -378,13 +388,18 @@ export class windowSystem {
                 }
                 if (clickWindowId) {
                     this.#windowDepthManage.windowDepthChange(clickWindowId)
-                    if (target.className === "window-max") this.#fullscreenBtn = clickWindowId // ウィンドウ最大化処理
+                    if (target.classList.contains("window-max")) this.#fullscreenBtn = clickWindowId // ウィンドウ最大化処理
+                    if (target.classList.contains("window-min")) this.#miniwindowBtn = clickWindowId // ウィンドウ最大化処理
+                    if (target.classList.contains("window-close")) this.#closeBtn = clickWindowId // ウィンドウ最大化処理
                     // ウィンドウサイズ変更処理
-                    if ((() => {
-                        const obj = Object.keys(this.#windowSizeID)
-                        for (let i = 0; i !== obj.length; i++) if (this.#windowSizeID[obj[i]] === target.className) return true
-                        return false
-                    })()) {
+                    const windowSizegenre = Object.keys(this.#windowSizeID)
+                    const type = (() => {
+                        for (let i = 0; i !== windowSizegenre.length; i++)
+                            if (target.classList.contains(this.#windowSizeID[windowSizegenre[i]])) 
+                            return this.#windowSizeID[windowSizegenre[i]]
+                        return null
+                    })()
+                    if (type) {
                         const clickWindowId = this.#clickWindowId(tar, true)
                         if (clickWindowId) {
                             const stat = this.#windows[clickWindowId]
@@ -393,7 +408,7 @@ export class windowSystem {
                                 const right = assertions.HTMLElement(stat.element.getElementsByClassName("window-bar-right")[0])
                                 if (left && right) this.#resizeingWindow = {
                                     name: clickWindowId,
-                                    type: target.className,
+                                    type: type,
                                     top: stat.top,
                                     left: stat.left,
                                     topSize: stat.topSize,
@@ -422,6 +437,10 @@ export class windowSystem {
             const stat = this.#windows[this.#moveingWindow.name]
             if (stat) {
                 if (stat.full.is) {
+                    this.#moveingWindow.top = e.clientY + stat.top
+                    this.#moveingWindow.left = e.clientX + stat.left
+                    stat.full.top = e.clientY - this.#moveingWindow.top
+                    stat.full.left = e.clientX - this.#moveingWindow.left
                     this.fullscreenSetting(this.#moveingWindow.name, true)
                 }
                 stat.top = e.clientY - this.#moveingWindow.top // 場所を保存
@@ -434,7 +453,7 @@ export class windowSystem {
             const stat = this.#windows[this.#resizeingWindow.name]
             if (stat) {
                 const rewin = this.#resizeingWindow
-                const windowBarLength = 30
+                const windowBarLength = 50
                 const windowHeightLowLenght = (rewin.windowBarLeftLength + rewin.windowBarRightLength) + 24
                 if (
                     type === ids.top
@@ -445,8 +464,8 @@ export class windowSystem {
                 ) {
                     stat.top = e.clientY - rewin.clientTop
                     stat.topSize = rewin.topSize - (e.clientY - rewin.clientY)
-                    if (stat.topSize < 30) {
-                        stat.top = (e.clientY - rewin.clientTop) + (rewin.topSize - (e.clientY - rewin.clientY)) - 30
+                    if (stat.topSize < windowBarLength) {
+                        stat.top = (e.clientY - rewin.clientTop) + (rewin.topSize - (e.clientY - rewin.clientY)) - windowBarLength
                         stat.topSize = windowBarLength
                     }
                 }
@@ -484,7 +503,7 @@ export class windowSystem {
                     || type === ids.leftBottom
                 ) {
                     stat.topSize = this.#resizeingWindow.topSize + (e.clientY - this.#resizeingWindow.clientY)
-                    if (stat.topSize < 30) {
+                    if (stat.topSize < windowBarLength) {
                         stat.topSize = windowBarLength
                     }
                 }
@@ -502,16 +521,21 @@ export class windowSystem {
         // フルスクリーンボタンのイベント
         const target = assertions.HTMLElement(e.target)
         if (
-            target?.className === "window-max"
-            && target.parentElement
-            && target.parentElement.parentElement
-            && target.parentElement.parentElement.parentElement
-            && target.parentElement.parentElement.parentElement.className === "window-body"
+            target?.classList.contains("window-max")
+            && target.parentElement?.parentElement?.parentElement?.classList.contains("window-body")
         ) {
             const id = target.parentElement.parentElement.parentElement.id
             await this.fullscreenSetting(id)
-        }
-        this.#fullscreenBtn = null // フルスクリーンのボタンをリセット
+        } else if (
+            target?.classList.contains("window-close")
+            && target.parentElement?.parentElement?.parentElement?.classList.contains("window-body")
+            ) {
+                const id = target.parentElement.parentElement.parentElement.id
+                await this.windowClose(id)
+            }
+        this.#miniwindowBtn = null // 最小化ボタンをリセット
+        this.#closeBtn = null // 閉じるボタンをリセット
+        this.#fullscreenBtn = null // フルスクリーンボタンをリセット
     }
     /**
      * 
@@ -545,7 +569,7 @@ export class windowSystem {
                     for (let i = 0; i !== rB.length; i++) {
                         const parentElement = rB[i].parentElement
                         if (
-                            parentElement?.parentElement?.className === "window-master"
+                            parentElement?.parentElement?.classList.contains("window-master")
                             && assertions.HTMLElement(parentElement.parentElement.getElementsByClassName("window-body")[0])?.id === id
                         ) return rB[i]
                     }
@@ -556,7 +580,7 @@ export class windowSystem {
                         const parentElement = rB[i].parentElement
                         if (
                             parentElement
-                            && parentElement.className === "window-master"
+                            && parentElement.classList.contains("window-master")
                             && assertions.HTMLElement(parentElement.getElementsByClassName("window-body")[0])?.id === id
                         ) return rB[i]
                     }
@@ -594,7 +618,7 @@ export class windowSystem {
                 for (let i = 0; i !== rB.length; i++) {
                     const parentElement = rB[i].parentElement
                     if (
-                        parentElement?.parentElement?.className === "window-master"
+                        parentElement?.parentElement?.classList.contains("window-master")
                         && assertions.HTMLElement(parentElement.parentElement.getElementsByClassName("window-body")[0])?.id === id
                     ) return rB[i]
                 }
@@ -605,7 +629,7 @@ export class windowSystem {
                     const parentElement = rB[i].parentElement
                     if (
                         parentElement
-                        && parentElement.className === "window-master"
+                        && parentElement.classList.contains("window-master")
                         && assertions.HTMLElement(parentElement.getElementsByClassName("window-body")[0])?.id === id
                     ) return rB[i]
                 }
@@ -766,10 +790,30 @@ export class windowSystem {
                 }
             }
             if (option.title) title.innerText = option.title
-            if (option.layout) { }
+            if (option.layout) {
+                if (option.layout.center) {
+                    
+                }
+            }
         }
 
         // 表示
         this.#body.appendChild(master)
+        await wait(20)
+        body.classList.add("window-viewed")
+    }
+    /**
+     * 
+     * @param {string} id 
+     */
+    async windowClose(id) {
+        const stat = this.#windows[id]
+        if (stat) {
+            const body = assertions.HTMLElement(stat.element.getElementsByClassName("window-body")[0])
+            if (body) body.classList.remove("window-viewed")
+            await wait(255)
+            this.#body.removeChild(stat.element)
+            delete this.#windows[id]
+        }
     }
 }
