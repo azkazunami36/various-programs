@@ -32,20 +32,20 @@
         StreamType,
         AudioPlayerStatus
     } = require("@discordjs/voice")
-    const { mbyteString } = require("./modules/mbyteString")
-    const { timeString } = require("./modules/timeString")
-    const { arrayRamdom } = require("./modules/arrayRamdom")
-    const { VASourceGet } = require("./modules/VASourceGet")
-    const { ytThumbnailGet } = require("./modules/ytThumbnailGet")
-    const { ytIndexCreate } = require("./modules/ytIndexCreate")
-    const { ytIndexReBuild } = require("./modules/ytIndexRebuild")
-    const { ytVASourceCheck } = require("./modules/ytVASourceCheck")
-    const { ytAuthorIconGet } = require("./modules/ytAuthorIconGet")
-    const { ytVideoInfoGet } = require("./modules/ytVideoInfoGet")
-    const { ytAuthorInfoGet } = require("./modules/ytAuthorInfoGet")
-    const { ytVideoIdToAuthorInfoGet } = require("./modules/ytVideoIdToAuthorInfoGet")
-    const { ytVideoGetErrorMessage } = require("./modules/ytVideoGetErrorMessage")
-    const { ytPassGet, sourceExist, youtubedl, passContentTypeGet, deleteSource } = require("./modules/ytPassGet")
+    const { mbyteString } = require("../modules/mbyteString")
+    const { timeString } = require("../modules/timeString")
+    const { arrayRamdom } = require("../modules/arrayRamdom")
+    const { VASourceGet } = require("../modules/VASourceGet")
+    const { ytThumbnailGet } = require("../modules/ytThumbnailGet")
+    const { ytIndexCreate } = require("../modules/ytIndexCreate")
+    const { ytIndexReBuild } = require("../modules/ytIndexRebuild")
+    const { ytVASourceCheck } = require("../modules/ytVASourceCheck")
+    const { ytAuthorIconGet } = require("../modules/ytAuthorIconGet")
+    const { ytVideoInfoGet } = require("../modules/ytVideoInfoGet")
+    const { ytAuthorInfoGet } = require("../modules/ytAuthorInfoGet")
+    const { ytVideoIdToAuthorInfoGet } = require("../modules/ytVideoIdToAuthorInfoGet")
+    const { ytVideoGetErrorMessage } = require("../modules/ytVideoGetErrorMessage")
+    const { ytPassGet, sourceExist, youtubedl, passContentTypeGet, deleteSource } = require("../modules/ytPassGet")
     const wait = util.promisify(setTimeout)
     /**
      * データを格納しています。
@@ -72,7 +72,7 @@
     folderCreate(savePass + "cache/YouTubeDLConvert")
     //-----------ここまで------------
     require("dotenv").config()
-    const processJson = require("./processJson.json")
+    const processJson = require("../processJson.json")
     const procData = {}
     const app = express()
     /**
