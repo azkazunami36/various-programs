@@ -1,8 +1,8 @@
 import Discord from "discord.js"
 import EventEmitter from "events"
 
-import dataIO from "./dataIO"
-import handyTool from "./handyTool"
+import dataIO from "./dataIO.js"
+import handyTool from "./handyTool.js"
 /**
  * Discordのクライアントクラスやそれに関するデータ、例でいう可変するVCの利用状況などに常にアクセスできるように作成された関数です。
  * ユーザーが不正に書き込んだりプログラムでむやみに操作しないようにしてください。エラーが発生したり重複が起こったり可能性があります。

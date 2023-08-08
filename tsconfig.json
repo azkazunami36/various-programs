@@ -1,19 +1,17 @@
 {
     "compilerOptions": {
+        "module": "ESNext",
         "moduleResolution": "Node",
         "target": "ESNext",
-        "noEmit": true,
         "resolveJsonModule": true,
+        "composite": true,
+        "declaration": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "sourceMap": true,
         "noImplicitAny": true,
+        "sourceMap": true,
         "strictNullChecks": true,
-        "baseUrl": "./",
-        "paths": {
-            "./*": [
-                "*"
-            ]
-        }
+        "baseUrl": "./"
     },
+    "include": ["main.ts", "ts-library"]
 }

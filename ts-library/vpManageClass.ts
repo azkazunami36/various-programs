@@ -1,9 +1,9 @@
-import { discordRealTimeData } from "./discord-bot"
-import expressd from "./expressd"
-import consoleUIPrograms from "./consoleUIPrograms"
-import youtubeDownloader from "./youtubeDownloader"
-import handyTool from "./handyTool"
-import dataIO from "./dataIO"
+import { discordRealTimeData } from "./discord-bot.js"
+import expressd from "./expressd.js"
+import consoleUIPrograms from "./consoleUIPrograms.js"
+import youtubeDownloader from "./youtubeDownloader.js"
+import handyTool from "./handyTool.js"
+import dataIO from "./dataIO.js"
 
 /**
  * Various Programsを動かす上で共通で利用されるインターフェイスや関数をまとめています。

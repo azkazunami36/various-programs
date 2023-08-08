@@ -1,7 +1,7 @@
 import EventEmitter from "events"
 import ffmpeg from "fluent-ffmpeg"
 
-import consoleUIPrograms from "./consoleUIPrograms"
+import consoleUIPrograms from "./consoleUIPrograms.js"
 
 const { question, booleanIO } = consoleUIPrograms
 export interface ffmpegConverterEvents {

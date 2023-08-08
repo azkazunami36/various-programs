@@ -1,7 +1,7 @@
-import cuiIO from "./ts-library/cuiIO"
-import dataIO from "./ts-library/dataIO"
-import expressd from "./ts-library/expressd"
-import vpManageClass from "./ts-library/vpManageClass"
+import cuiIO from "./ts-library/cuiIO.js"
+import dataIO from "./ts-library/dataIO.js"
+import expressd from "./ts-library/expressd.js"
+import vpManageClass from "./ts-library/vpManageClass.js"
 /**
  * 改善する前に、README.mdをお読みください。
  * しかし、読まなくても僕がコードを確認するので、重要事項ではないことはご了承ください。

@@ -3,7 +3,7 @@ import fs from "fs"
 import imageSize from "image-size"
 import sharp from "sharp"
 
-import sfs from "./fsSumwave"
+import sfs from "./fsSumwave.js"
 
 interface sharpConvertEvents {
     end: [void],

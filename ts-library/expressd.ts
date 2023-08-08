@@ -1,10 +1,10 @@
 import express, { Request, Response } from "express"
 import http from "http"
 import fs from "fs"
-
-import sfs from "./fsSumwave"
 import { EventEmitter } from "events"
-import dataIO from "./dataIO"
+
+import sfs from "./fsSumwave.js"
+import dataIO from "./dataIO.js"
 
 export namespace expressd {
     /**

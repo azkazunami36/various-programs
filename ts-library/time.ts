@@ -1,4 +1,4 @@
-import handyTool from "./handyTool"
+import handyTool from "./handyTool.js"
 
 export interface tempTime {
     sec: number,

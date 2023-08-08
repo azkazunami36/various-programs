@@ -1,6 +1,6 @@
 import readline from "readline"
 
-import handyTool from "./handyTool"
+import handyTool from "./handyTool.js"
 
 namespace consoleUIPrograms {
 	/**

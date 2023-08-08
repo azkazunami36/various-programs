@@ -3,9 +3,9 @@ import ytdl from "ytdl-core"
 import fs from "fs"
 import ffmpeg from "fluent-ffmpeg"
 
-import dataIO from "./dataIO"
-import vpManageClass from "./vpManageClass"
-import musicManager from "./musicManager"
+import dataIO from "./dataIO.js"
+import vpManageClass from "./vpManageClass.js"
+import musicManager from "./musicManager.js"
 interface youtubeDownloaderEvents {
     ready: [void]
     error: [Error]

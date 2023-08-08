@@ -1,9 +1,9 @@
 import EventEmitter from "events"
 import fs from "fs"
 
-import sfs from "./fsSumwave"
-import vpManageClass from "./vpManageClass"
-import handyTool from "./handyTool"
+import sfs from "./fsSumwave.js"
+import vpManageClass from "./vpManageClass.js"
+import handyTool from "./handyTool.js"
 
 /**
  * # dataIO

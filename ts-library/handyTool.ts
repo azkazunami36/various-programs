@@ -1,5 +1,5 @@
-import dataIO from "./dataIO"
-import sfs from "./fsSumwave"
+import dataIO from "./dataIO.js"
+import sfs from "./fsSumwave.js"
 
 /**
  * # Handy Tool
