@@ -96,12 +96,9 @@ export namespace expressd {
         if (range) headers["Content-Range"] = "bytes " + options.start + "-" + options.end + "/" + videoSize
         headers["Content-Range"] = "bytes " + options.start + "-" + options.end + "/" + videoSize
         headers["Content-Type"] = type
-        console.log(options, ranges, range)
         res.writeHead((range) ? 206 : 200, headers) //206を使用すると接続を続行することが出来る
         const Stream = fs.createReadStream(videopath, options) //ストリームにし、範囲のデータを読み込む
         Stream.on("error", error => {
-            console.log("Error reading file" + videopath + ".")
-            console.log(error)
             res.sendStatus(500)
         });
         Stream.on("data", c => res.write(c))

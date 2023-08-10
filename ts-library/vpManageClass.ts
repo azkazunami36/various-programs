@@ -1,9 +1,10 @@
 import { discordRealTimeData } from "./discord-bot.js"
 import expressd from "./expressd.js"
-import consoleUIPrograms from "./consoleUIPrograms.js"
 import youtubeDownloader from "./youtubeDownloader.js"
 import handyTool from "./handyTool.js"
 import dataIO from "./dataIO.js"
+import { consoleUIPrograms } from "./cuiIO.js"
+import ffmpegConverter from "./ffmpegConverter.js"
 
 /**
  * Various Programsを動かす上で共通で利用されるインターフェイスや関数をまとめています。
@@ -23,6 +24,7 @@ export namespace vpManageClass {
         }
         youtubedl?: youtubeDownloader
         dataIO?: dataIO.ny
+        ffmpegConverter?: ffmpegConverter
     }
     /**
      * Various Programsの常駐プログラムをすべて終了します。

@@ -60,7 +60,7 @@ export namespace dataIO {
      * dataIOで扱うファイルは実際の階層とは別物です。JSONを書き換えたりするなど、人為的にデータを操作した場合には例外が発生する可能性があり、データを失う恐れがあります。
      * JSONに型定義をする場合は都度、「**XXXX**dataIOextJSON」というインターフェイスに
      * ```ts
-     * interface hogedataIOextJSON extend dataIO {
+     * interface hogedataIOextJSON extends dataIO.dataIO {
      *   json: {
      *     hoge: string
      *   }
@@ -336,7 +336,7 @@ export namespace dataIO {
                 this.#data.name = name
                 await shareData.dataIO.clientdataiosetting(this, this.#accessKey)
                 this.emit("ready", undefined)
-            })
+            })()
         }
         static async initer(name: string, shareData: vpManageClass.shareData) {
             const d = new dataIOClient(name, shareData)
@@ -555,7 +555,6 @@ export namespace dataIO {
             }
         }
         //データを出力
-        console.log(processd)
         return processd
     }
     /**

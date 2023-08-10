@@ -63,7 +63,7 @@ export class time {
      * (async() => {
      *     const time = new sumtool.time()
      *     await time.count(1000) //１秒以上の計算を要します。
-     *     console.log(time.toString()) //16分40秒
+     *     time.toString() //16分40秒
      * })()
      * ```
      */

@@ -1,7 +1,10 @@
 /**
  * qwerty配列の日本語キーボードでかな入力時、入力されたローマ字を推測します。
- * @param string 
- * @param convertTo 
+ * つまり「ひらがな等」->「英数字」への変換となります。
+ * 英数字からかなの場合、「のらみみみにかにくち」とキーボードの英字とかなに対応した文字列に変換されます。
+ * 逆変換すなわちかなから英数字の場合「konnnitiha」となります。
+ * @param string 元となる文字列
+ * @param convertTo 「英数字」へなのか「かな」へなのか
  * @returns 
  */
 export function kanaConvert(string: string, convertTo: boolean) {

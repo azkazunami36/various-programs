@@ -211,28 +211,25 @@ export declare interface youtubeDownloader {
 export class youtubeDownloader extends EventEmitter {
     data: ytdldataIOextJSON
     constructor() {
+        (async () => {
+            const data = await dataIO.dataIO.initer("youtube-downloader")
+            if (!data) {
+                const e = new ReferenceError()
+                e.message = "dataIOの準備ができませんでした。"
+                e.name = "YouTube Downloader"
+                this.emit("error", e)
+                return
+            }
+            this.data = data
+            this.emit("ready", undefined)
+        })()
         super()
-        this.pconst().then(() => this.emit("ready", undefined))
     }
-    private async pconst() {
-        const data = await dataIO.dataIO.initer("youtube-downloader")
-        if (!data) {
-            const e = new ReferenceError()
-            e.message = "dataIOの準備ができませんでした。"
-            e.name = "YouTube Downloader"
-            this.emit("error", e)
-            return
-        }
-        this.data = data
-    }
-    /**
-     * YouTube Downloaderの準備を行います。
-     */
+    /** YouTube Downloaderの準備を行います。 */
     static async initer(shareData: vpManageClass.shareData) {
-        shareData.youtubedl = await new Promise<youtubeDownloader>(resolve => {
-            const youtubedl = new youtubeDownloader()
-            youtubedl.on("ready", () => resolve(youtubedl))
-        })
+        const youtubedl = new youtubeDownloader()
+        await new Promise<void>(resolve => youtubedl.on("ready", () => resolve()))
+        shareData.youtubedl = youtubedl
     }
     /**
      * YouTubeからソースを入手します。
@@ -325,7 +322,7 @@ export class youtubeDownloader extends EventEmitter {
             }
             const Stream = fs.createReadStream(pass) // 読み込みストリーム
             Stream.pipe(fs.createWriteStream(path)) // 書き込みストリームを使い書き込む
-            Stream.on("end", () => {})
+            Stream.on("end", () => { })
             this.data.json.videoMeta[videoId].datas[no] = {
                 path: {
                     path: ["youtubeSource", "sources", videoId],

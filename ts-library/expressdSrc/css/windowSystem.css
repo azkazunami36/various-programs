@@ -18,7 +18,7 @@
     transition: all 250ms 0s ease;
     box-shadow: 2px 2px 20px -5px #000000A0;
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.95);
 }
 
 .window-viewed {

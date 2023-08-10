@@ -92,7 +92,7 @@ interface discordProgram {
  * 
  * 利用方法。initerに次のようなJSONを入力します。
  * ```ts
- * discordBot.initer({name: "Botの名前"})
+ * discordBot.initer({ name: "Botの名前" })
  * ```
  * その後はtoken関数を使い、トークンを入力します。
  */
@@ -110,9 +110,128 @@ export class discordBot extends EventEmitter {
      */
     constructor(data: discordRealTimeData) {
         super()
-        this.rtdata = data
-        if (!this.rtdata.status) this.rtdata.status = {}
-        this.pconst().then(() => this.emit("classReady"))
+        this.rtdata = data;
+        (async () => {
+            if (!this.rtdata.status) this.rtdata.status = {}
+            const { GatewayIntentBits, Partials } = Discord
+            const newClientOption = {
+                intents: [
+                    GatewayIntentBits.AutoModerationConfiguration,
+                    GatewayIntentBits.AutoModerationExecution,
+                    GatewayIntentBits.DirectMessageReactions,
+                    GatewayIntentBits.DirectMessageTyping,
+                    GatewayIntentBits.DirectMessages,
+                    GatewayIntentBits.GuildEmojisAndStickers,
+                    GatewayIntentBits.GuildIntegrations,
+                    GatewayIntentBits.GuildInvites,
+                    GatewayIntentBits.GuildMembers,
+                    GatewayIntentBits.GuildMessageReactions,
+                    GatewayIntentBits.GuildMessageTyping,
+                    GatewayIntentBits.GuildMessages,
+                    GatewayIntentBits.GuildPresences,
+                    GatewayIntentBits.GuildScheduledEvents,
+                    GatewayIntentBits.GuildVoiceStates,
+                    GatewayIntentBits.GuildWebhooks,
+                    GatewayIntentBits.Guilds,
+                    GatewayIntentBits.MessageContent
+                ],
+                partials: [
+                    Partials.Channel,
+                    Partials.GuildMember,
+                    Partials.GuildScheduledEvent,
+                    Partials.Message,
+                    Partials.Reaction,
+                    Partials.ThreadMember,
+                    Partials.User
+                ]
+            }
+            const data = await dataIO.dataIO.initer("discordBot")
+            if (!data) {
+                const e = new ReferenceError()
+                e.message = "dataIOの準備ができませんでした。"
+                e.name = "Discord Bot"
+                this.emit("error", e)
+                return
+            }
+            this.data = data
+            // JSONにBotの名前が存在しなかったら追加します。
+            if (!this.data.json[this.rtdata.name]) this.data.json[this.rtdata.name] = {
+                programs: [],
+                token: ""
+            }
+            // リアルタイムデータ内のprogramを初期化します。
+            this.rtdata.program = {}
+            //リアルタイムデータ内に関数を保存します。
+            await this.programSeting()
+            const th = this
+            // ClientにBotのデータが入っていない場合は設定します。
+            if (!this.rtdata.client) {
+                /**
+                 * dataIOのJSONに入ったBotのデータを定義
+                 */
+                const json = this.data.json[this.rtdata.name]
+                /**
+                 * Discord.jsの準備
+                 */
+                this.rtdata.client = new Discord.Client(json.clientOptions !== undefined ? json.clientOptions : newClientOption)
+                const client = this.rtdata.client
+                client.on(Discord.Events.MessageCreate, async message => {
+                    /**
+                     * リアルタイムプログラム内に関数が入っていれば
+                     */
+                    if (th.rtdata.program) {
+                        const programStrings = Object.keys(th.rtdata.program)
+                        /**
+                         * 利用するとされているプログラムを実行
+                         */
+                        for (let i = 0; i !== programStrings.length; i++) {
+                            const program = th.rtdata.program[programStrings[i]]
+                            if (program.message) await program.message(message)
+                        }
+                    }
+                })
+                client.on(Discord.Events.InteractionCreate, async interaction => {
+                    /**
+                     * リアルタイムプログラム内に関数が入っていれば
+                     */
+                    if (th.rtdata.program) {
+                        const programStrings = Object.keys(th.rtdata.program)
+                        /**
+                         * 利用するとされているプログラムを実行
+                         */
+                        for (let i = 0; i !== programStrings.length; i++) {
+                            const program = th.rtdata.program[programStrings[i]]
+                            if (program.interaction) {
+                                await program.interaction(interaction)
+                            }
+                        }
+                    }
+                })
+            }
+            const client = this.rtdata.client
+            client.on(Discord.Events.ClientReady, client => {
+                th.emit("djsClientReady", client)
+                client.application.commands.set((() => {
+                    const program = th.rtdata.program
+                    if (!program) return []
+                    const keys = Object.keys(program)
+                    let data: Omit<Discord.SlashCommandBuilder, "addSubcommandGroup" | "addSubcommand" | "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption">[] = []
+                    for (let i = 0; i !== keys.length; i++) {
+                        const slashCommands = program[keys[i]].slashCommand
+                        if (slashCommands) for (let i = 0; i !== slashCommands.length; i++) data.push(slashCommands[i])
+                    }
+                    return data
+                })())
+            })
+            client.on(Discord.Events.MessageCreate, message => {
+                th.emit("messageCreate", message)
+            })
+            client.on(Discord.Events.InteractionCreate, interaction => {
+                th.emit("interactionCreate", interaction)
+            })
+            await this.data.save()
+        })()
+        this.emit("classReady")
     }
     /**
      * クラスを安定的に初期化します。おすすめです。
@@ -120,10 +239,9 @@ export class discordBot extends EventEmitter {
      * @returns 
      */
     static async initer(data: discordRealTimeData) {
-        return await new Promise<discordBot>(resolve => {
-            const djs = new discordBot(data)
-            djs.on("classReady", () => resolve(djs))
-        })
+        const djs = new discordBot(data)
+        await new Promise<void>(resolve => djs.on("classReady", () => resolve()))
+        return djs
     }
     /**
      * 全てのDiscord Botに関するデータを読み込みます。
@@ -136,130 +254,6 @@ export class discordBot extends EventEmitter {
 
         return <discordData>JSON.parse(JSON.stringify(json))
     }
-    /**
-     * Discord Botクラスの準備を整えます。
-     * @returns 
-     */
-    private async pconst() {
-        const { GatewayIntentBits, Partials } = Discord
-        const newClientOption = {
-            intents: [
-                GatewayIntentBits.AutoModerationConfiguration,
-                GatewayIntentBits.AutoModerationExecution,
-                GatewayIntentBits.DirectMessageReactions,
-                GatewayIntentBits.DirectMessageTyping,
-                GatewayIntentBits.DirectMessages,
-                GatewayIntentBits.GuildEmojisAndStickers,
-                GatewayIntentBits.GuildIntegrations,
-                GatewayIntentBits.GuildInvites,
-                GatewayIntentBits.GuildMembers,
-                GatewayIntentBits.GuildMessageReactions,
-                GatewayIntentBits.GuildMessageTyping,
-                GatewayIntentBits.GuildMessages,
-                GatewayIntentBits.GuildPresences,
-                GatewayIntentBits.GuildScheduledEvents,
-                GatewayIntentBits.GuildVoiceStates,
-                GatewayIntentBits.GuildWebhooks,
-                GatewayIntentBits.Guilds,
-                GatewayIntentBits.MessageContent
-            ],
-            partials: [
-                Partials.Channel,
-                Partials.GuildMember,
-                Partials.GuildScheduledEvent,
-                Partials.Message,
-                Partials.Reaction,
-                Partials.ThreadMember,
-                Partials.User
-            ]
-        }
-        const data = await dataIO.dataIO.initer("discordBot")
-        if (!data) {
-            const e = new ReferenceError()
-            e.message = "dataIOの準備ができませんでした。"
-            e.name = "Discord Bot"
-            this.emit("error", e)
-            return
-        }
-        this.data = data
-        // JSONにBotの名前が存在しなかったら追加します。
-        if (!this.data.json[this.rtdata.name]) this.data.json[this.rtdata.name] = {
-            programs: [],
-            token: ""
-        }
-        // リアルタイムデータ内のprogramを初期化します。
-        this.rtdata.program = {}
-        //リアルタイムデータ内に関数を保存します。
-        await this.programSeting()
-        const th = this
-        // ClientにBotのデータが入っていない場合は設定します。
-        if (!this.rtdata.client) {
-            /**
-             * dataIOのJSONに入ったBotのデータを定義
-             */
-            const json = this.data.json[this.rtdata.name]
-            /**
-             * Discord.jsの準備
-             */
-            this.rtdata.client = new Discord.Client(json.clientOptions !== undefined ? json.clientOptions : newClientOption)
-            const client = this.rtdata.client
-            client.on(Discord.Events.MessageCreate, async message => {
-                /**
-                 * リアルタイムプログラム内に関数が入っていれば
-                 */
-                if (th.rtdata.program) {
-                    const programStrings = Object.keys(th.rtdata.program)
-                    /**
-                     * 利用するとされているプログラムを実行
-                     */
-                    for (let i = 0; i !== programStrings.length; i++) {
-                        const program = th.rtdata.program[programStrings[i]]
-                        if (program.message) await program.message(message)
-                    }
-                }
-            })
-            client.on(Discord.Events.InteractionCreate, async interaction => {
-                /**
-                 * リアルタイムプログラム内に関数が入っていれば
-                 */
-                if (th.rtdata.program) {
-                    const programStrings = Object.keys(th.rtdata.program)
-                    /**
-                     * 利用するとされているプログラムを実行
-                     */
-                    for (let i = 0; i !== programStrings.length; i++) {
-                        const program = th.rtdata.program[programStrings[i]]
-                        if (program.interaction) {
-                            await program.interaction(interaction)
-                        }
-                    }
-                }
-            })
-        }
-        const client = this.rtdata.client
-        client.on(Discord.Events.ClientReady, client => {
-            th.emit("djsClientReady", client)
-            client.application.commands.set((() => {
-                const program = th.rtdata.program
-                if (!program) return []
-                const keys = Object.keys(program)
-                let data: Omit<Discord.SlashCommandBuilder, "addSubcommandGroup" | "addSubcommand" | "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption">[] = []
-                for (let i = 0; i !== keys.length; i++) {
-                    const slashCommands = program[keys[i]].slashCommand
-                    if (slashCommands) for (let i = 0; i !== slashCommands.length; i++) data.push(slashCommands[i])
-                }
-                return data
-            })())
-        })
-        client.on(Discord.Events.MessageCreate, message => {
-            th.emit("messageCreate", message)
-        })
-        client.on(Discord.Events.InteractionCreate, interaction => {
-            th.emit("interactionCreate", interaction)
-        })
-        await this.data.save()
-    }
-
     /**
      * Discord Botで利用できる専用プログラムです。
      */
@@ -534,7 +528,7 @@ export class discordBot extends EventEmitter {
                                     const role = await interaction.guild.roles.fetch(roleGive.roleId)
                                     if (member && role) {
                                         member.roles.add(role)
-                                        await  interaction.reply({
+                                        await interaction.reply({
                                             content: "ロールを付与しました！",
                                             ephemeral: true
                                         })
@@ -543,10 +537,10 @@ export class discordBot extends EventEmitter {
                                 }
                             }
                             catch (e) {
-                                await   interaction.reply({
-                                        content: "認証でエラーが発生してしまいました...\nエラーは管理者が確認し修正します。",
-                                        ephemeral: true
-                                    })
+                                await interaction.reply({
+                                    content: "認証でエラーが発生してしまいました...\nエラーは管理者が確認し修正します。",
+                                    ephemeral: true
+                                })
                             }
                         }
                     }

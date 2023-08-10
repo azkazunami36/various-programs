@@ -3,6 +3,7 @@ import fs from "fs"
 import imageSize from "image-size"
 import sharp from "sharp"
 
+import dataIO from "./dataIO.js"
 import sfs from "./fsSumwave.js"
 
 interface sharpConvertEvents {
@@ -17,7 +18,7 @@ export declare interface sharpConvert {
 export class sharpConvert extends EventEmitter {
     #converting = 0
     #convertPoint = 0
-    afterPass = ""
+    afterPass: string[] = []
     size = 100
     processd: {
         filename: string,
@@ -52,24 +53,26 @@ export class sharpConvert extends EventEmitter {
                 const fileName = this.processd[i].filename + "." + this.processd[i].extension
                 let outfolders = ""
                 const point = this.processd[i].point
+                const afterPass = dataIO.slashPathStr(this.afterPass)
                 for (let i = 0; i !== point.length; i++) {
                     outfolders += point[i] + "/"
-                    if (!(await sfs.exsits(this.afterPass + "/" + outfolders))) await sfs.mkdir(this.afterPass + "/" + outfolders)
+                    if (!(await sfs.exsits(afterPass + "/" + outfolders))) await sfs.mkdir(afterPass + "/" + outfolders)
                 }
-                const Stream = fs.createWriteStream(this.afterPass + "/" + outfolders + [
+                const path = afterPass + "/" + outfolders + [
                     this.processd[i].filename,
                     (i + 1) + " - " + this.processd[i].filename,
                     this.processd[i].extension + " - " + this.processd[i].filename,
                     (i + 1) + "_" + this.processd[i].extension + " - " + this.processd[i].filename,
                     i + 1,
-                ][this.nameing] + "." + sharpConvert.extType[this.type])
+                ][this.nameing] + "." + sharpConvert.extType[this.type]
+                const Stream = fs.createWriteStream(path)
                 this.emit("progress", this.#convertPoint, this.processd.length)
                 await new Promise<void>(async resolve => {
                     try {
-                        const image = imageSize(this.processd[i].pass + fileName)
+                        const image = imageSize(this.processd[i].pass + "/" + fileName)
                         if (image.width) {
-                            const sha = sharp(this.processd[i].pass + fileName)
-                            sha.resize((this.size < image.width) ? this.size : image.width)
+                            const sha = sharp(this.processd[i].pass + "/" + fileName)
+                            sha.resize((this.size < image.width) ? this.size : this.size)
                             switch (sharpConvert.extType[this.type]) {
                                 case "png": sha.png(); break
                                 case "jpg": sha.jpeg(); break

@@ -379,7 +379,6 @@ export class windowSystem {
                         }
                     }
                     if (doubleClick) {
-                        console.log("ダブルクリックされました。")
                         if (clickWindowIdOnly) {
                             this.#moveingWindow = null
                             this.fullscreenSetting(clickWindowIdOnly, true)
