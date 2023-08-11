@@ -23,7 +23,7 @@ interface workingQueueList {
 }
 interface preset {
     /** プリセット名です。 */
-    name: string | null
+    name?: string
     /** このプリセットで使われる拡張子です。 */
     ext: string
     /** タグ一覧です。 */

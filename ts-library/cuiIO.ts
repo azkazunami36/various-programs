@@ -33,15 +33,15 @@ export namespace consoleUIPrograms {
      * @param array 文字列配列を入力します。
      * @param title 文字列配列の意図を入力します。
      * @param questionText 質問文を入力します。
-     * @param manyNumNotDetected 配列以外の数字を選択された際にnullを返さないかどうかを決定します。
+     * @param manyNumNotDetected 配列以外の数字を選択された際にundefinedを返さないかどうかを決定します。
      * @returns 
      */
-    export async function choice(array: string[], title?: string, questionText?: string, manyNumNotDetected?: boolean): Promise<number | null> {
+    export async function choice(array: string[], title?: string, questionText?: string, manyNumNotDetected?: boolean): Promise<number | undefined> {
         console.log((title ? title : "一覧") + ": ")
         for (let i = 0; i !== array.length; i++) console.log("[" + (i + 1) + "] " + array[i])
         const request = Number(await question(questionText ? questionText : "上記から数字で選択してください。"))
-        if (Number.isNaN(request)) return null
-        if (!manyNumNotDetected && request > array.length || request < 1) return null
+        if (Number.isNaN(request)) return
+        if (!manyNumNotDetected && request > array.length || request < 1) return
         return request
     }
     /**
@@ -205,7 +205,7 @@ export namespace consoleUIPrograms {
                     this.message.topMsg ? this.message.topMsg : "利用可能な操作一覧",
                     this.message.userToMsg ? this.message.userToMsg : "利用する機能を選択してください。"
                 )
-                if (programChoice === null) {
+                if (!programChoice) {
                     console.log("選択された番号は利用できません。最初からやり直してください。")
                     stats = false
                     continue
@@ -243,22 +243,22 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                 return
             }
             const beforePass = await dataIO.pathChecker(await question("変換元の画像フォルダを指定してください。"))
-            if (beforePass === null) {
+            if (!beforePass) {
                 console.log("入力が間違っているようです。最初からやり直してください。")
                 return
             }
             const afterPass = await dataIO.pathChecker(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
-            if (afterPass === null) {
+            if (!afterPass) {
                 console.log("入力が間違っているようです。最初からやり直してください。")
                 return
             }
             const nameing = await choice(sharpConvert.type, "命名方法", "上記から命名方法を選択してください。")
-            if (nameing === null) {
+            if (!nameing) {
                 console.log("入力が間違っているようです。最初からやり直してください。")
                 return
             }
             const type = await choice(sharpConvert.extType, "拡張子一覧", "利用する拡張子と圧縮技術を選択してください。")
-            if (type === null) {
+            if (!type) {
                 console.log("入力が間違っているようです。最初からやり直してください。")
                 return
             }
@@ -342,7 +342,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                         return
                     }
                     const botChoice = await choice(botNames, "bot一覧", "利用するbotを選択してください。")
-                    if (botChoice === null) {
+                    if (!botChoice) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
                         return
                     }
@@ -472,12 +472,12 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                     const fc = new funcSelect({
                         "パスを指定しプリセットで変換": async () => {
                             const beforePass = await dataIO.pathChecker(await question("元のソースパスを入力してください。"))
-                            if (beforePass === null) {
+                            if (!beforePass) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
                             const afterPass = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
-                            if (afterPass === null) {
+                            if (!afterPass) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
@@ -520,12 +520,12 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                         },
                         "タグを手入力し、詳細な設定を自分で行う": async () => {
                             const beforePass = await dataIO.pathChecker(await question("元のソースパスを入力してください。"))
-                            if (beforePass === null) {
+                            if (!beforePass) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
                             const afterPass = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
-                            if (afterPass === null) {
+                            if (!afterPass) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
@@ -554,12 +554,12 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                         },
                         "複数ファイルを一括変換": async () => {
                             const beforePass = await dataIO.pathChecker(await question("元のフォルダパスを入力してください。"))
-                            if (beforePass === null) {
+                            if (!beforePass) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
                             const afterPass = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
-                            if (afterPass === null) {
+                            if (!afterPass) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
@@ -632,7 +632,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                         "プリセット作成": async () => {
                             const preset = await getFunction.ffmpegInputPreset()
                             const name = preset.name
-                            if (name === null) {
+                            if (!name) {
                                 console.log("名前を読み込めませんでした。")
                                 return
                             }
@@ -654,7 +654,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                 })
                                 return presetNames
                             })(), "プリセット一覧", "編集するプリセットを選択してください。")
-                            if (presetChoice === null) {
+                            if (!presetChoice) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
@@ -731,8 +731,8 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
         },
         "棒読みちゃん読み上げ": async () => {
             const data = await dataIO.dataIO.initer("bouyomi")
-            if (data === null) return
-            if (!data.json.temp) data.json.temp = null
+            if (!data) return
+            if (!data.json.temp) data.json.temp = undefined
             const msg = await question("読み上げたい内容を入力してください。")
             if (!data.json.temp || !await booleanIO("前回のデータを再利用しますか？")) {
                 const speed = Number(await question("読み上げ速度を入力してください。"))
@@ -825,7 +825,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                 function: async () => {
                     const pass = await question("パスを入力")
                     const checked = await dataIO.pathChecker(pass)
-                    console.log(checked ? dataIO.slashPathStr(checked) : null)
+                    console.log(checked ? dataIO.slashPathStr(checked) : undefined)
                 }
             }]
             const programsName = (() => {
@@ -834,7 +834,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                 return programsName
             })()
             const programChoice = await choice(programsName, "利用可能なプログラム", "実行したいプログラムを選択してください。")
-            if (programChoice === null) {
+            if (!programChoice) {
                 console.log("入力が間違っているようです。最初からやり直してください。")
                 return
             }
@@ -870,7 +870,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                 }
             }
             const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
-            if (programChoice === null) {
+            if (!programChoice) {
                 console.log("入力が間違っているようです。最初からやり直してください。")
                 return
             }
@@ -965,10 +965,10 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                     console.log("メモリ使用率(bytes): " + process.memoryUsage.rss())
                 },
                 "キャッシュデータ等のパス設定": async () => {
-                    const data = await sfs.exsits("passCache.json") ? JSON.parse(String(await sfs.readFile("passCache.json"))) : null
+                    const data = await sfs.exsits("passCache.json") ? JSON.parse(String(await sfs.readFile("passCache.json"))) : undefined
                     console.log("現在のキャッシュパス場所は" + (data ? data + "です。" : "設定されていません。"))
                     const pass = await dataIO.pathChecker(await question("キャッシュデータを保存するパスを入力してください。"))
-                    if (pass === null) {
+                    if (!pass) {
                         console.log("入力が間違っているようです。最初からやり直してください。")
                         return
                     }
@@ -977,7 +977,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                 }
             }
             const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
-            if (programChoice === null) {
+            if (!programChoice) {
                 console.log("入力が間違っているようです。最初からやり直してください。")
                 return
             }
@@ -1045,7 +1045,7 @@ namespace getFunction {
      */
     async function fileNameTextList() {
         const folderPath = await dataIO.pathChecker(await question("フォルダを入力してください。"))
-        if (folderPath === null) return console.log("フォルダが見つかりませんでした。")
+        if (!folderPath) return console.log("フォルダが見つかりませんでした。")
         const dotignore = await booleanIO("「.」から始まるファイルを省略しますか？")
         const list = await dataIO.fileLister(folderPath, { invFIleIgnored: dotignore })
         let text = ""
@@ -1065,7 +1065,7 @@ namespace getFunction {
             extensionFilter: []
         })
     }
-    export async function ffmpegInputPreset(option?: { tagonly?: boolean }): Promise<{ name: string | null, ext: string, tag: string[] }> {
+    export async function ffmpegInputPreset(option?: { tagonly?: boolean }): Promise<{ name?: string, ext: string, tag: string[] }> {
         console.log("-からタグの入力を始めます。複数を１度に入力してはなりません。検知し警告します。\n空白で続行すると完了したことになります。")
         const presets: string[] = []
         while (true) {
@@ -1080,7 +1080,7 @@ namespace getFunction {
             presets.push(string)
         }
         const extension = await question("保存時に使用する拡張子を入力してください。間違えると今後エラーを起こします。")
-        const name = (option ? option.tagonly : false) ? null : await question("プリセット名を入力してください。名前は自由です。")
+        const name = (option ? option.tagonly : false) ? undefined : await question("プリセット名を入力してください。名前は自由です。")
         return {
             name: name,
             ext: extension,

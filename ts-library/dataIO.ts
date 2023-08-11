@@ -41,7 +41,7 @@ export namespace dataIO {
          * dataIO管理のフォルダまでのパス/ファイル名-現在の時間(ms)-疑似階層配列-ランダム数字 + 必要であれば.と拡張子
          * ```
          */
-        pass: string | null,
+        pass?: string,
         /**
          * ファイル、フォルダにデータ(タグ等)をつけることができます。
          */
@@ -67,7 +67,7 @@ export namespace dataIO {
      * }
      * ```
      * 等の型定義を行ってください。  
-     * 識別名を設定するとき、クラス名と同じ名前を使用しないでください。dataIOという名前は内部で予約されているため、必ずクラスがエラーまたはnullになります。
+     * 識別名を設定するとき、クラス名と同じ名前を使用しないでください。dataIOという名前は内部で予約されているため、必ずクラスがエラーまたはundefinedになります。
      */
     export class dataIO extends EventEmitter {
         /**
@@ -133,10 +133,10 @@ export namespace dataIO {
         /**
          * 簡易初期化ができるものです。パスはVarious Programsで管理されているパスを利用します。
          * @param programName dataIOの識別名を入力します。英字と[-_]のみにしてください。
-         * @returns dataIOの初期化済みクラスまたはnullを返します。
+         * @returns dataIOの初期化済みクラスまたはundefinedを返します。
          */
-        static async initer(programName: string): Promise<dataIO | null> {
-            if (programName === "dataIO") return null
+        static async initer(programName: string): Promise<dataIO | undefined> {
+            if (programName === "dataIO") return
             if (!await sfs.exsits("passCache.json")) {
                 if (!await sfs.exsits("cache")) sfs.mkdir("cache")
                 await sfs.writeFile("passCache.json", "\"cache\"")
@@ -161,9 +161,9 @@ export namespace dataIO {
              * 拡張子を指定します。
              */
             extension?: string
-        }): Promise<string | null> {
-            if (!this.#operation) return null
-            let extension: string | null = null
+        }): Promise<string | undefined> {
+            if (!this.#operation) return
+            let extension: string | undefined
             if (option) {
                 if (option.extension) extension = option.extension
             }
@@ -174,7 +174,6 @@ export namespace dataIO {
             for (let i = 0; i !== pass.length; i++) {
                 if (!obj[pass[i]]) obj[pass[i]] = { // ここまでのパスが存在しない場合。
                     attribute: { directory: true }, // フォルダを生成
-                    pass: null,
                     data: {}
                 }
                 // 読み込まれているファイルがディレクトリである場合
@@ -184,7 +183,7 @@ export namespace dataIO {
                     error.message = "JSONによる擬似パス内階層にアクセス中に例外「ファイル内フォルダにアクセス」が発生しました。"
                     error.name = "JSON擬似パスエラー"
                     this.emit("error", error) // ファイル内にフォルダを作らないようにする
-                    return null
+                    return
                 }
             }
             if (!obj[name]) obj[name] = { // ファイルが存在しない場合
@@ -345,7 +344,7 @@ export namespace dataIO {
         }
         data(accessKey: string) {
             if (this.#accessKey === accessKey) return this.#data
-            return null
+            return
         }
     }
     /**
@@ -387,9 +386,9 @@ export namespace dataIO {
                 passtmp = passtmp.replace(exp, type)
                 if (await sfs.exsits(passtmp)) return passtmp
             }
-            return null
+            return
         })()
-        if (!pass) return null
+        if (!pass) return
         const passArray = pass.split("/")
         return passArray
     }

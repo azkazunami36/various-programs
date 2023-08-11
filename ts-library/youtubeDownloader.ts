@@ -50,22 +50,22 @@ export interface sourceMetadata {
      */
     codec: string
     /**
-     * FPSです。音声などの場合はnullになります。
+     * FPSです。音声などの場合はundefinedになります。
      */
-    fps: number | null
+    fps?: number
     /**
-     * 縦の高さです。音声などの場合はnullになります。
+     * 縦の高さです。音声などの場合はundefinedになります。
      */
-    height: number | null
+    height?: number
     /**
-     * 音声のビット深度です。動画などの場合はnullになります。  
+     * 音声のビット深度です。動画などの場合はundefinedになります。  
      * まだ未検証ですが、fltpという深度表示になった場合は深度表示を利用できないことがあります。
      */
-    bits: string | null
+    bits?: string
     /**
-     * サンプルレートです。動画などの場合はnullになります。
+     * サンプルレートです。動画などの場合はundefinedになります。
      */
-    samplerate: number | null
+    samplerate?: number
     /**
      * オリジナルとのズレを数字で記録します。  
      * １秒過ぎている場合は1000、１秒送れている場合は-1000です。
@@ -78,9 +78,9 @@ export interface sourceMetadata {
     sameAsOriginal: boolean
     /**
      * 曲のアルバムアートワークである場合はアルバム名をセットします。自動で関連付けられます。  
-     * 画像以外の場合は意味を成しませんので、nullになるようにしてください。バグが起こることはありません。
+     * 画像以外の場合は意味を成しませんので、undefinedになるようにしてください。バグが起こることはありません。
      */
-    albumArtwork: string | null
+    albumArtwork?: string
 }
 export interface videoMetadata {
     /**
@@ -333,18 +333,17 @@ export class youtubeDownloader extends EventEmitter {
                 userOriginal: false,
                 codec: video.codec_name,
                 fps: (() => { // もしfps値が「0」または「0/0」だった場合に自動で計算する関数
-                    if (!video.r_frame_rate) return null
+                    if (!video.r_frame_rate) return
                     if (video.r_frame_rate.match("/")) {
                         const data = video.r_frame_rate.split("/")
                         return Number(data[0]) / Number(data[1])
                     } else return Number(video.r_frame_rate)
                 })(),
-                height: video.height ? video.height : null,
-                bits: video.sample_fmt ? video.sample_fmt : null,
-                samplerate: video.sample_rate ? video.sample_rate : null,
+                height: video.height ? video.height : undefined,
+                bits: video.sample_fmt ? video.sample_fmt : undefined,
+                samplerate: video.sample_rate ? video.sample_rate : undefined,
                 latency: 0,
-                sameAsOriginal: true,
-                albumArtwork: null
+                sameAsOriginal: true
             }
         })
     }

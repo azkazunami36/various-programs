@@ -409,9 +409,9 @@ export function kanaConvert(string: string, convertTo: boolean) {
         const e = (() => {
             for (let e = 0; e !== array.length; e++)
                 if (string[i] === array[e][((type === 1) ? "key" : "kana")]) return e
-            return null
+            return
         })()
-        if (e !== null) outText += array[e][((type === 1) ? "kana" : "key")]
+        if (e) outText += array[e][((type === 1) ? "kana" : "key")]
         else outText += string[i]
     }
     return outText

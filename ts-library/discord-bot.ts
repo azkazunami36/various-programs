@@ -249,7 +249,7 @@ export class discordBot extends EventEmitter {
      */
     static async outputJSON() {
         const data = await dataIO.dataIO.initer("discordBot")
-        if (!data) return null
+        if (!data) return
         const json: discordData = data.json
 
         return <discordData>JSON.parse(JSON.stringify(json))
@@ -335,7 +335,7 @@ export class discordBot extends EventEmitter {
                                     const roleIDs = (() => {
                                         const roleString = interaction.options.getString("roleids")
                                         if (roleString) return roleString.split(" ")
-                                        return null
+                                        return
                                     })()
                                     const title = interaction.options.getString("title")
                                     const description = interaction.options.getString("description")
@@ -397,8 +397,8 @@ export class discordBot extends EventEmitter {
                         const data = (() => {
                             try {
                                 const json = JSON.parse(customId) as ttt
-                                if (typeof json !== "object" || json === null) return null
-                                if (!("type" in json && "data" in json && typeof json.data === "object")) return null
+                                if (!json || typeof json !== "object") return
+                                if (!("type" in json && "data" in json && typeof json.data === "object")) return
                                 if (
                                     json.type === "buttoncreate" &&
                                     !(
@@ -407,7 +407,7 @@ export class discordBot extends EventEmitter {
                                         typeof json.data.roleId === "string" &&
                                         typeof json.data.question === "boolean"
                                     )
-                                ) return null
+                                ) return
                                 if (
                                     json.type === "calc" &&
                                     !(
@@ -418,23 +418,22 @@ export class discordBot extends EventEmitter {
                                         typeof json.data.buttonNum === "number" &&
                                         typeof json.data.calcType === "number"
                                     )
-                                ) return null
+                                ) return
                                 if (
                                     json.type === "multirole" &&
                                     !(
                                         "roleId" in json.data &&
                                         typeof json.data.roleId === "string"
                                     )
-                                ) return null
+                                ) return
                                 return json
                             }
-                            catch (e) { return null } //JSONではない文字列の場合nullを返す
+                            catch (e) { return } //JSONではない文字列の場合undefinedを返す
                         })()
-                        let roleGive: { give: boolean, roleId: string | null } = {
-                            give: false,
-                            roleId: null
+                        let roleGive: { give: boolean, roleId?: string } = {
+                            give: false
                         }
-                        if (data !== null)
+                        if (data)
                             if (data.type === "buttoncreate") {
                                 const { roleId, question } = data.data
                                 if (question) {
@@ -521,7 +520,7 @@ export class discordBot extends EventEmitter {
                                     }
                                 }
                             }
-                        if (roleGive.give && roleGive.roleId !== null && interaction.channel) {
+                        if (roleGive.give && roleGive.roleId && interaction.channel) {
                             try {
                                 if (interaction.guild) {
                                     const member = interaction.guild.members.cache.get(interaction.user.id)

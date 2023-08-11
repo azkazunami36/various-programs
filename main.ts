@@ -3,7 +3,7 @@ import dataIO from "./ts-library/dataIO.js"
 import expressd from "./ts-library/expressd.js"
 import vpManageClass from "./ts-library/vpManageClass.js"
 /**
- * 改善する前に、README.mdをお読みください。
+ * 改善する前に、Wikiをお読みください。
  * しかし、読まなくても僕がコードを確認するので、重要事項ではないことはご了承ください。
  * 
  * このプログラムはまだ作成段階であり、不安定かつルールが不定かです。
