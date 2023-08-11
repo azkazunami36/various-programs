@@ -25,10 +25,8 @@ export namespace consoleUIPrograms {
      * @returns 
      */
     export async function question(text: string): Promise<string> {
-        const iface =
-            readline.createInterface({ input: process.stdin, output: process.stdout })
-        return await
-            new Promise(resolve => iface.question(text + "> ", answer => { iface.close(); resolve(answer) }))
+        const iface = readline.createInterface({ input: process.stdin, output: process.stdout })
+        return await new Promise(resolve => iface.question(text + "> ", answer => { iface.close(); resolve(answer) }))
     }
     /**
      * 文字列配列からユーザー入力を利用し番号を選択させます。
