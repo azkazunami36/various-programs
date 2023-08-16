@@ -77,7 +77,7 @@ export namespace dataIO {
         /**
          * dataIOが管理しているパスです。このパスを中心にデータを読み込み、書き込み、操作や計算を行います。
          */
-        #pass: string[]
+        #pass: dataPath
         /**
          * dataIOを複数利用している場合、判別するために使用します。
          */
@@ -200,6 +200,56 @@ export namespace dataIO {
             await sfs.writeFile(this.#jsonPass, JSON.stringify({ json: this.json, passIndex: this.#passIndex }))
         }
     }
+    /**
+     * パスを配列で記録します。パスと名前、拡張子が含まれています。
+     */
+    export interface dataPath {
+        /**
+         * 目的のファイルの名前です。
+         * 拡張子は含まれません。
+         */
+        name: string
+        /**
+         * 目的のファイルの拡張子です。存在しない場合はundefinedです。
+         */
+        extension?: string
+        /**
+         * 目的のファイルまでのパスです。
+         */
+        path: string[]
+        /**
+         * 必要に応じて絶対パスと相対パスを配置します。
+         * 絶対パスには相対パスのルートとなるパス、相対パスはこのパスまでのファイルを表します。  
+         * 主にFile Listerに利用されます。
+         */
+        relativePath?: {
+            /**
+             * 絶対パス
+             */
+            absolute: dataPath
+            /**
+             * 相対パス
+             */
+            relative: dataRelativePath
+        }
+        absolute: true
+    }
+    export interface dataRelativePath {
+        /**
+         * 目的のファイルの名前です。
+         * 拡張子は含まれません。
+         */
+        name: string
+        /**
+         * 目的のファイルの拡張子です。存在しない場合はundefinedです。
+         */
+        extension?: string
+        /**
+         * 目的のファイルまでのパスです。
+         */
+        path: string[]
+        relative: true
+    }
     export declare interface ny {
         on<K extends keyof dataIOEvents>(s: K, listener: (...args: dataIOEvents[K]) => any): this
         emit<K extends keyof dataIOEvents>(eventName: K, ...args: dataIOEvents[K]): boolean
@@ -304,7 +354,6 @@ export namespace dataIO {
                 }
             }
         }
-
     }
     export declare interface dataIOClient {
         on<K extends keyof dataIOEvents>(s: K, listener: (...args: dataIOEvents[K]) => any): this
@@ -352,69 +401,141 @@ export namespace dataIO {
      * @param passArray 文字列配列を入力します。
      * @returns 
      */
-    export function slashPathStr(passArray: string[]) {
-        let passtmp = ""
-        for (let i = 0; i !== passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
-        return passtmp
+    export function slashPathStr(dataPath: dataPath) {
+        let pathtmp = ""
+        for (let i = 0; i !== dataPath.path.length; i++) pathtmp += dataPath.path[i] + (((i + 1) !== dataPath.path.length) ? "/" : "")
+        pathtmp += dataPath.name + (dataPath.extension ? "." + dataPath.extension : "")
+        return pathtmp
     }
     /**
-     * 有効なパスかをチェックします。そして、一部の特殊なパスの場合に変換をします
+     * 有効なパスかをチェックします。そして、dataIO用のパスデータに変換します。
      * @param string 文字列を入力します。
      * @returns 
      */
-    export async function pathChecker(str: string | string[]) {
-        const pass = await (async () => {
+    export async function pathChecker(str: string | dataPath): Promise<dataPath | undefined> {
+        const path = await (async () => {
             const string = (() => {
                 if (typeof str === "string") return str
                 else return slashPathStr(str)
             })()
-            const passDeli = (string.match(/:\\/)) ? "\\" : "/"
-            const passArray = string.split(passDeli)
-            let passtmp = ""
-            for (let i = 0; i !== passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "")
+            const passDeli = (string.match(/:\\/)) ? "\\" : "/" // パス階層「\」「/」かを検知し、適切な文字にする
+            const passArray = string.split(passDeli) // 「/」または「\」で分割
+            let passtmp = "" // パスを結合し、検査するための一時置き場
+            for (let i = 0; i !== passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "") // パス結合、配列最後はスラッシュを置かない
+            if (await sfs.exsits(passtmp)) return passtmp // この時点でパスが有効ならreturn
+            if (passtmp[0] === "\"" && passtmp[passtmp.length - 1] === "\"") passtmp = passtmp.substring(1, passtmp.length - 1) // ダブルクォーテーションに囲われているなら除去
+            if (await sfs.exsits(passtmp)) return passtmp // 有効ならreturn
+            if (passtmp[0] === "\'" && passtmp[passtmp.length - 1] === "\'") passtmp = passtmp.substring(1, passtmp.length - 1) // シングルクォーテーションに囲われているなら除去
             if (await sfs.exsits(passtmp)) return passtmp
-            if (passtmp[0] === "\"" && passtmp[passtmp.length - 1] === "\"") passtmp = passtmp.substring(1, passtmp.length - 1)
+            while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1) // 無駄なスペースに囲われているなら除去
             if (await sfs.exsits(passtmp)) return passtmp
-            if (passtmp[0] === "\'" && passtmp[passtmp.length - 1] === "\'") passtmp = passtmp.substring(1, passtmp.length - 1)
-            if (await sfs.exsits(passtmp)) return passtmp
-            while (passtmp[passtmp.length - 1] === " ") passtmp = passtmp.slice(0, -1)
-            if (await sfs.exsits(passtmp)) return passtmp
-            const expType = " ()#~"
-            for (let i = 0; i !== expType.length; i++) {
+            const expType = " ()#~" // 記号系
+            for (let i = 0; i !== expType.length; i++) { // macのエスケープ記号を通常の記号に置き換える
                 const type = expType[i]
-                const exp = new RegExp("\\\\\\" + type, "g")
-                passtmp = passtmp.replace(exp, type)
-                if (await sfs.exsits(passtmp)) return passtmp
+                const exp = new RegExp("\\\\\\" + type, "g") // 何故か知らんがバックスラッシュを3つおいている
+                passtmp = passtmp.replace(exp, type) // 置き換え
+                if (await sfs.exsits(passtmp)) return passtmp // 有効ならreturn
             }
             return
         })()
-        if (!pass) return
-        const passArray = pass.split("/")
-        return passArray
+        if (!path) return
+        const pathArray = path.split("/")
+        const name = pathArray[pathArray.length - 1]
+        const splitedName = name.split(".")
+        const extension = (splitedName.length !== 1) ? splitedName[splitedName.length - 1] : undefined
+        pathArray.pop()
+        return typeToDataPath({
+            name: (extension) ? name.slice(0, -(extension.length + 1)) : name,
+            extension: extension,
+            path: pathArray
+        })
     }
-    interface passInfo {
+    /**
+     * dataPath型をパス配列に変換します。以前のdataIO用型ですが、dataPath.pathに置き換える等の変更が必要でない限り利用しないでください。
+     * @param path dataPathを入力
+     * @returns 
+     */
+    export function filePathToPath(path: dataPath | dataRelativePath) { return [...path.path, path.name + (path.extension ? "." + path.extension : "")] }
+    /**
+     * dataPath型にします。内部の形式は殆ど変わりませんが、コーディングの精度が上がります。
+     * @param path 
+     * @returns 
+     */
+    export function typeToDataPath(path: dataPath | {
         /**
-         * 拡張子を含まないファイル名が記載
+         * 目的のファイルの名前です。
+         * 拡張子は含まれません。
          */
-        filename: string
+        name: string
         /**
-         * 拡張子が記載
+         * 目的のファイルの拡張子です。存在しない場合はundefinedです。
          */
-        extension: string
+        extension?: string
         /**
-         * この位置までのパスが記載
+         * 目的のファイルまでのパスです。
          */
-        pass: string
+        path: string[]
         /**
-         * 相対パスでの配列での記載
-         * フォルダ内のデータを移動する際に役立つ。
+         * 必要に応じて絶対パスと相対パスを配置します。
+         * 絶対パスには相対パスのルートとなるパス、相対パスはこのパスまでのファイルを表します。  
+         * 主にFile Listerに利用されます。
          */
-        point: string[]
+        relativePath?: {
+            /**
+             * 絶対パス
+             */
+            absolute: dataPath
+            /**
+             * 相対パス
+             */
+            relative: dataRelativePath
+        }
+        absolute?: boolean | true
+    }) {
+        path.absolute = true
+        return path as dataPath
+    }
+    /**
+     * dataRelativePath型にします。内部の形式は変わりませんが、コーディングの精度が上がります。
+     * @param path 
+     * @returns 
+     */
+    export function typeToDataRelativePath(path: dataRelativePath | {
         /**
-         * 元パスから配列での記載
-         * データにアクセスするために役立つ。passデータとはあまり変わらない。
+         * 目的のファイルの名前です。
+         * 拡張子は含まれません。
          */
-        isPoint: string[]
+        name: string
+        /**
+         * 目的のファイルの拡張子です。存在しない場合はundefinedです。
+         */
+        extension?: string
+        /**
+         * 目的のファイルまでのパスです。
+         */
+        path: string[]
+        relative?: boolean | true
+    }) {
+        path.relative = true
+        return path as dataRelativePath
+    }
+    export interface fileListerOption {
+        /**
+         * フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか
+         */
+        contain?: boolean,
+        /**
+         * 拡張子を限定し、検索範囲を絞る
+         */
+        extensionFilter?: string[],
+        /**
+         * 「.」を使った隠しファイルを検出し、検索から除外する
+         */
+        invFIleIgnored?: boolean,
+        /**
+         * 「._」を使った隠しパラメーターファイルを検出し、検索から除外する
+         */
+        macosInvIgnored?: boolean
     }
     /**
      * フォルダ内のファイルを配列として出力します。
@@ -426,28 +547,11 @@ export namespace dataIO {
         /**
          * フォルダパスを入力。その中のファイルやフォルダを配列化する。
          */
-        pass: string[],
+        path: dataPath,
         /**
          * 様々なオプションを入力
          */
-        option?: {
-            /**
-             * フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか
-             */
-            contain?: boolean,
-            /**
-             * 拡張子を限定し、検索範囲を絞る
-             */
-            extensionFilter?: string[],
-            /**
-             * 「.」を使った隠しファイルを検出し、検索から除外する
-             */
-            invFIleIgnored?: boolean,
-            /**
-             * 「._」を使った隠しパラメーターファイルを検出し、検索から除外する
-             */
-            macosInvIgnored?: boolean
-        }
+        option?: fileListerOption
     ) {
         //オプションデータの格納用
         /**
@@ -473,9 +577,9 @@ export namespace dataIO {
             if (option.macosInvIgnored) macosInvIgnored = true
         }
 
-        const processd: passInfo[] = [] //出力データの保存場所
-        if (!await pathChecker(pass)) return processd
-        const point: string[] = [] //パス場所を設定
+        const processd: dataPath[] = [] // 出力データの保存場所
+        if (!await pathChecker(path)) return processd
+        const point: string[] = [] // パス場所を設定
         /**
          * キャッシュデータの格納
          */
@@ -497,14 +601,20 @@ export namespace dataIO {
         } = {}
 
         while (true) {
-            let lpass = pass //ファイル処理時の一時的パス場所
-            for (let i = 0; i !== point.length; i++) lpass.push(point[i]) //パス解析、配列化
+            const pathArrTmp = filePathToPath(path)
+            let lpass = pathArrTmp //ファイル処理時の一時的パス場所
+            for (let i = 0; i !== point.length; i++) lpass.push(point[i]) // パス解析、配列化
 
-            //filepointの初期化
-            if (!filepoint[slashPathStr(lpass)]) filepoint[slashPathStr(lpass)] = {
+            function listerSlash(str: string[]) {
+                let tmp = ""
+                for (let i = 0; i !== str.length; i++) tmp += str[i] + (i !== str.length - 1) ? "/" : ""
+                return tmp
+            }
+            // filepointの初期化
+            if (!filepoint[listerSlash(lpass)]) filepoint[listerSlash(lpass)] = {
                 point: 0,
                 dirents: await new Promise(resolve => {
-                    fs.readdir(slashPathStr(lpass), { withFileTypes: true }, (err, dirents) => {
+                    fs.readdir(listerSlash(lpass), { withFileTypes: true }, (err, dirents) => {
                         if (err) throw err
                         resolve(dirents)
                     })
@@ -513,59 +623,56 @@ export namespace dataIO {
             /**
              * 保存されたリストを取得
              */
-            const dirents = filepoint[slashPathStr(lpass)].dirents
-            //もしディレクトリ内のファイル数とファイル指定番号が同じな場合
-            if (dirents.length === filepoint[slashPathStr(lpass)].point)
-                //lpassが初期値「pass + "/"」と同じ場合ループを抜ける
-                if (slashPathStr(lpass) === slashPathStr(pass)) break
-                //そうでない場合上の階層へ移動する
+            const dirents = filepoint[listerSlash(lpass)].dirents
+            // もしディレクトリ内のファイル数とファイル指定番号が同じな場合
+            if (dirents.length === filepoint[listerSlash(lpass)].point)
+                // lpassが初期値「pass + "/"」と同じ場合ループを抜ける
+                if (listerSlash(lpass) === listerSlash(pathArrTmp)) break
+                // そうでない場合上の階層へ移動する
                 else point.pop()
             else {
-                //ファイル名の取得
-                const name = dirents[filepoint[slashPathStr(lpass)].point].name
-                //フォルダ、ディレクトリでない場合
-                if (!dirents[filepoint[slashPathStr(lpass)].point].isDirectory()) {
-                    //ドットで分割
+                // ファイル名の取得
+                const name = dirents[filepoint[listerSlash(lpass)].point].name
+                // フォルダ、ディレクトリでない場合
+                if (!dirents[filepoint[listerSlash(lpass)].point].isDirectory()) {
+                    // ドットで分割
                     const namedot = name.split(".")
-                    //拡張子を取得
+                    // 拡張子を取得
                     const extension = namedot[namedot.length - 1]
                     if ((() => { //もしも
-                        if (extensionFilter[0]) { //拡張子指定がある場合
+                        if (extensionFilter[0]) { // 拡張子指定がある場合
                             let stats = false
                             for (let i = 0; i !== extensionFilter.length; i++)
                                 if (extensionFilter[i].match(new RegExp(extension, "i"))) stats = true
-                            if (!stats) return false //拡張子がマッチしなかったらfalse
+                            if (!stats) return false // 拡張子がマッチしなかったらfalse
                         }
-                        //末端が一致した場合false
+                        // 末端が一致した場合false
                         if (invFIleIgnored && name[0] === ".") return false
                         if (macosInvIgnored && name[0] === "." && name[1] === "_") return false
-                        return true //全てがreturnしない場合true
-                    })()) processd.push({ //ファイルデータを追加
-                        filename: name.slice(0, -(extension.length + 1)),
-                        extension: extension,
-                        pass: slashPathStr(lpass),
-                        isPoint: JSON.parse(JSON.stringify([...pass, ...point])),
-                        point: point
-                    })
-                    //ディレクトりの場合は階層を移動し、ディレクトリ内に入り込む
-                } else if (contain && dirents[filepoint[slashPathStr(lpass)].point].isDirectory()) point.push(name)
-                //次のファイルへ移動する
-                filepoint[slashPathStr(lpass)].point++
+                        return true // 全てがreturnしない場合true
+                    })()) {
+                        console.log(lpass, name)
+                        const outPath = await pathChecker(listerSlash(lpass) + "/" + name)
+                        if (outPath) {
+                            outPath.relativePath = {
+                                absolute: path,
+                                relative: typeToDataRelativePath({
+                                    name: name.slice(0, -(extension.length + 1)),
+                                    extension: extension,
+                                    path: point
+                                })
+                            }
+                            processd.push(outPath)
+                        }
+                    }
+                    // ディレクトりの場合は階層を移動し、ディレクトリ内に入り込む
+                } else if (contain && dirents[filepoint[listerSlash(lpass)].point].isDirectory()) point.push(name)
+                // 次のファイルへ移動する
+                filepoint[listerSlash(lpass)].point++
             }
         }
-        //データを出力
+        // データを出力
         return processd
-    }
-    /**
-     * 拡張子と名前で分割します。
-     */
-    export function splitExt(name: string) {
-        const splitedName = name.split(".")
-        const extension = splitedName[splitedName.length - 1]
-        return {
-            filename: name.slice(0, -(extension.length + 1)),
-            extension: extension
-        }
     }
 }
 export default dataIO
