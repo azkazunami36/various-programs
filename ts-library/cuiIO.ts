@@ -1,6 +1,4 @@
-import fs from "fs"
 import Discord from "discord.js"
-import crypto from "crypto"
 import readline from "readline"
 
 import sfs from "./fsSumwave.js"
@@ -222,6 +220,248 @@ export namespace consoleUIPrograms {
                 if (!this.loop) this.loop = true
             }
             return stats
+        }
+    }
+    type userIOGetRequest = {
+        /**
+         * 文字列を要求します。
+         */
+        type: "string"
+        /**
+         * 質問文を決めます。デフォルトは「文字を入力してください。」となります。
+         */
+        text?: string
+        /**
+         * 要求するデータが必須でないかどうかを決めます。デフォルトは「false」です。
+         */
+        notRequire?: boolean
+    } | {
+        /**
+         * 正か負かを要求します。
+         */
+        type: "boolean"
+        /**
+         * 質問文を決めます。デフォルトは「はいかいいえかをY/Nで入力してください。」となります。
+         */
+        text?: string
+        /**
+         * 要求するデータが必須でないかどうかを決めます。デフォルトは「false」です。
+         */
+        notRequire?: boolean
+    } | {
+        /**
+         * 文字列の配列から選択を要求します。
+         */
+        type: "choice"
+        /**
+         * 必須です。選択するためのリストが表示されます。
+         */
+        array: string[]
+        /**
+         * 質問文を決めます。デフォルトは「上記から数字で選択してください。」となります。
+         */
+        text?: string
+        /**
+         * リストのタイトルを決めます。デフォルトは「一覧」となります。
+         */
+        title?: string
+        /**
+         * 配列の範囲外を指定した際、undefinedにならないようにするかどうかを決めます。デフォルトは「false」です。
+         */
+        manyNumNotDetected?: boolean
+        /**
+         * 要求するデータが必須でないかどうかを決めます。デフォルトは「false」です。
+         */
+        notRequire?: boolean
+    } | {
+        /**
+         * パスを要求します。
+         */
+        type: "path"
+        /**
+         * 質問文を決めます。デフォルトは「パスを入力してください。」となります。
+         */
+        text?: string
+        /**
+         * 要求するデータが必須でないかどうかを決めます。デフォルトは「false」です。
+         */
+        notRequire?: boolean
+    }
+    type userIOGetResponse = {
+        type: "string"
+        data: string
+    } | {
+        type: "boolean"
+        data: boolean
+    } | {
+        type: "choice"
+        data?: number
+    } | {
+        type: "path"
+        data?: dataIO.dataPath
+    }
+    /**
+     * 欲しいデータのリストを入力すると、ユーザーに質問文で要求し、集まったデータを返します。
+     * @param request 
+     */
+    export async function userIOGet(requests: {
+        name: string
+        request: userIOGetRequest
+    }[]) {
+        const res: userIOGetResponse[] = []
+        for (let i = 0; i !== requests.length; i++) {
+            switch (requests[i].request.type) {
+                case "string": {
+                    break
+                }
+                case "boolean": {
+                    break
+                }
+                case "choice": {
+                    break
+                }
+                case "path": {
+                    break
+                }
+            }
+        }
+        return res
+    }
+    type userIOMenuMain = {
+        /**
+         * 関数が必須かどうかを決めます。  
+         * trueにするとfunc、backIsを入力できます。  
+         * falseにするとmenus、title、textを入力できます。
+         */
+        funcIs: true
+        /**
+         * 選択されると実行される関数です。
+         */
+        func: () => Promise<void>
+        /**
+         * 関数が終了した後に元のメニューに戻るかどうかを決めます。デフォルトはfalseで、メニュー関数が終了します。
+         */
+        backIs?: boolean
+    } | {
+        /**
+         * 関数が必須かどうかを決めます。  
+         * trueにするとfunc、backIsを入力できます。  
+         * falseにするとmenus、title、textを入力できます。
+         */
+        funcIs: false
+        /**
+         * メニューのIDを入力します。
+         * これを利用し一覧を構築します。
+         */
+        menus: string[]
+        /**
+         * メニューのタイトルを決めます。
+         */
+        title?: string
+        /**
+         * 質問文を決めます。
+         */
+        text?: string
+    }
+    /**
+     * ユーザーに様々な機能にアクセスさせるためのメニューを表示します。  
+     * 例:
+     * ```console
+     * 操作:
+     * [1] 機能１
+     * [2] 機能２
+     * [3] 戻る
+     * 選択してください > 1
+     * 利用可能な設定:
+     * [1] セット
+     * [2] 解除
+     * [3] 戻る
+     * 好きな設定を選択してください >
+     * ```
+     * ```ts
+     * async userIOMenu("play", [
+     *     {
+     *         id: "play",
+     *         name: "",
+     *         title: "操作",
+     *         text: "選択してください。"
+     *         menus: ["func1", "func2"]
+     *     },
+     *     {
+     *         id: "func1",
+     *         name: "機能１",
+     *         menus: []
+     *     },
+     *     {
+     *         id: "func2",
+     *         name: "機能２",
+     *         title: "利用可能な設定",
+     *         text: "好きな設定を選択してください。"
+     *         menus: ["set", "unset"]
+     *     },
+     *     {
+     *         id: "set",
+     *         name: "セット",
+     *         func: async() => {}
+     *     },
+     *     {
+     *         id: "unset",
+     *         name: "解除",
+     *         func: async() => {},
+     *         backIs: true
+     *     }
+     * ])
+     * ```
+     */
+    export async function userIOMenu(mainId: string, req: (userIOMenuMain & {
+        /**
+         * メニューIDを決めます。
+         */
+        id: string
+        /**
+         * メニューの一覧に表示される名前を決めます。
+         */
+        name: string
+    })[]) {
+        let nowId = mainId
+        let status = true
+        const history: string[] = []
+        while (status) {
+            for (let i = 0; i !== req.length; i++)  if (req[i].id === nowId) {
+                const request = req[i]
+                if (request.funcIs) {
+                    await request.func()
+                    if (request.backIs) {
+                        if (history.length === 0) status = false
+                        else {
+                            nowId = history[history.length - 1]
+                            history.pop()
+                        }
+                    }
+                } else {
+                    const select = await choice(request.menus, request.title, request.text)
+                    if (select) if (select !== request.menus.length - 1) {
+                        history.push(nowId)
+                        nowId = request.menus[i]
+                    } else {
+                        if (history.length === 0) status = false
+                        else {
+                            nowId = history[history.length - 1]
+                            history.pop()
+                        }
+                    } else {
+                        console.log("入力した数字は正しくありません。１つ前に戻ります。")
+                        if (history.length === 0) status = false
+                        else {
+                            nowId = history[history.length - 1]
+                            history.pop()
+                        }
+                    }
+                }
+            } else {
+                console.log("メニュー関数エラー: 指定IDが見つかりません。")
+                return
+            }
         }
     }
 }
@@ -471,19 +711,19 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                 "変換を開始する": async () => {
                     const fc = new funcSelect({
                         "パスを指定しプリセットで変換": async () => {
-                            const beforePass = await dataIO.pathChecker(await question("元のソースパスを入力してください。"))
-                            if (!beforePass) {
+                            const beforePath = await dataIO.pathChecker(await question("元のソースパスを入力してください。"))
+                            if (!beforePath) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
-                            const afterPass = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
-                            if (!afterPass) {
+                            const afterPath = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
+                            if (!afterPath) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
                             const filename = await (async () => {
-                                let filename = await question("書き出し先のファイル名を入力してください。")
-                                if (filename === "") filename = dataIO.splitExt(beforePass[beforePass.length - 1]).filename
+                                let filename: string = await question("書き出し先のファイル名を入力してください。")
+                                if (filename === "") filename = beforePath.name
                                 return filename
                             })()
                             const presetChoice = await choice((() => {
@@ -498,8 +738,8 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                 return
                             }
                             console.log(
-                                "変換元: " + dataIO.slashPathStr(beforePass) + "\n" +
-                                "変換先: " + dataIO.slashPathStr(afterPass) + "/" + filename + "." + convert.data.json.preset[presetChoice - 1].ext + "\n" +
+                                "変換元: " + dataIO.slashPathStr(beforePath) + "\n" +
+                                "変換先: " + dataIO.slashPathStr(afterPath) + "/" + filename + "." + convert.data.json.preset[presetChoice - 1].ext + "\n" +
                                 "タグ: " + (() => {
                                     let tags = ""
                                     convert.data.json.preset[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
@@ -508,11 +748,16 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                             )
                             const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
                             if (permission) {
-                                if (await sfs.exsits(dataIO.slashPathStr(afterPass) + "/" + filename + "." + convert.data.json.preset[presetChoice - 1].ext))
+                                const newPath = dataIO.typeToDataPath({
+                                    name: filename,
+                                    extension: convert.data.json.preset[presetChoice - 1].ext,
+                                    path: dataIO.filePathToPath(afterPath)
+                                })
+                                if (await sfs.exsits(dataIO.slashPathStr(newPath)))
                                     if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) return
                                 await convert.convert([{
-                                    oldPass: beforePass,
-                                    newPass: [...afterPass, + filename + "." + convert.data.json.preset[presetChoice - 1].ext],
+                                    oldPass: beforePath,
+                                    newPass: newPath,
                                     preset: convert.data.json.preset[presetChoice - 1]
                                 }])
                                 console.log("変換が完了しました！")
@@ -524,8 +769,8 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
-                            const afterPass = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
-                            if (!afterPass) {
+                            const afterPath = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
+                            if (!afterPath) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
@@ -533,7 +778,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                             const preset = await getFunction.ffmpegInputPreset({ tagonly: true })
                             console.log(
                                 "変換元: " + dataIO.slashPathStr(beforePass) + "\n" +
-                                "変換先: " + dataIO.slashPathStr(afterPass) + "/" + filename + "." + preset.ext + "\n" +
+                                "変換先: " + dataIO.slashPathStr(afterPath) + "/" + filename + "." + preset.ext + "\n" +
                                 "タグ: " + (() => {
                                     let tags = ""
                                     preset.tag.forEach(tag => tags += tag + " ")
@@ -542,11 +787,15 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                             )
                             const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
                             if (permission) {
-                                if (await sfs.exsits(dataIO.slashPathStr(afterPass)))
+                                if (await sfs.exsits(dataIO.slashPathStr(afterPath)))
                                     if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) return
                                 await convert.convert([{
                                     oldPass: beforePass,
-                                    newPass: [...afterPass, filename + "." + preset.ext],
+                                    newPass: dataIO.typeToDataPath({
+                                        name: filename,
+                                        extension: preset.ext,
+                                        path: dataIO.filePathToPath(afterPath)
+                                    }),
                                     preset: preset
                                 }])
                                 console.log("変換が完了しました！")
@@ -558,26 +807,21 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
-                            const afterPass = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
-                            if (!afterPass) {
+                            const afterPath = await dataIO.pathChecker(await question("保存先のフォルダパスを入力してください。"))
+                            if (!afterPath) {
                                 console.log("入力が間違っているようです。最初からやり直してください。")
                                 return
                             }
-                            const folderContain = await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。")
-                            const invFileIgnore = await booleanIO("最初に「.」が付くファイルを省略しますか？")
-                            const listerOptions = { macOSFileIgnote: false }
-                            if (!invFileIgnore) listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
-                            const fileList = await dataIO.fileLister(beforePass, {
-                                contain: folderContain,
+                            const option: dataIO.fileListerOption = {
+                                contain: await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。"),
                                 extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "caf", "aif", "aiff", "m4r", "alac", "flac", "3gp", "3g2", "webm", "aac", "hevc"],
-                                invFIleIgnored: invFileIgnore,
-                                macosInvIgnored: listerOptions.macOSFileIgnote
-                            })
+                                invFIleIgnored: await booleanIO("最初に「.」が付くファイルを省略しますか？")
+                            }
+                            if (!option.invFIleIgnored) option.macosInvIgnored = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
+                            const fileList = await dataIO.fileLister(beforePass, option)
                             const presetChoice = await choice((() => {
                                 let presetNames: string[] = []
-                                convert.data.json.preset.forEach(preset => {
-                                    presetNames.push(preset.name ? preset.name : "")
-                                })
+                                convert.data.json.preset.forEach(preset => presetNames.push(preset.name ? preset.name : ""))
                                 return presetNames
                             })(), "プリセット一覧", "使用するプリセットを選択してください。")
                             if (!presetChoice) {
@@ -586,7 +830,7 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                             }
                             console.log(
                                 "変換元: " + dataIO.slashPathStr(beforePass) + "\n" +
-                                "変換先: " + dataIO.slashPathStr(afterPass) + "\n" +
+                                "変換先: " + dataIO.slashPathStr(afterPath) + "\n" +
                                 "タグ: " + (() => {
                                     let tags = ""
                                     convert.data.json.preset[presetChoice - 1].tag.forEach(tag => tags += tag + " ")
@@ -597,22 +841,19 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                             const permission = await booleanIO("上記の内容でよろしいですか？yと入力すると続行します。")
                             if (permission) {
                                 for (let i = 0; i != fileList.length; i++) {
-                                    const oldPath = await dataIO.pathChecker(fileList[i].pass)
-                                    const newPath = await dataIO.pathChecker(afterPass)
-                                    if (oldPath && newPath) {
-                                        const reNewPath = [...newPath, (await (async () => {
-                                            let outfolders = []
-                                            const point = fileList[i].point
-                                            for (let i = 0; i !== point.length; i++) {
-                                                outfolders.push(point[i])
-                                                if (!(await sfs.exsits(dataIO.slashPathStr(afterPass) + "/" + outfolders))) await sfs.mkdir(dataIO.slashPathStr(afterPass) + "/" + outfolders)
-                                            }
-                                            return outfolders
-                                        })()) + fileList[i].filename + "." + convert.data.json.preset[presetChoice - 1].ext]
+                                    const oldPath = await dataIO.pathChecker(fileList[i])
+                                    const newPath = await dataIO.pathChecker(afterPath)
+                                    const file = fileList[i]
+                                    if (oldPath && newPath && file.relativePath?.relative) {
+                                        const reNewPath = dataIO.typeToDataPath({
+                                            name: file.name,
+                                            extension: convert.data.json.preset[presetChoice - 1].ext,
+                                            path: dataIO.filePathToPath(file.relativePath.relative)
+                                        })
                                         if (await sfs.exsits(dataIO.slashPathStr(reNewPath)))
                                             if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) continue
                                         await convert.convert([{
-                                            oldPass: [...oldPath, + fileList[i].filename + "." + fileList[i].extension],
+                                            oldPass: oldPath,
                                             newPass: reNewPath,
                                             preset: convert.data.json.preset[presetChoice - 1]
                                         }])
@@ -764,118 +1005,6 @@ export async function cuiIO(shareData: vpManageClass.shareData) {
                 })
                 client.send(msg)
             })
-        },
-        "Folder Copy": async () => {
-            console.log("このプログラムは想定外の入力に弱い傾向にあります。ご了承ください。")
-            const beforePass = await dataIO.pathChecker(await question("移動元のフォルダを指定してください。"))
-            if (!beforePass) {
-                console.log("入力が間違ってるようです。もう一度やり直してください。")
-                return
-            }
-            const afterPass = await dataIO.pathChecker(await question("移動先のフォルダを指定してください。"))
-            if (!afterPass) {
-                console.log("入力が間違ってるようです。もう一度やり直してください。")
-                return
-            }
-            const list = await dataIO.fileLister(beforePass, { contain: true })
-            console.log("移動元のフォルダには" + list.length + "個のファイルたちがあります。")
-            if (await booleanIO("移動を開始しますか？")) {
-                try {
-                    let errorNum = 0
-                    let skipNum = 0
-                    const prog = new progress()
-                    prog.view()
-                    prog.total = list.length
-                    for (let i = 0; i !== list.length; i++) {
-                        const point = list[i].point
-                        let outfolders = ""
-                        for (let i = 0; i !== point.length; i++) {
-                            outfolders += point[i] + "/"
-                            if (!(await sfs.exsits(dataIO.slashPathStr(afterPass) + "/" + outfolders))) await sfs.mkdir(dataIO.slashPathStr(afterPass) + "/" + outfolders)
-                        }
-                        const fileName = list[i].filename + (list[i].extension ? ("." + list[i].extension) : "")
-                        const copyDataTo = dataIO.slashPathStr(afterPass) + "/" + outfolders + fileName
-                        prog.now = i
-                        prog.viewStr = "移動中。スキップ[" + skipNum + "] エラー[" + errorNum + "]"
-                        if (await sfs.exsits(list[i].pass + fileName)) {
-                            await new Promise<void>(resolve => {
-                                const Stream = fs.createReadStream(list[i].pass + fileName)
-                                Stream.pipe(fs.createWriteStream(copyDataTo))
-                                Stream.on("error", err => {
-                                    errorNum++
-                                })
-                                Stream.on("end", () => { resolve() })
-                            })
-                        } else {
-                            skipNum++
-                        }
-                    }
-                    prog.view()
-                    prog.viewed = false
-                } catch (e) { }
-            }
-        },
-        "プログラムテスト": async () => {
-            console.log("これを使用してしまうと、強制終了する以外にプログラムを抜ける方法が無くなります。")
-            const programs: {
-                name: string,
-                function: () => Promise<void>
-            }[] = [{
-                name: "passCheck",
-                function: async () => {
-                    const pass = await question("パスを入力")
-                    const checked = await dataIO.pathChecker(pass)
-                    console.log(checked ? dataIO.slashPathStr(checked) : undefined)
-                }
-            }]
-            const programsName = (() => {
-                const programsName = []
-                for (let i = 0; i !== programs.length; i++) programsName.push(programs[i].name)
-                return programsName
-            })()
-            const programChoice = await choice(programsName, "利用可能なプログラム", "実行したいプログラムを選択してください。")
-            if (!programChoice) {
-                console.log("入力が間違っているようです。最初からやり直してください。")
-                return
-            }
-            while (true) {
-                await programs[programChoice - 1].function()
-            }
-        },
-        "Cryptoによる暗号化": async () => {
-            console.log("現在のところ未完成です。")
-            const algorithm = "aes-256-cbc"
-            const data = await question("使用する文字列を入力してください。")
-            const password = await question("パスワードを入力してください。")
-            async function scrypt(password: crypto.BinaryLike, salt: crypto.BinaryLike, keylen: number): Promise<Buffer> {
-                return await new Promise<Buffer>(resolve => { crypto.scrypt(password, salt, keylen, (err, derivedKey) => resolve(derivedKey)) })
-            }
-            const key = await scrypt(password, data, 32)
-            const iv = crypto.randomBytes(16)
-
-            const programs: { [programName: string]: () => Promise<void> } = {
-                "暗号化": async () => {
-                    const cipher = crypto.createCipheriv(algorithm, key, iv)
-                    const crypted = cipher.update("ここに暗号化する文字列", 'utf-8', 'hex')
-                    const crypted_text = crypted + cipher.final('hex')
-
-                    console.log(crypted_text)
-                },
-                "復号化": async () => {
-                    const decipher = crypto.createDecipher(algorithm, "ここにパスワード")
-                    const decrypted = decipher.update("ここに復号化する文字列", 'hex', 'utf-8')
-                    const decrypted_text = decrypted + decipher.final('utf-8')
-
-                    console.log(decrypted_text)
-                }
-            }
-            const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
-            if (!programChoice) {
-                console.log("入力が間違っているようです。最初からやり直してください。")
-                return
-            }
-            const choiceProgramName = Object.keys(programs)[programChoice - 1]
-            await programs[choiceProgramName]()
         },
         "Discord BotToken情報収集": async () => {
             const token = await question("Botのトークンを入力してください。")
@@ -1049,7 +1178,7 @@ namespace getFunction {
         const dotignore = await booleanIO("「.」から始まるファイルを省略しますか？")
         const list = await dataIO.fileLister(folderPath, { invFIleIgnored: dotignore })
         let text = ""
-        for (let i = 0; i !== list.length; i++) text += list[i].filename + "\n"
+        for (let i = 0; i !== list.length; i++) text += list[i].name + "\n"
         const savePath = await dataIO.pathChecker(await question("テキストの保存先フォルダを入力してください。"))
         if (savePath) sfs.writeFile(dataIO.slashPathStr(savePath) + "/ファイル名リスト.txt", text)
         const folderContain = await booleanIO("フォルダ内にあるフォルダも含めますか？")
