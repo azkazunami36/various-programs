@@ -18,14 +18,9 @@ export declare interface sharpConvert {
 export class sharpConvert extends EventEmitter {
     #converting = 0
     #convertPoint = 0
-    afterPass: string[] = []
+    afterPass: dataIO.dataPath
     size = 100
-    processd: {
-        filename: string,
-        extension: string,
-        point: string[],
-        pass: string
-    }[] = []
+    processd: dataIO.dataPath[] = []
     nameing = 1
     type: 0 | 1 = 0
     #maxconvert = 20
@@ -50,47 +45,47 @@ export class sharpConvert extends EventEmitter {
                 const i = this.#convertPoint
                 this.#convertPoint++
                 this.#converting++
-                const fileName = this.processd[i].filename + "." + this.processd[i].extension
-                let outfolders = ""
-                const point = this.processd[i].point
-                const afterPass = dataIO.slashPathStr(this.afterPass)
-                for (let i = 0; i !== point.length; i++) {
-                    outfolders += point[i] + "/"
-                    if (!(await sfs.exsits(afterPass + "/" + outfolders))) await sfs.mkdir(afterPass + "/" + outfolders)
-                }
-                const path = afterPass + "/" + outfolders + [
-                    this.processd[i].filename,
-                    (i + 1) + " - " + this.processd[i].filename,
-                    this.processd[i].extension + " - " + this.processd[i].filename,
-                    (i + 1) + "_" + this.processd[i].extension + " - " + this.processd[i].filename,
-                    i + 1,
-                ][this.nameing] + "." + sharpConvert.extType[this.type]
-                const Stream = fs.createWriteStream(path)
-                this.emit("progress", this.#convertPoint, this.processd.length)
-                await new Promise<void>(async resolve => {
-                    try {
-                        const image = imageSize(this.processd[i].pass + "/" + fileName)
-                        if (image.width) {
-                            const sha = sharp(this.processd[i].pass + "/" + fileName)
-                            sha.resize((this.size < image.width) ? this.size : this.size)
-                            switch (sharpConvert.extType[this.type]) {
-                                case "png": sha.png(); break
-                                case "jpg": sha.jpeg(); break
+                const path = this.processd[i]
+                if (path.relativePath) {
+                    const oldPath = path
+                    const newPath = dataIO.typeToDataPath({
+                        name: [
+                            this.processd[i].name,
+                            (i + 1) + " - " + this.processd[i].name,
+                            this.processd[i].extension + " - " + this.processd[i].name,
+                            (i + 1) + "_" + this.processd[i].extension + " - " + this.processd[i].name,
+                            String(i + 1),
+                        ][this.nameing],
+                        extension: sharpConvert.extType[this.type],
+                        path: dataIO.filePathToPath(path.relativePath.relative)
+                    })
+                    const Stream = fs.createWriteStream(dataIO.slashPathStr(newPath))
+                    this.emit("progress", this.#convertPoint, this.processd.length)
+                    await new Promise<void>(async resolve => {
+                        try {
+                            const image = imageSize(dataIO.slashPathStr(oldPath))
+                            if (image.width) {
+                                const sha = sharp(dataIO.slashPathStr(oldPath))
+                                sha.resize((this.size < image.width) ? this.size : this.size)
+                                switch (sharpConvert.extType[this.type]) {
+                                    case "png": sha.png(); break
+                                    case "jpg": sha.jpeg(); break
+                                }
+                                sha.pipe(Stream)
+                                Stream.on("finish", resolve)
+                            } else {
+                                const e = new ReferenceError()
+                                e.message = "width is undefined."
+                                e.name = "imageSize"
+                                this.emit("error", e)
+                                resolve()
                             }
-                            sha.pipe(Stream)
-                            Stream.on("finish", resolve)
-                        } else {
-                            const e = new ReferenceError()
-                            e.message = "width is undefined."
-                            e.name = "imageSize"
+                        } catch (e) {
                             this.emit("error", e)
                             resolve()
                         }
-                    } catch (e) {
-                        this.emit("error", e)
-                        resolve()
-                    }
-                })
+                    })
+                }
                 this.#converting--
                 convert()
             }

@@ -1,11 +1,14 @@
-import express, { Request, Response } from "express"
+import express from "express"
 import http from "http"
 import fs from "fs"
 import { EventEmitter } from "events"
 
-import sfs from "./fsSumwave.js"
 import dataIO from "./dataIO.js"
 
+/**
+ * # expressd
+ * GUI操作プログラムです。最も親しみやすいUIと分かりやすい操作方法、様々な状況でも動く柔軟なプログラムを提供します。
+ */
 export namespace expressd {
     /**
      * 利用出来るイベントです。
@@ -43,20 +46,20 @@ export namespace expressd {
             await new Promise<void>(resolve => exp.on("ready", () => resolve()))
             return exp
         }
-        async #get(req: Request | http.IncomingMessage, res: Response) {
+        async #get(req: express.Request | http.IncomingMessage, res: express.Response) {
             if (req.url !== undefined) {
-                const url = (req.url !== "/") ? req.url : "/index.html"
-                const contentType = (() => {
-                    switch (dataIO.splitExt(url).extension) {
-                        case "html": return "text/html"
-                        case "css": return "text/css"
-                        case "js": return "application/javascript"
-                        case "json": return "application/json"
-                    }
-                })()
-                res.header("Content-Type", contentType + ";charset=utf-8")
-                if (await dataIO.pathChecker("./ts-library/expressdSrc" + url)) {
-                    const stream = fs.createReadStream("./ts-library/expressdSrc" + url)
+                const url = await dataIO.pathChecker("./ts-library/expressdSrc" + (req.url !== "/") ? req.url : "/index.html")
+                if (url) {
+                    const contentType = (() => {
+                        switch (url.extension) {
+                            case "html": return "text/html"
+                            case "css": return "text/css"
+                            case "js": return "application/javascript"
+                            case "json": return "application/json"
+                        }
+                    })()
+                    res.header("Content-Type", contentType + ";charset=utf-8")
+                    const stream = fs.createReadStream(dataIO.slashPathStr(url))
                     stream.on("data", chunk => res.write(chunk))
                     stream.on("end", () => res.end())
                 } else {
@@ -65,7 +68,7 @@ export namespace expressd {
                 }
             }
         }
-        async #post(req: Request | http.IncomingMessage, res: Response | http.ServerResponse) { }
+        async #post(req: express.Request | http.IncomingMessage, res: express.Response | http.ServerResponse) { }
     }
     /**
      * 動画や音声をスムーズにクライアントに送信する関数です

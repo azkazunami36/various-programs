@@ -15,9 +15,9 @@ export declare interface ffmpegConverter {
 }
 interface workingQueueList {
     /** 変換元 */
-    oldPass: string[]
+    oldPass: dataIO.dataPath
     /** 変換先 */
-    newPass: string[]
+    newPass: dataIO.dataPath
     /** この動画に利用されるプリセット */
     preset: preset
 }

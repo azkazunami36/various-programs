@@ -84,15 +84,15 @@ export namespace handyTool {
      * @param listerOption File Listerに入力するオプションを入力します。
      * @returns ファイル名をリスト化したテキストを出力します。
      */
-    export async function fileNameTextList(folderPath: string[], listerOption?: {
+    export async function fileNameTextList(folderPath: dataIO.dataPath, listerOption?: {
         contain?: boolean | undefined;
         extensionFilter?: string[] | undefined;
         invFIleIgnored?: boolean | undefined;
         macosInvIgnored?: boolean | undefined;
-    }, savePath?: string[]) {
+    }, savePath?: dataIO.dataPath) {
         const list = await dataIO.fileLister(folderPath, listerOption)
         let text = ""
-        for (let i = 0; i !== list.length; i++) text += list[i].filename + "\n"
+        for (let i = 0; i !== list.length; i++) text += list[i].name + "\n"
         if (savePath) sfs.writeFile(dataIO.slashPathStr(savePath) + "/ファイル名リスト.txt", text)
         return text
     }
