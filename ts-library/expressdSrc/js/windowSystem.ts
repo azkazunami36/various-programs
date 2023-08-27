@@ -195,12 +195,11 @@ export class windowSystem {
     #clickTime = 0
     /**
      * ウィンドウの位置や状態を全て確認し、更新します。
-     * @param {string?} [id] 識別名を指定すると、特定のウィンドウの状態だけ更新します。
+     * @param id 識別名を指定すると、特定のウィンドウの状態だけ更新します。
      */
-    async viewReflash(id) {
+    async viewReflash(id?: string) {
         const windows = this.#windows
-        /** @param {string} id */
-        async function reflash(id) {
+        async function reflash(id: string) {
             const stat = windows[id]
             if (stat) {
                 const style = stat.element.style
@@ -393,7 +392,7 @@ export class windowSystem {
                     }
                     if (doubleClick) {
                         if (clickWindowIdOnly) {
-                            this.#moveingWindow = null
+                            this.#moveingWindow = undefined
                             this.fullscreenSetting(clickWindowIdOnly, true)
                         }
                     }
@@ -416,8 +415,8 @@ export class windowSystem {
                         if (clickWindowId) {
                             const stat = this.#windows[clickWindowId]
                             if (stat) {
-                                const left = assertions.HTMLElement(stat.element.getElementsByClassName("window-bar-left")[0])
-                                const right = assertions.HTMLElement(stat.element.getElementsByClassName("window-bar-right")[0])
+                                const left = stat.element.getElementsByClassName("window-bar-left")[0]
+                                const right = stat.element.getElementsByClassName("window-bar-right")[0]
                                 if (left && right) this.#resizeingWindow = {
                                     name: clickWindowId,
                                     type: type,
@@ -529,13 +528,12 @@ export class windowSystem {
     }
     /**
      * マウスのクリック終了イベントの受付です。
-     * @param {MouseEvent} e 
      */
-    async #mouseup(e) {
-        this.#moveingWindow = null // ウィンドウドラッグを終了
-        this.#resizeingWindow = null // ウィンドウリサイズを終了
+    async #mouseup(e: MouseEvent) {
+        this.#moveingWindow = undefined // ウィンドウドラッグを終了
+        this.#resizeingWindow = undefined // ウィンドウリサイズを終了
         // フルスクリーンボタンのイベント
-        const target = assertions.HTMLElement(e.target)
+        const target = e.target as HTMLElement
         if (
             target?.classList.contains("window-max")
             && target.parentElement?.parentElement?.parentElement?.classList.contains("window-body")
@@ -549,16 +547,15 @@ export class windowSystem {
             const id = target.parentElement.parentElement.parentElement.id
             await this.windowClose(id)
         }
-        this.#miniwindowBtn = null // 最小化ボタンをリセット
-        this.#closeBtn = null // 閉じるボタンをリセット
-        this.#fullscreenBtn = null // フルスクリーンボタンをリセット
+        this.#miniwindowBtn = undefined // 最小化ボタンをリセット
+        this.#closeBtn = undefined // 閉じるボタンをリセット
+        this.#fullscreenBtn = undefined // フルスクリーンボタンをリセット
     }
     /**
      * 
-     * @param {string} id 
-     * @param {boolean} [buttonnull] ボタンの状況にかかわらず状態を切り替え
+     * @param buttonnull ボタンの状況にかかわらず状態を切り替え
      */
-    async fullscreenSetting(id, buttonnull) {
+    async fullscreenSetting(id: string, buttonnull?: boolean) {
         const stat = this.#windows[id]
         if ((id === this.#fullscreenBtn || buttonnull) && stat) if (stat.full.is) {
             stat.full.is = false
@@ -566,8 +563,8 @@ export class windowSystem {
             stat.left = stat.full.left
             stat.topSize = stat.full.topSize
             stat.leftSize = stat.full.leftSize
-            const style1 = assertions.HTMLElement(stat.element.getElementsByClassName("window-body")[0])?.style
-            const style2 = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-center")[0])?.style
+            const style1 = (stat.element.getElementsByClassName("window-body")[0] as HTMLElement)?.style
+            const style2 = (stat.element.getElementsByClassName("window-resize-center")[0] as HTMLElement)?.style
             if (style1 && style2) {
                 style1.borderRadius = ""
                 style1.width = ""
@@ -578,29 +575,29 @@ export class windowSystem {
             this.viewReflash(id)
             await wait(255)
             if (!stat.full.is) {
-                const resizeTop = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-top")[0])
-                const resizeLeft = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-left")[0])
-                const resizeRight = assertions.HTMLElement((() => {
+                const resizeTop = stat.element.getElementsByClassName("window-resize-top")[0] as HTMLElement
+                const resizeLeft = stat.element.getElementsByClassName("window-resize-left")[0] as HTMLElement
+                const resizeRight = (() => {
                     const rB = stat.element.getElementsByClassName("window-resize-right")
                     for (let i = 0; i !== rB.length; i++) {
                         const parentElement = rB[i].parentElement
                         if (
                             parentElement?.parentElement?.classList.contains("window-master")
-                            && assertions.HTMLElement(parentElement.parentElement.getElementsByClassName("window-body")[0])?.id === id
+                            && parentElement.parentElement.getElementsByClassName("window-body")[0]?.id === id
                         ) return rB[i]
                     }
-                })())
-                const resizeBottom = assertions.HTMLElement((() => {
+                })() as HTMLElement
+                const resizeBottom = (() => {
                     const rB = stat.element.getElementsByClassName("window-resize-bottom")
                     for (let i = 0; i !== rB.length; i++) {
                         const parentElement = rB[i].parentElement
                         if (
                             parentElement
                             && parentElement.classList.contains("window-master")
-                            && assertions.HTMLElement(parentElement.getElementsByClassName("window-body")[0])?.id === id
+                            && parentElement.getElementsByClassName("window-body")[0]?.id === id
                         ) return rB[i]
                     }
-                })())
+                })() as HTMLElement
                 if (resizeTop) resizeTop.style.display = ""
                 if (resizeLeft) resizeLeft.style.display = ""
                 if (resizeRight) resizeRight.style.display = ""
@@ -618,8 +615,8 @@ export class windowSystem {
             stat.left = 0
             stat.topSize = this.#body.offsetHeight
             stat.leftSize = this.#body.offsetWidth
-            const style1 = assertions.HTMLElement(stat.element.getElementsByClassName("window-body")[0])?.style
-            const style2 = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-center")[0])?.style
+            const style1 = (stat.element.getElementsByClassName("window-body")[0] as HTMLElement)?.style
+            const style2 = (stat.element.getElementsByClassName("window-resize-center")[0] as HTMLElement)?.style
             if (style1 && style2) {
                 style1.borderRadius = "0"
                 style1.width = "100%"
@@ -627,29 +624,29 @@ export class windowSystem {
                 style2.width = "100%"
                 style2.height = "100%"
             }
-            const resizeTop = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-top")[0])
-            const resizeLeft = assertions.HTMLElement(stat.element.getElementsByClassName("window-resize-left")[0])
-            const resizeRight = assertions.HTMLElement((() => {
+            const resizeTop = stat.element.getElementsByClassName("window-resize-top")[0] as HTMLElement
+            const resizeLeft = stat.element.getElementsByClassName("window-resize-left")[0] as HTMLElement
+            const resizeRight = (() => {
                 const rB = stat.element.getElementsByClassName("window-resize-right")
                 for (let i = 0; i !== rB.length; i++) {
                     const parentElement = rB[i].parentElement
                     if (
                         parentElement?.parentElement?.classList.contains("window-master")
-                        && assertions.HTMLElement(parentElement.parentElement.getElementsByClassName("window-body")[0])?.id === id
+                        && parentElement.parentElement.getElementsByClassName("window-body")[0]?.id === id
                     ) return rB[i]
                 }
-            })())
-            const resizeBottom = assertions.HTMLElement((() => {
+            })() as HTMLElement
+            const resizeBottom = (() => {
                 const rB = stat.element.getElementsByClassName("window-resize-bottom")
                 for (let i = 0; i !== rB.length; i++) {
                     const parentElement = rB[i].parentElement
                     if (
                         parentElement
                         && parentElement.classList.contains("window-master")
-                        && assertions.HTMLElement(parentElement.getElementsByClassName("window-body")[0])?.id === id
+                        && parentElement.getElementsByClassName("window-body")[0]?.id === id
                     ) return rB[i]
                 }
-            })())
+            })() as HTMLElement
             if (resizeTop) resizeTop.style.display = "none"
             if (resizeLeft) resizeLeft.style.display = "none"
             if (resizeRight) resizeRight.style.display = "none"
@@ -660,20 +657,32 @@ export class windowSystem {
     /**
      * ウィンドウを作成します。  
      * Elementを入力する際、予め内容を完成させてから入力すると滑らかな動作、不具合が軽減することがあります。
-     * @param {string} name ウィンドウを管理するための名前です。間違えると閉じられなくなります。
-     * @param {HTMLElement} element 各自プログラムが管理することの出来るElementを入力します。その周りにウィンドウバーなどを装飾します。
-     * @param {object} [option] オプションを指定する
-     * @param {object} [option.layout] レイアウトを指定。上から順に適用され、上書きされる。sizeを指定しないといけないオプションもある
-     * @param {boolean} [option.layout.center] 中央配置にするか。size必須
-     * @param {boolean} [option.layout.widthFull] 横幅を最大まで広げるかどうか
-     * @param {boolean} [option.layout.heigthFull] 立幅を最大まで広げるかどうか
-     * @param {object} [option.size] ウィンドウサイズを決定
-     * @param {number} [option.size.top] 立幅を決める
-     * @param {number} [option.size.left] 横幅を決める
-     * @param {string} [option.iconURL] ウィンドウにつけるアイコンを指定する
-     * @param {string} [option.title] ウィンドウタイトルを決定
+     * @param name ウィンドウを管理するための名前です。間違えると閉じられなくなります。
+     * @param element 各自プログラムが管理することの出来るElementを入力します。その周りにウィンドウバーなどを装飾します。
+     * @param option オプションを指定する
      */
-    async createWindow(name, element, option) {
+    async createWindow(name: string, element: HTMLElement, option: {
+        /** ウィンドウにつけるアイコンを指定する */
+        iconURL?: string
+        /** ウィンドウタイトルを決定 */
+        title?: string
+        /** レイアウトを指定。上から順に適用され、上書きされる。sizeを指定しないといけないオプションもある */
+        layout?: {
+            /** 中央配置にするか。size必須 */
+            center?: boolean
+            /** 横幅を最大まで広げるかどうか */
+            widthFull?: boolean
+            /** 立幅を最大まで広げるかどうか */
+            heigthFull?: boolean
+        }
+        /** ウィンドウサイズを決定 */
+        size?: {
+            /** 立幅を決める */
+            top?: number
+            /** 横幅を決める */
+            left?: number
+        }
+    }) {
         // ウィンドウのメイン
         const master = document.createElement("div")
         master.classList.add("window-master")
@@ -819,13 +828,12 @@ export class windowSystem {
         body.classList.add("window-viewed")
     }
     /**
-     * 
-     * @param {string} id 
+     * ウィンドウを閉じます。この際に一部のデータを解放し負荷が減少します。
      */
-    async windowClose(id) {
+    async windowClose(id: string) {
         const stat = this.#windows[id]
         if (stat) {
-            const body = assertions.HTMLElement(stat.element.getElementsByClassName("window-body")[0])
+            const body = stat.element.getElementsByClassName("window-body")[0]
             if (body) body.classList.remove("window-viewed")
             await wait(255)
             this.#body.removeChild(stat.element)
