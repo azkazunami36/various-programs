@@ -12,6 +12,7 @@ import bouyomi from "./bouyomi.js"
 import vpManageClass from "./vpManageClass.js"
 import handyTool from "./handyTool.js"
 import youTubeDownloader from "./youtubeDownloader.js"
+import { fileNetworkSend } from "./fileNetworkSend.js"
 
 /**
  * # Console UI Programs
@@ -1048,6 +1049,31 @@ export class cuiIO {
                     fc.selectingFuncName = "YouTube Downloader"
                     await fc.view()
                 } else console.log("クラスを取得することが出来ません。原因不明のエラーのため、報告してください。")
+            },
+            "FileNetworkSend": async () => {
+                const fns = new fileNetworkSend()
+                const fc = new funcSelect({
+                    "送信する": async () => {
+                        fns.ipAddress = await question("IPアドレスを入力してください。")
+                        const port = await question("ポート番号を入力してください。")
+                        fns.port = Number(port)
+                        if (!Number.isFinite(fns.port)) return console.log("数字では無いようです。")
+                        if (fns.port !== Number(port)) console.log("範囲を超えたポート番号のため、" + fns.port + "に変更しました。")
+                        const path = await dataIO.pathChecker(await question("パスを入力してください。"))
+                        if (path) {
+                            await fns.send(path)
+                        }
+                    },
+                    "受信する": async () => {
+                        const path = await dataIO.pathChecker(await question("パスを入力してください。"))
+                        if (path) {
+                            await fns.get(path)
+                        }
+                    }
+                })
+                fc.selectingFuncName = "FileNetworkSend"
+                fc.errorView = true
+                await fc.view()
             },
             "Various Programsの状態・設定": async () => {
                 const programs: { [programName: string]: () => Promise<void> } = {
