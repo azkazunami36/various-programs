@@ -219,7 +219,7 @@ export namespace consoleUIPrograms {
                     stats = false
                 }
                 if (!this.loop) this.loop = true
-            } while (this.loop && !this.end) 
+            } while ( this.loop && !this.end )
             return stats
         }
     }
@@ -1018,88 +1018,10 @@ export class cuiIO {
                     client.send(msg)
                 })
             },
-            "Discord BotToken情報収集": async () => {
-                const token = await question("Botのトークンを入力してください。")
-                const {
-                    Client,
-                    Partials,
-                    GatewayIntentBits
-                } = Discord
-                const client = new Client({
-                    intents: [
-                        GatewayIntentBits.GuildMembers,
-                        GatewayIntentBits.MessageContent,
-                        GatewayIntentBits.Guilds
-                    ],
-                    partials: [
-                        Partials.Channel,
-                        Partials.GuildMember,
-                        Partials.GuildScheduledEvent,
-                        Partials.Message,
-                        Partials.Reaction,
-                        Partials.ThreadMember,
-                        Partials.User
-                    ]
-                })
-                client.on(Discord.Events.Error, err => {
-                    throw err
-                })
-                await client.login(token)
-                await new Promise<void>(resolve => {
-                    client.on(Discord.Events.ClientReady, client => {
-                        resolve()
-                    })
-                })
-                const guilds: {
-                    guildName: string
-                    guildId: string
-                    channels: {
-                        channelName: string
-                    }[]
-                    users: {
-                        displayName: string
-                        nickName: string | null
-                    }[]
-                }[] = []
-                const data = (await client.guilds.fetch())
-                data.map(data => {
-                    data
-                })
-                client.guilds.cache.map(guild => guilds.push({
-                    guildName: guild.name,
-                    guildId: guild.id,
-                    channels: (() => {
-                        const channels: {
-                            channelName: string
-                        }[] = []
-                        guild.channels.cache.map(channel => {
-                            channels.push({
-                                channelName: channel.name
-                            })
-                        })
-                        return channels
-                    })(),
-                    users: (() => {
-                        const users: {
-                            displayName: string
-                            nickName: string | null
-                        }[] = []
-                        guild.members.cache.map(member => {
-                            users.push({
-                                displayName: member.displayName,
-                                nickName: member.nickname
-                            })
-                        })
-                        return users
-                    })()
-                }))
-                client.destroy()
-                console.log("情報が取得されました。")
-            },
             "YouTube Downloader": async () => {
                 const youtubedl = shareData.youtubedl
                 if (youtubedl) {
-                youtubedl.on("error", err => console.log(err))
+                    youtubedl.on("error", err => console.log(err))
                     console.log("\n現在開発段階です。\n" +
                         "利用する機能は動作を不安定にさせたり、容量を圧迫したりする恐れがあり、もし利用が出来たとしても、それらのデータが失われないという保証はありません。\n" +
                         "とにかく、このプログラムで行う操作はユーザーにとって無意味な動作である場合が多いため、利用していただかないことを推奨します。\n" +

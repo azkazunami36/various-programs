@@ -24,7 +24,7 @@ export class sharpConvert extends EventEmitter {
     nameing = 1
     type: 0 | 1 = 0
     #maxconvert = 20
-    #interval: NodeJS.Timer
+    #interval: NodeJS.Timeout
     constructor() {
         super()
         this.#interval = setInterval(() => this.emit("progress", this.#convertPoint, this.processd.length), 100)

@@ -116,23 +116,25 @@ export class ffmpegConverter extends EventEmitter {
     /** 変換中かどうか確認できます。 */
     #converting = false
     /** 変換する動画のリストです。 */
-    #workList: workingQueueList[]
+    #workList: workingQueueList[] = []
     /** 変換するために必要なデータを入力すると、自動で変換を開始します。 */
     async convert(list: workingQueueList[]) {
         this.#workList.push(...list)
         if (!this.#converting) this.#convert()
     }
     async #convert() {
-        if (this.#workList[0]) {
+        const work = this.#workList.pop()
+        if (work) {
             await new Promise<void>(resolve => {
                 this.#converting = true
-                this.#ffmpeg = ffmpeg(dataIO.slashPathStr(this.#workList[0].oldPass))
-                this.#ffmpeg.addOptions(this.#workList[0].preset.tag)
-                this.#ffmpeg.save(dataIO.slashPathStr(this.#workList[0].newPass))
+                this.#ffmpeg = ffmpeg(dataIO.slashPathStr(work.oldPass))
+                this.#ffmpeg.addOptions(work.preset.tag)
+                this.#ffmpeg.save(dataIO.slashPathStr(work.newPass))
                 this.#ffmpeg.on("end", () => { this.emit("end", undefined); resolve() })
                 this.#ffmpeg.on("progress", progress => { this.emit("progress", progress) })
                 this.#ffmpeg.on("error", err => { this.emit("error", err) })
             })
+            this.#convert()
         } else this.#converting = false
     }
     /** あまり使わないように。意味がありません。 */

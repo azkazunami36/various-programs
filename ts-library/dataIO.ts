@@ -399,7 +399,7 @@ export namespace dataIO {
      */
     export function slashPathStr(dataPath: dataPath) {
         let pathtmp = ""
-        for (let i = 0; i !== dataPath.path.length; i++) pathtmp += dataPath.path[i] + "/"
+        for (let i = 0; i !== dataPath.path.length; i++) pathtmp += dataPath.path[i] + "/" 
         pathtmp += dataPath.name + (dataPath.extension ? "." + dataPath.extension : "")
         return pathtmp
     }
@@ -549,6 +549,7 @@ export namespace dataIO {
          */
         option?: fileListerOption
     ) {
+        console.log(path, option)
         //オプションデータの格納用
         /**
          * フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか
@@ -603,7 +604,7 @@ export namespace dataIO {
 
             function listerSlash(str: string[]) {
                 let tmp = ""
-                for (let i = 0; i !== str.length; i++) tmp += str[i] + (i !== str.length - 1) ? "/" : ""
+                for (let i = 0; i !== str.length; i++) tmp += str[i] + (i !== str.length - 1 ? "/" : "")
                 return tmp
             }
             // filepointの初期化
