@@ -1057,7 +1057,7 @@ export class cuiIO {
                         fns.ipAddress = await question("IPアドレスを入力してください。")
                         const port = await question("ポート番号を入力してください。")
                         fns.port = Number(port)
-                        if (!Number.isFinite(fns.port)) return console.log("数字では無いようです。")
+                        if (!Number.isFinite(fns.port)) return console.log("数字では無いようです。:" + fns.port + "(" + port + ")")
                         if (fns.port !== Number(port)) console.log("範囲を超えたポート番号のため、" + fns.port + "に変更しました。")
                         const path = await dataIO.pathChecker(await question("パスを入力してください。"))
                         if (path) {
@@ -1065,6 +1065,10 @@ export class cuiIO {
                         }
                     },
                     "受信する": async () => {
+                        const port = await question("ポート番号を入力してください。")
+                        fns.port = Number(port)
+                        if (!Number.isFinite(fns.port)) return console.log("数字では無いようです。:" + fns.port + "(" + port + ")")
+                        if (fns.port !== Number(port)) console.log("範囲を超えたポート番号のため、" + fns.port + "に変更しました。")
                         const path = await dataIO.pathChecker(await question("パスを入力してください。"))
                         if (path) {
                             await fns.get(path)
