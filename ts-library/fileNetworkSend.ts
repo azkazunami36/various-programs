@@ -41,16 +41,21 @@ export class fileNetworkSend {
         const app = express()
         app.use(bodyParser.urlencoded({ limit: "20gb" }))
         const server = await new Promise<http.Server>(resolve => { const server = app.listen(this.#port, () => { resolve(server) }) })
+        console.log("受信準備完了")
         await new Promise<void>((resolve, reject) => {
             app.post("*", (req, res) => {
-                console.log(req.headers)
-                const stream = fs.createWriteStream(dataIO.slashPathStr(path) + "/test")
+                console.log(req.headers, "ヘッダー")
+                const savePath = dataIO.slashPathStr(path) + "/test"
+                console.log("保存先: " + savePath + "に保存")
+                const stream = fs.createWriteStream(savePath)
                 stream.on("error", e => { reject(e) })
                 req.on("error", e => { reject(e) })
                 req.on("end", () => { resolve() })
                 req.pipe(stream)
+                console.log("postプログラムの終端に到着")
             })
         })
+        console.log("終了")
         server.close()
     }
     /**
@@ -63,7 +68,7 @@ export class fileNetworkSend {
             const stream = fs.createReadStream(dataIO.slashPathStr(path))
             stream.on("error", e => { reject(e) })
             try {
-                const req = request.post(this.ipAddress, {
+                const req = request.post("http://" + this.ipAddress, {
                     port: this.#port,
                     body: stream,
                     headers: {
