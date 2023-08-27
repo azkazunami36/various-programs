@@ -1,8 +1,9 @@
 //@ts-check
 
 import { windowSystem } from "./js/windowSystem.js"
+import { httpDataRequest, APISend } from "./js/handyTool.js"
 
-addEventListener("load",async () => {
+addEventListener("load", async () => {
     /**
      * メインプログラム同様、shareDataです。
      * @type {{
@@ -34,5 +35,16 @@ addEventListener("load",async () => {
             title: "サブウィンドウ"
         })
     })
+    const postUrl = "dataIO"
+    const testPost = document.createElement("div")
+    testPost.style.padding = "5px"
+    testPost.style.width = "fit-content"
+    testPost.style.background = "white"
+    testPost.style.borderRadius = "10px"
+    testPost.innerText = "テストPOSTを送信: " + postUrl
+    testPost.addEventListener("click", async () => {
+        await APISend("dataIO", JSON.stringify({}))
+    })
+    mainWindow.appendChild(testPost)
     mainWindow.appendChild(createButton)
 })

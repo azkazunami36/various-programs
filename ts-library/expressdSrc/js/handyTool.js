@@ -25,7 +25,7 @@ export const assertions = {
  * @param {string} send 送信したいテキスト(JSONもstringifyで可能)
  * @returns 
  */
-async function httpDataRequest(request, send) {
+export async function httpDataRequest(request, send) {
     return new Promise(resolve => {
         const xhr = new XMLHttpRequest()
         xhr.open("POST", "http://" + location.hostname + ":" + location.port + "/" + request)
@@ -33,6 +33,17 @@ async function httpDataRequest(request, send) {
         xhr.send(send); //データを送信
         xhr.onreadystatechange = async () => { if (xhr.readyState === 4 && xhr.status === 200) resolve(xhr.responseText) } //レスポンスを返す
     })
+}
+
+
+export async function APISend(request, send) {
+    /**
+     * @type {any}
+     */
+    let sa
+    return {
+        type: sa
+    }
 }
 
 /**

@@ -1,7 +1,8 @@
 import EventEmitter from "events"
 import ffmpeg from "fluent-ffmpeg"
 
-import dataIO from "./dataIO"
+import dataIO from "./dataIO.js"
+import vpManageClass from "./vpManageClass.js"
 
 export interface ffmpegConverterEvents {
     ready: [void]
@@ -32,7 +33,7 @@ interface preset {
 interface ffmpegdataIOextJSON extends dataIO.dataIO {
     json: {
         /** ユーザーが保存しているプリセットです。 */
-        preset: preset[]
+        presets: preset[]
     }
 }
 /**
@@ -42,14 +43,23 @@ interface ffmpegdataIOextJSON extends dataIO.dataIO {
 export class ffmpegConverter extends EventEmitter {
     #ffmpeg: ffmpeg.FfmpegCommand
     data: ffmpegdataIOextJSON
+    readyIs = false
     constructor() {
-        (async () => { this.emit("ready", undefined) })()
-        super()
+        super();
+        (async () => {
+            const c = await dataIO.dataIO.initer("ffmpeg-converter")
+            if (c) this.data = c
+            this.readyIs = true
+            this.emit("ready", undefined)
+        })()
     }
-    static async initer() {
+    static async initer(shareData: vpManageClass.shareData) {
         const convert = new ffmpegConverter()
-        await new Promise<void>(resolve => convert.on("ready", () => resolve()))
-        return convert
+        await new Promise<void>(resolve => {
+            if (convert.readyIs) resolve()
+            convert.on("ready", () => resolve())
+        })
+        shareData.ffmpegConverter = convert
     }
     /** 主にFFmpeg Converterの初期化時に最初に置かれるプリセット一覧です。 */
     static presetSample = [

@@ -10,8 +10,13 @@
         "skipLibCheck": true,
         "noImplicitAny": true,
         "sourceMap": true,
-        "strictNullChecks": true,
-        "baseUrl": "./"
+        "strictNullChecks": true
     },
-    "include": ["main.ts", "ts-library"]
+    "include": [
+        "main.ts",
+        "ts-library/*"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
 }

@@ -1,6 +1,32 @@
-//@ts-check
+import { wait } from "./handyTool.js"
 
-import { assertions, wait } from "./handyTool.js"
+interface windows {
+    element: HTMLElement
+    /** 縦の位置 */
+    top: number
+    /** 横の位置 */
+    left: number
+    /** 縦の大きさ */
+    topSize: number
+    /** 横の大きさ */
+    leftSize: number
+    /** フルスクリーン状態 */
+    full: {
+        /** フルスクリーンかどうか */
+        is: boolean
+        /** フルスクリーン前の縦座標の状態 */
+        top: number
+        /** フルスクリーン前の横座標の状態 */
+        left: number
+        topSize: number
+        leftSize: number
+    }
+    depth: number
+    option?: {
+        front?: boolean
+        background?: boolean
+    }
+}
 
 /**
  * # Window System
@@ -8,11 +34,7 @@ import { assertions, wait } from "./handyTool.js"
  * ウィンドウのサイズや位置、重ね合わせなどの処理を管理します。マウス入力などの処理が内蔵されているため、ほぼ自動で管理されます。
  */
 export class windowSystem {
-    /**
-     * 
-     * @param {HTMLElement} body 
-     */
-    constructor(body) {
+    constructor(body: HTMLElement) {
         // マウスイベントです
         addEventListener("pointerdown", e => this.#mousedown(e))
         addEventListener("pointermove", e => this.#mousemove(e))
@@ -21,9 +43,8 @@ export class windowSystem {
     }
     /**
      * document.bodyにあたるものです。
-     * @type {HTMLElement}
      */
-    #body
+    #body: HTMLElement
     /**
      * @typedef {object} windows ウィンドウと見なした、クラスで作成したElementを保管しています。
      * @prop {HTMLElement} element
@@ -46,34 +67,43 @@ export class windowSystem {
      * ウィンドウと見なした、クラスで作成したElementを保管しています。
      * @type {{[name: string]: windows | null}}
      */
-    #windows = {}
+    #windows: {[name: string]: windows | undefined} = {}
     /**
      * 移動中のウィンドウのid(識別名)やウィンドウバーからマウスの間のズレを記録します。
-     * @type {{
-     * name: string // IDを記録します。
-     * top: number // マウスの間のズレ(縦)
-     * left: number // マウスの間のズレ(横)
-    * } | null}
      */
-    #moveingWindow = null
+    #moveingWindow: {
+        /** IDを記録します。 */
+        name: string
+        /** マウスの間のズレ(縦) */
+        top: number
+        /** マウスの間のズレ(横) */
+        left: number
+    } | undefined
     /**
      * サイズ変更中のウィンドウのid(識別名)や変更中の箇所、その位置等を記録します。
-     * @type {{
-     * name: string // ウィンドウの名前
-     * type: string // 選択されたresizeのID名
-     * top: number // 移動前の状態
-     * left: number // 移動前の状態
-     * topSize: number // 移動前の状態
-     * leftSize: number // 移動前の状態
-     * clientTop: number // マウスの間のズレ
-     * clientLeft: number // マウスの間のズレ
-     * clientX: number
-     * clientY: number
-     * windowBarLeftLength: number
-     * windowBarRightLength: number
-     * } | null}
      */
-    #resizeingWindow = null
+    #resizeingWindow: {
+        /** ウィンドウの名前 */
+        name: string
+        /** 選択されたresizeのID名 */
+        type: string
+        /** 移動前の状態 */
+        top: number
+        /** 移動前の状態 */
+        left: number
+        /** 移動前の状態 */
+        topSize: number
+        /** 移動前の状態 */
+        leftSize: number
+        /** マウスの間のズレ */
+        clientTop: number
+        /** マウスの間のズレ */
+        clientLeft: number
+        clientX: number
+        clientY: number
+        windowBarLeftLength: number
+        windowBarRightLength: number
+    } | undefined
     /**
      * ウィンドウの初期位置を記録します。ウィンドウが複数起動した際、ばらばらに配置されるようになります。
      */
@@ -83,19 +113,16 @@ export class windowSystem {
     }
     /**
      * 最大化ボタンを最初から押しているかどうかの判定をします。
-     * @type {string | null}
      */
-    #fullscreenBtn = null
+    #fullscreenBtn: string | undefined
     /**
      * 最小化ボタンを最初から押しているかどうかの判定をします。
-     * @type {string | null}
      */
-    #miniwindowBtn = null
+    #miniwindowBtn: string | undefined
     /**
      * 閉じるボタンを最初から押しているかどうかの判定をします。
-     * @type {string | null}
      */
-    #closeBtn = null
+    #closeBtn: string | undefined
     /**
      * ウィンドウサイズ変更要素のID(ClassName)
      */
@@ -198,14 +225,10 @@ export class windowSystem {
      * 機能と独特のデータが多いため、クラス化しました。
      */
     #windowDepthManage = new class {
-        /**
-         * @param {windowSystem} windowSystem 
-         */
-        constructor(windowSystem) {
+        constructor(windowSystem: windowSystem) {
             this.#windowSystem = windowSystem
         }
-        /** @type {{[num: string]: string} | null} */
-        #depthListTemp = null
+        #depthListTemp: {[num: string]: string} | undefined
         depthList() {
             /**
              * 奥行順にidを並べ替えています。
@@ -233,18 +256,16 @@ export class windowSystem {
         }
         /**
          * depthListからidを元に現状の奥行を取得します。
-         * @param {string} id 
          */
-        getDepth(id) {
+        getDepth(id: string) {
             this.windowDepthChange()
             if (this.#depthListTemp) return this.#getDepth(this.#depthListTemp, id)
         }
         /**
          * ウィンドウが最も手前にあるものをIDとして返します。
-         * @param {{[num: string]: string}} depthList
          * @returns 最も手前だったウィンドウのIDと番号を出力します。
          */
-        #frontID(depthList) {
+        #frontID(depthList: { [num: string]: string }) {
             let num = 0 // 最も手前のウィンドウの値を保存していく
             const depths = Object.keys(depthList)
 
@@ -257,18 +278,15 @@ export class windowSystem {
         }
         /**
          * depthListからidを元に現状の奥行を取得します。
-         * @param {{[num: string]: string}} depthList
-         * @param {string} id 
          */
-        #getDepth(depthList, id) {
+        #getDepth(depthList: {[num: string]: string}, id: string) {
             const depthLen = Object.keys(depthList)
             for (let i = 0; i !== depthLen.length; i++) if (depthList[depthLen[i]] === id) return depthLen[i]
         }
         /**
          * depthList内の数字と数字の間に間隔がある場合、詰めます
-         * @param {{[num: string]: string}} depthList
          */
-        #packmove(depthList) {
+        #packmove(depthList: {[num: string]: string}) {
             const depths = Object.keys(depthList)
             const length = depths.length
             for (let i = 0; i !== length; i++) {
@@ -278,15 +296,12 @@ export class windowSystem {
                 }
             }
         }
-        /**
-         * @type {windowSystem}
-         */
-        #windowSystem
+        #windowSystem: windowSystem
         /**
          * ウィンドウの重ね合わせを管理します。
-         * @param {string} [id] 手前にしたいウィンドウを選択します。
+         * @param id 手前にしたいウィンドウを選択します。
          */
-        async windowDepthChange(id) {
+        async windowDepthChange(id?: string) {
             const depthList = this.depthList()
             this.#depthListTemp = depthList
             if (id) {
@@ -309,23 +324,22 @@ export class windowSystem {
     }(this)
     /**
      * 触れた要素の親要素がここで管理されているウィンドウであるかどうかを自動で確認します。
-     * @param {HTMLElement} e 触れられた要素を入力
-     * @param {boolean} [only] マウスで選択された要素が別のWindow System管理のウィンドウでないことを保障
+     * @param e 触れられた要素を入力
+     * @param only マウスで選択された要素が別のWindow System管理のウィンドウでないことを保障
      * @returns 
      */
-    #clickWindowId(e, only) {
+    #clickWindowId(e: HTMLElement, only?: boolean) {
         /**
          * Elementの仮置き場です。
-         * @type {HTMLElement | null}
          */
-        let elementTemp = e
+        let elementTemp: HTMLElement | undefined = e
 
         // 主にresizewindowゾーンをクリックされている場合に利用
-        let id = null
+        let id: string | undefined
         if (e.parentElement?.parentElement?.classList.contains("window-master"))
-            id = assertions.HTMLInputElement(e.parentElement.parentElement.getElementsByClassName("window-body")[0])?.id
+            id = (e.parentElement.parentElement.getElementsByClassName("window-body")[0] as HTMLElement)?.id
         else if (e.parentElement?.parentElement?.parentElement?.classList.contains("window-master"))
-            id = assertions.HTMLInputElement(e.parentElement.parentElement.parentElement.getElementsByClassName("window-body")[0])?.id
+            id = (e.parentElement.parentElement.parentElement.getElementsByClassName("window-body")[0] as HTMLElement)?.id
         if (id && this.#windows[id]) return id // 上のifに一致したらリターン
 
         while (elementTemp) if (elementTemp.parentElement) if (
@@ -335,14 +349,13 @@ export class windowSystem {
         ) {
             return elementTemp.parentElement.id
         } else elementTemp = elementTemp.parentElement
-        else elementTemp = null
-        return null
+        else elementTemp = undefined
+        return
     }
     /**
      * マウスのクリックイベントの受付です。
-     * @param {MouseEvent} e 
      */
-    async #mousedown(e) {
+    async #mousedown(e: MouseEvent) {
         let doubleClick = (() => {
             const nowTime = Date.now()
             if (nowTime - this.#clickTime < 200) {
@@ -353,19 +366,19 @@ export class windowSystem {
         })()
         // ウィンドウドラッグ処理
         const target = (() => { // タイトルバーのクリック範囲を歪ませます。
-            const target = assertions.HTMLElement(e.target)
+            const target = e.target as HTMLElement
             if (target) {
                 if (target.classList.contains("window-bar-left")) {
-                    return assertions.HTMLElement(target.parentElement)
+                    return target.parentElement as HTMLElement
                 }
                 if (target.classList.contains("window-title")) {
-                    return assertions.HTMLElement(target.parentElement?.parentElement)
+                    return target.parentElement?.parentElement as HTMLElement
                 }
             }
             return target
         })()
         if (target) {
-            const tar = assertions.HTMLElement(target)
+            const tar = target as HTMLElement
             if (tar) {
                 const clickWindowId = this.#clickWindowId(tar)
                 const clickWindowIdOnly = this.#clickWindowId(tar, true)
@@ -394,8 +407,8 @@ export class windowSystem {
                     const windowSizegenre = Object.keys(this.#windowSizeID)
                     const type = (() => {
                         for (let i = 0; i !== windowSizegenre.length; i++)
-                            if (target.classList.contains(this.#windowSizeID[windowSizegenre[i]])) 
-                            return this.#windowSizeID[windowSizegenre[i]]
+                            if (target.classList.contains(this.#windowSizeID[windowSizegenre[i]]))
+                                return this.#windowSizeID[windowSizegenre[i]]
                         return null
                     })()
                     if (type) {
@@ -532,10 +545,10 @@ export class windowSystem {
         } else if (
             target?.classList.contains("window-close")
             && target.parentElement?.parentElement?.parentElement?.classList.contains("window-body")
-            ) {
-                const id = target.parentElement.parentElement.parentElement.id
-                await this.windowClose(id)
-            }
+        ) {
+            const id = target.parentElement.parentElement.parentElement.id
+            await this.windowClose(id)
+        }
         this.#miniwindowBtn = null // 最小化ボタンをリセット
         this.#closeBtn = null // 閉じるボタンをリセット
         this.#fullscreenBtn = null // フルスクリーンボタンをリセット
@@ -795,7 +808,7 @@ export class windowSystem {
             if (option.title) title.innerText = option.title
             if (option.layout) {
                 if (option.layout.center) {
-                    
+
                 }
             }
         }

@@ -1,9 +1,9 @@
 import { discordRealTimeData } from "./discord-bot.js"
 import expressd from "./expressd.js"
-import youtubeDownloader from "./youtubeDownloader.js"
+import youTubeDownloader from "./youtubeDownloader.js"
 import handyTool from "./handyTool.js"
 import dataIO from "./dataIO.js"
-import { consoleUIPrograms } from "./cuiIO.js"
+import cuiIO from "./cuiIO.js"
 import ffmpegConverter from "./ffmpegConverter.js"
 
 /**
@@ -19,10 +19,8 @@ export namespace vpManageClass {
             [botName: string]: discordRealTimeData
         }
         expressd?: expressd.expressd
-        cuiIO?: {
-            funcSelect?: consoleUIPrograms.funcSelect
-        }
-        youtubedl?: youtubeDownloader
+        cuiIO?: cuiIO
+        youtubedl?: youTubeDownloader.youTubeDownloader
         dataIO?: dataIO.ny
         ffmpegConverter?: ffmpegConverter
     }
@@ -74,7 +72,7 @@ export namespace vpManageClass {
         }
         if (shareData.expressd) {
             message({ type: "expressdExit", status: "start" })
-            if (shareData.expressd.app && shareData.expressd.server) {
+            if (shareData.expressd.server) {
                 shareData.expressd.server.close()
             }
             message({ type: "expressdExit", status: "end" })

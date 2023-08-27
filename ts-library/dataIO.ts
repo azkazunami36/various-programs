@@ -163,10 +163,6 @@ export namespace dataIO {
             extension?: string
         }): Promise<string | undefined> {
             if (!this.#operation) return
-            let extension: string | undefined
-            if (option) {
-                if (option.extension) extension = option.extension
-            }
             /**
              * 現在いる階層
              */
@@ -188,9 +184,10 @@ export namespace dataIO {
             }
             if (!obj[name]) obj[name] = { // ファイルが存在しない場合
                 attribute: { directory: false }, //ファイルとして作成
-                pass: this.#folderPass + "/" + name + "-" + Date.now() + "-" + pass.join("") + "-" + Math.floor(Math.random() * 99) + (extension ? "." + extension : ""), // 新規パスを生成
+                pass: this.#folderPass + "/" + name + "-" + Date.now() + "-" + pass.join("") + "-" + Math.floor(Math.random() * 99) + (option?.extension ? "." + option.extension : ""), // 新規パスを生成
                 data: {}
             }
+            await this.save()
             return obj[name].pass
         }
         /**
@@ -272,15 +269,15 @@ export namespace dataIO {
         }
     }
     /**
-     * # dataIO
-     * pathCache.jsonが自動でvarious-programsフォルダ内に作成されます。
+     * dataIOのメインクラスです。
      */
-    export class ny {
+    export class ny extends EventEmitter {
         /**
          * dataIOが利用できるかのステータスの状況
          */
         #dataIOstatus = false
         constructor() {
+            super();
             (async () => {
                 // パスが保存されたjsonがあるかどうかで、初期化する
                 if (!await sfs.exsits("pathCache.json")) {
@@ -299,10 +296,10 @@ export namespace dataIO {
          * クラス定義時に非同期関数をawaitで待機できるようにしたもの
          * @returns 
          */
-        static async initer() {
+        static async initer(shareData: vpManageClass.shareData) {
             const dataIO = new ny()
             await new Promise<void>(resolve => dataIO.on("ready", () => resolve()))
-            return dataIO
+            shareData.dataIO = dataIO
         }
         /**
          * dataIOが現在利用できるかどうかを確認できます。
@@ -380,9 +377,8 @@ export namespace dataIO {
                     num: true,
                     upstr: true
                 }) // キーをセット
-                if (!shareData.dataIO) shareData.dataIO = await ny.initer()
                 this.#data.name = name
-                await shareData.dataIO.clientdataiosetting(this, this.#accessKey)
+                if (shareData.dataIO) await shareData.dataIO.clientdataiosetting(this, this.#accessKey)
                 this.emit("ready", undefined)
             })()
         }
@@ -403,7 +399,7 @@ export namespace dataIO {
      */
     export function slashPathStr(dataPath: dataPath) {
         let pathtmp = ""
-        for (let i = 0; i !== dataPath.path.length; i++) pathtmp += dataPath.path[i] + (((i + 1) !== dataPath.path.length) ? "/" : "")
+        for (let i = 0; i !== dataPath.path.length; i++) pathtmp += dataPath.path[i] + "/"
         pathtmp += dataPath.name + (dataPath.extension ? "." + dataPath.extension : "")
         return pathtmp
     }
@@ -418,8 +414,8 @@ export namespace dataIO {
                 if (typeof str === "string") return str
                 else return slashPathStr(str)
             })()
-            const passDeli = (string.match(/:\\/)) ? "\\" : "/" // パス階層「\」「/」かを検知し、適切な文字にする
-            const passArray = string.split(passDeli) // 「/」または「\」で分割
+            const slashReplaceString = string.replaceAll("\\", "/")
+            const passArray = slashReplaceString.split("/") // 「/」で分割
             let passtmp = "" // パスを結合し、検査するための一時置き場
             for (let i = 0; i !== passArray.length; i++) passtmp += passArray[i] + (((i + 1) !== passArray.length) ? "/" : "") // パス結合、配列最後はスラッシュを置かない
             if (await sfs.exsits(passtmp)) return passtmp // この時点でパスが有効ならreturn

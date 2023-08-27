@@ -1,35 +1,57 @@
 import fs from "fs"
+import promises from "fs/promises"
+
+/**
+ * File System Sumwave
+ * プログラムの安定性の向上のために、非同期処理を可能にするために作成されたものです。
+ */
 export namespace sfs {
     /**
-     * fsの関数を非同期関数にしたものです。
-     * @param pass パスを入力します。
-     * @returns 
+     * fsからの型定義
      */
-    export async function exsits(pass: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(pass, err => resolve(err === null)) }) }
+    interface StreamOptions {
+        flags?: string | undefined;
+        encoding?: BufferEncoding | undefined;
+        fd?: number | promises.FileHandle | undefined;
+        mode?: number | undefined;
+        autoClose?: boolean | undefined;
+        /**
+         * @default false
+         */
+        emitClose?: boolean | undefined;
+        start?: number | undefined;
+        highWaterMark?: number | undefined;
+    }
+    /**
+     * fsからの型定義
+     */
+    export interface ReadStreamOptions extends StreamOptions {
+        end?: number | undefined;
+    }
     /**
      * fsの関数を非同期関数にしたものです。
-     * @param pass パスを入力します。
+     * @param path パスを入力します。
      * @returns 
      */
-    export async function mkdir(pass: string): Promise<boolean> { return await new Promise<boolean>(resolve => fs.mkdir(pass, err => resolve(err === null))) }
+    export async function exsits(path: string): Promise<Boolean> { return await new Promise(resolve => { fs.access(path, err => resolve(err === null)) }) }
     /**
      * fsの関数を非同期関数にしたものです。
-     * @param pass パスを入力します。
+     * @param path パスを入力します。
      * @returns 
      */
-    export async function readFile(pass: string): Promise<Buffer> { return await new Promise<Buffer>(resolve => fs.readFile(pass, (err, data) => resolve(data))) }
+    export async function mkdir(path: string): Promise<boolean> { return await new Promise<boolean>(resolve => fs.mkdir(path, err => resolve(err === null))) }
     /**
      * fsの関数を非同期関数にしたものです。
-     * @param pass パスを入力します。
+     * @param path パスを入力します。
+     * @returns 
+     */
+    export async function readFile(path: string): Promise<Buffer> { return await new Promise<Buffer>(resolve => fs.readFile(path, (err, data) => resolve(data))) }
+    /**
+     * fsの関数を非同期関数にしたものです。
+     * @param path パスを入力します。
      * @param data 書き込む文字列を入力します。
      * @returns 
      */
-    export async function writeFile(pass: string, data: string): Promise<void> { return await new Promise<void>(resolve => fs.writeFile(pass, data, () => resolve())) }
-        /**
-     * 半角と全角を区別し、それにあった文字列を算出します。
-     * 半角を1、全角を2文字とします。
-     * @param string 文字列を入力します。
-     * @returns 
-     */
+    export async function writeFile(path: string, data: string): Promise<void> { return await new Promise<void>(resolve => fs.writeFile(path, data, () => resolve())) }
 }
 export default sfs

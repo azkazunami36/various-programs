@@ -4,6 +4,7 @@ import fs from "fs"
 import { EventEmitter } from "events"
 
 import dataIO from "./dataIO.js"
+import vpManageClass from "./vpManageClass.js"
 
 /**
  * # expressd
@@ -27,10 +28,11 @@ export namespace expressd {
      * が、それまではプログラムは全く別になり、同じ操作方法を保証することはないです。
      */
     export class expressd extends EventEmitter {
-        app?: express.Express
+        app: express.Express
         server?: http.Server
         #port = "80"
-        constructor() {
+        shareData: vpManageClass.shareData
+        constructor(shareData: vpManageClass.shareData) {
             super();
             (async () => {
                 this.app = express()
@@ -38,17 +40,19 @@ export namespace expressd {
                 app.get("*", async (req, res) => this.#get(req, res))
                 app.post("*", (req, res) => this.#post(req, res))
                 await new Promise<void>(resolve => this.server = app.listen(this.#port, () => { resolve() }))
+                if (this.server) this.server.on("error", err => { this.emit("error", err) })
                 this.emit("ready", undefined)
+                this.shareData = shareData
             })()
         }
-        static async initer() {
-            const exp = new expressd()
+        static async initer(shareData: vpManageClass.shareData) {
+            const exp = new expressd(shareData)
             await new Promise<void>(resolve => exp.on("ready", () => resolve()))
-            return exp
+            shareData.expressd = exp
         }
         async #get(req: express.Request | http.IncomingMessage, res: express.Response) {
             if (req.url !== undefined) {
-                const url = await dataIO.pathChecker("./ts-library/expressdSrc" + (req.url !== "/") ? req.url : "/index.html")
+                const url = await dataIO.pathChecker(process.cwd() + "/ts-library/expressdSrc" + (req.url !== "/" ? req.url : "/index.html"))
                 if (url) {
                     const contentType = (() => {
                         switch (url.extension) {
@@ -68,7 +72,35 @@ export namespace expressd {
                 }
             }
         }
-        async #post(req: express.Request | http.IncomingMessage, res: express.Response | http.ServerResponse) { }
+        async #post(req: express.Request | http.IncomingMessage, res: express.Response | http.ServerResponse) {
+            const urlSplit = req.url?.split("/")
+            if (urlSplit) {
+                console.log(urlSplit)
+                const reqData: {
+                    [mainName: string]: {
+                        [funcName: string]: {
+                            [name: string]: (() => Promise<string>) | undefined
+                        } | undefined
+                    } | undefined
+                } = {
+                    "API": {
+                        "dataIO": {
+                            "parentFolder": async () => {
+                                this.shareData.dataIO
+                                return ""
+                            }
+                        }
+                    }
+                }
+                const urlOne = reqData[urlSplit[0]]
+                if (!urlOne) { res.end("Not Found"); return }
+                const urlTwo = urlOne[urlSplit[1]]
+                if (!urlTwo) { res.end("Not Found"); return }
+                const urlThree = urlTwo[urlSplit[2]]
+                if (!urlThree) { res.end("Not Found"); return }
+                res.end(await urlThree())
+            }
+        }
     }
     /**
      * 動画や音声をスムーズにクライアントに送信する関数です
