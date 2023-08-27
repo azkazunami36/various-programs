@@ -31,6 +31,7 @@ export class fileNetworkSend {
         else if (num < 0) { this.#port = 0 }
         else { this.#port = num }
     }
+    get port() { return this.#port }
     /**
      * データを受信します。
      * 送信先が送信を開始・終了するまでPromiseは待機します。
