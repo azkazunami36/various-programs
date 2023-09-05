@@ -549,7 +549,6 @@ export namespace dataIO {
          */
         option?: fileListerOption
     ) {
-        console.log(path, option)
         //オプションデータの格納用
         /**
          * フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか
@@ -648,7 +647,6 @@ export namespace dataIO {
                         if (macosInvIgnored && name[0] === "." && name[1] === "_") return false
                         return true // 全てがreturnしない場合true
                     })()) {
-                        console.log(lpass, name)
                         const outPath = await pathChecker(listerSlash(lpass) + "/" + name)
                         if (outPath) {
                             outPath.relativePath = {

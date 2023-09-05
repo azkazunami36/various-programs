@@ -8,7 +8,8 @@ import vpManageClass from "./vpManageClass.js"
 
 /**
  * # expressd
- * GUI操作プログラムです。最も親しみやすいUIと分かりやすい操作方法、様々な状況でも動く柔軟なプログラムを提供します。
+ * GUI操作プログラムです。最も親しみやすいUIと分かりやすい操作方法、様々な状況でも動く柔軟なプログラムを提供します。  
+ * さらに、expressを利用したデータをネットワーク上で送受信する機能を利用することが出来ます。
  */
 export namespace expressd {
     /**
@@ -23,8 +24,8 @@ export namespace expressd {
      * expressdは名前の通りexpressを利用しますが、少し変わった点があります。  
      * それは、cuiIOの上位互換だと言うことです。
      * 
-     * つまり、cuiIOでのプログラムにアクセスする手段のGUI版と言うことです。
-     * そのため、今後cuiIOとguiIOのプログラム内容の同期を行うための、新しい方法を試行錯誤しておきます。
+     * つまり、cuiIOでのプログラムにアクセスする手段のGUI版と言うことです。  
+     * そのため、今後cuiIOとguiIOのプログラム内容の同期を行うための、新しい方法を試行錯誤しておきます。  
      * が、それまではプログラムは全く別になり、同じ操作方法を保証することはないです。
      */
     export class expressd extends EventEmitter {
@@ -75,7 +76,6 @@ export namespace expressd {
         async #post(req: express.Request | http.IncomingMessage, res: express.Response | http.ServerResponse) {
             const urlSplit = req.url?.split("/")
             if (urlSplit) {
-                console.log(urlSplit)
                 const reqData: {
                     [mainName: string]: {
                         [funcName: string]: {

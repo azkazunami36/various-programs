@@ -219,7 +219,6 @@ export namespace consoleUIPrograms {
                     if (this.errorView) console.log(e)
                     stats = false
                 }
-                if (!this.loop) this.loop = true
             } while ( this.loop && !this.end )
             return stats
         }
@@ -771,7 +770,6 @@ export class cuiIO {
                                             newPass: newPath,
                                             preset: convert.data.json.presets[presetChoice - 1]
                                         }])
-                                        console.log("変換が完了しました！")
                                     }
                                 },
                                 "タグを手入力し、詳細な設定を自分で行う": async () => {
@@ -809,7 +807,6 @@ export class cuiIO {
                                             }),
                                             preset: preset
                                         }])
-                                        console.log("変換が完了しました！")
                                     }
                                 },
                                 "複数ファイルを一括変換": async () => {
@@ -855,11 +852,11 @@ export class cuiIO {
                                             const oldPath = await dataIO.pathChecker(fileList[i])
                                             const newPath = await dataIO.pathChecker(afterPath)
                                             const file = fileList[i]
-                                            if (oldPath && newPath && file.relativePath?.relative) {
+                                            if (oldPath && newPath && file.relativePath?.absolute) {
                                                 const reNewPath = dataIO.typeToDataPath({
                                                     name: file.name,
                                                     extension: convert.data.json.presets[presetChoice - 1].ext,
-                                                    path: dataIO.filePathToPath(file.relativePath.relative)
+                                                    path: [...dataIO.filePathToPath(newPath), ...file.relativePath.relative.path]
                                                 })
                                                 if (await sfs.exsits(dataIO.slashPathStr(reNewPath)))
                                                     if (!await booleanIO("保存先に既に同じ名前のファイルがあります。このまま変換すると上書きされますが、よろしいですか？")) continue

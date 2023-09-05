@@ -633,8 +633,10 @@ export class discordBot extends EventEmitter {
         if (this.rtdata.status.logined) return
         const token = this.data.json[this.rtdata.name].token
         if (!token) return
-        await this.rtdata.client.login(token)
-        this.rtdata.status.logined = true
+        try {
+            await this.rtdata.client.login(token)
+            this.rtdata.status.logined = true
+        } catch (e) { }
     }
     async logout() {
         if (!this.rtdata.status) return

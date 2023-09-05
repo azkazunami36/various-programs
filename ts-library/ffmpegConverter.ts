@@ -125,9 +125,10 @@ export class ffmpegConverter extends EventEmitter {
     async #convert() {
         const work = this.#workList.pop()
         if (work) {
-            await new Promise<void>(resolve => {
+            await new Promise<void>((resolve, reject) => {
                 this.#converting = true
                 this.#ffmpeg = ffmpeg(dataIO.slashPathStr(work.oldPass))
+                this.#ffmpeg.on("error", err => { this.emit("error", err); reject() })
                 this.#ffmpeg.addOptions(work.preset.tag)
                 this.#ffmpeg.save(dataIO.slashPathStr(work.newPass))
                 this.#ffmpeg.on("end", () => { this.emit("end", undefined); resolve() })
