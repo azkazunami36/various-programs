@@ -230,8 +230,8 @@ export class discordBot extends EventEmitter {
                 th.emit("interactionCreate", interaction)
             })
             await this.data.save()
+            this.emit("classReady")
         })()
-        this.emit("classReady")
     }
     /**
      * クラスを安定的に初期化します。おすすめです。
@@ -440,11 +440,12 @@ export class discordBot extends EventEmitter {
                                     const embed = new Discord.EmbedBuilder();
                                     const num: number[] = []
                                     for (let i = 0; i !== 2; i++) num.push(Math.floor(Math.random() * 9))
-                                    const ord: { type: string, Num: number }[] = []
-                                    ord.push({ type: "+", Num: num[0] + num[1] })
-                                    ord.push({ type: "-", Num: num[0] - num[1] })
-                                    ord.push({ type: "x", Num: num[0] * num[1] })
-                                    const answer = Math.floor(Math.random() * ord.length - 1)
+                                    const ord: { type: string, Num: number }[] = [
+                                        { type: "+", Num: num[0] + num[1] },
+                                        { type: "-", Num: num[0] - num[1] },
+                                        { type: "x", Num: num[0] * num[1] }
+                                    ]
+                                    const answer = Math.floor(Math.random() * (ord.length - 1))
                                     handyTool.arrayRandom(ord)
                                     embed.setTitle("問題！")
                                     embed.setDescription("下の計算を解くだけで認証が出来ます！")
@@ -464,7 +465,7 @@ export class discordBot extends EventEmitter {
                                         }
                                         components.addComponents(
                                             new Discord.ButtonBuilder()
-                                                .setLabel(String(ord[i].Num))
+                                                .setLabel(String(answer !== i && ord[answer].Num === ord[i].Num ? ord[i].Num + 1 : ord[i].Num))
                                                 .setStyle(Discord.ButtonStyle.Primary)
                                                 .setCustomId(JSON.stringify(data))
                                         )
@@ -513,10 +514,21 @@ export class discordBot extends EventEmitter {
                                             ephemeral: true
                                         })
                                     } catch (e) {
-                                        await interaction.reply({
-                                            content: "認証でエラーが発生してしまいました...\nエラーは管理者が確認し修正します。",
-                                            ephemeral: true
-                                        })
+                                        switch (e.code) {
+                                            case "50013": {
+                                                await interaction.reply({
+                                                    content: "ロールを付与しようとしましたが、不適切なロール管理が原因で付与が出来ませんでした。サーバー管理人にご相談ください。",
+                                                    ephemeral: true
+                                                })
+                                                break
+                                            }
+                                            default: {
+                                                await interaction.reply({
+                                                    content: "認証でエラーが発生してしまいました...\nエラーは管理者が確認し修正します。",
+                                                    ephemeral: true
+                                                })
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -526,20 +538,29 @@ export class discordBot extends EventEmitter {
                                     const member = interaction.guild.members.cache.get(interaction.user.id)
                                     const role = await interaction.guild.roles.fetch(roleGive.roleId)
                                     if (member && role) {
-                                        member.roles.add(role)
+                                        await member.roles.add(role)
                                         await interaction.reply({
                                             content: "ロールを付与しました！",
                                             ephemeral: true
                                         })
                                     }
-                                } else {
                                 }
-                            }
-                            catch (e) {
-                                await interaction.reply({
-                                    content: "認証でエラーが発生してしまいました...\nエラーは管理者が確認し修正します。",
-                                    ephemeral: true
-                                })
+                            } catch (e) {
+                                switch (e.message) {
+                                    case "Missing Permissions": {
+                                        await interaction.reply({
+                                            content: "ロールを付与しようとしましたが、不適切なロール管理が原因で付与が出来ませんでした。サーバー管理人にご相談ください。",
+                                            ephemeral: true
+                                        })
+                                        break
+                                    }
+                                    default: {
+                                        await interaction.reply({
+                                            content: "認証でエラーが発生してしまいました...\nエラーは管理者が確認し修正します。",
+                                            ephemeral: true
+                                        })
+                                    }
+                                }
                             }
                         }
                     }
