@@ -26,4 +26,4 @@ const shareData: vpManageClass.shareData = {};
             process.exit(1)
         }
     }
-})
+})()

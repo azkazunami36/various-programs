@@ -290,7 +290,7 @@ export namespace dataIO {
                 if (!sfs.exsits(dataIOjsonPath + "/dataIO.json")) sfs.writeFile(dataIOjsonPath + "/dataIO.json", JSON.stringify({}))
                 this.#dataIOstatus = true // 利用可能としてマークする
                 this.emit("ready", undefined)
-            })
+            })()
         }
         /**
          * クラス定義時に非同期関数をawaitで待機できるようにしたもの

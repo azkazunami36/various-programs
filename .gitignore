@@ -10,6 +10,7 @@
 /test/cs-lang/bin/*
 .DS_Store
 /passCache.json
+/pathCache.json
 ./dataPass.json
 /cache
 /ts-library/**/*.js
