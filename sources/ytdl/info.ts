@@ -6,6 +6,6 @@ xhr.onreadystatechange = async () => {
     if (xhr.readyState === 4 && xhr.status === 200) {
         const videoIds = JSON.parse(xhr.responseText)
         const count = document.getElementById("count")
-        count.innerHTML = videoIds.length
+        if (count) count.innerHTML = videoIds.length
     }
 }

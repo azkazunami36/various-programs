@@ -1,10 +1,7 @@
 /**
  * httpリクエストできる関数
- * @param {string} request 
- * @param {any} send 
- * @returns 
  */
-async function httpDataRequest(request, send) {
+async function httpDataRequest(request: string, send: any) {
     return new Promise(resolve => {
         const xhr = new XMLHttpRequest()
         xhr.open("POST", "http://" + location.hostname + ":" + location.port + "/" + request)
@@ -13,65 +10,82 @@ async function httpDataRequest(request, send) {
         xhr.onreadystatechange = async () => { if (xhr.readyState === 4 && xhr.status === 200) resolve(xhr.responseText) } //レスポンスを返す
     })
 }
-const statusData = {
-    videoLoaded: 0, //表示済みの動画をカウント
+const statusData: {
+    /** 表示済みの動画をカウント */
+    videoLoaded: number
+    /** 取得したVideoID */
+    videoIds: string[]
+    /** インデックスデータを格納 */
+    ytIndex: { [videoId: string]: { title: string, author: { id: string, name: string } } }
+    /** 読み込み中かどうか */
+    videoloading: boolean
+    /** 横に並べる動画の数 */
+    videoRow: number
+    popupVideoRow: number
+    /** ブラウザの倍率 */
+    ratio: number
+    /** 最大のサムネイルの表示大きさ。320でYouTube */
+    thumbnailWidth: number
+} = {
+    videoLoaded: 0,
     /**
-     * @type {string[]}
+     * @type {}
      */
-    videoIds: [], //取得したVideoID
-    /**
-     * @type {[{title: string, author: {id: string, name: string}}]}
-     */
-    ytIndex: {}, //インデックスデータを格納
-    videoloading: false, //読み込み中かどうか
-    videoRow: 0, //横に並べる動画の数
+    videoIds: [],
+    ytIndex: {},
+    videoloading: false,
+    videoRow: 0,
     popupVideoRow: 0,
-    ratio: 1, //ブラウザの倍率
-    thumbnailWidth: 320 //最大のサムネイルの表示大きさ。320でYouTube
+    ratio: 1,
+    thumbnailWidth: 320
 }
 /**
  * 待機
- * @param {number} time 
  */
-async function wait(time) { await new Promise(resolve => setTimeout(resolve, time)) }
+async function wait(time: number) { await new Promise(resolve => setTimeout(resolve, time)) }
 /**
  * 最もわかりやすく言うと、一番下ならtrueを返すという意味です。  
  * １: cHeight(画面の高さ)+動画の並ぶ数x100した数  
  * ２: 一番下から数えた数  
  * この２が１より小さいとなった場合、trueが返されます。
  */
-async function ifScrollBottom() {
+function ifScrollBottom() {
     const videoList = document.getElementById("videoList")
-    const sHeight = videoList.scrollHeight //要素の高さ
-    const cHeight = videoList.clientHeight //クライアントに映ってる要素の高さ
-    const sTop = videoList.scrollTop //スクロールされている場所
-    const cBottom = cHeight + sTop //下を基準にするため
-    const sBottom = sHeight - cBottom //下から数えたスクロールされている場所
-    return statusData["videoRow"] * 400 + cHeight > sBottom
+    if (videoList) {
+        const sHeight = videoList.scrollHeight //要素の高さ
+        const cHeight = videoList.clientHeight //クライアントに映ってる要素の高さ
+        const sTop = videoList.scrollTop //スクロールされている場所
+        const cBottom = cHeight + sTop //下を基準にするため
+        const sBottom = sHeight - cBottom //下から数えたスクロールされている場所
+        return statusData["videoRow"] * 400 + cHeight > sBottom
+    } else return false
 }
 /**
  * 倍率状態を更新します。
  */
-async function updateRatio() { statusData["ratio"] = (window.devicePixelRatio || 1).toFixed(2) }
+function updateRatio() { statusData["ratio"] = Number((window.devicePixelRatio || 1).toFixed(2)) }
 /**
  * 動画の並ぶ数を更新します。
  */
 async function updateRow() {
-    const videonum = (document.getElementById("VideoListCenter").clientWidth / statusData["thumbnailWidth"]).toFixed()
-    if (videonum != statusData["videoRow"]) {
-        const videoLinkStyle = await getRuleBySelector(".VideoLink")
-        statusData["videoRow"] = videonum
-        //スタイルに反映
-        videoLinkStyle.style.width = "calc(100% / " + String(videonum) + ")"
+    const VideoListCenter = document.getElementById("VideoListCenter")
+    if (VideoListCenter) {
+        const videonum = Number((VideoListCenter.clientWidth / statusData["thumbnailWidth"]).toFixed())
+        if (videonum !== statusData["videoRow"]) {
+            const videoLinkStyle = await getRuleBySelector(".VideoLink")
+            statusData["videoRow"] = videonum
+            //スタイルに反映
+            if (videoLinkStyle) videoLinkStyle.style.width = "calc(100% / " + String(videonum) + ")"
+        }
+        const popupvideonum = (document.getElementById("infoVideos").clientWidth / 250).toFixed()
+        if (popupvideonum != statusData["popupVideoRow"]) {
+            const popupvideoLinkStyle = await getRuleBySelector(".popupVideoLink")
+            statusData["popupVideoRow"] = popupvideonum
+            //スタイルに反映
+            popupvideoLinkStyle.style.width = "calc(100% / " + String(videonum) + ")"
+        }
+        if (ifScrollBottom()) videoLoad() //サイズ変更時に一番下まで移動してしまったら読み込む
     }
-    const popupvideonum = (document.getElementById("infoVideos").clientWidth / 250).toFixed()
-    if (popupvideonum != statusData["popupVideoRow"]) {
-        const popupvideoLinkStyle = await getRuleBySelector(".popupVideoLink")
-        statusData["popupVideoRow"] = popupvideonum
-        //スタイルに反映
-        popupvideoLinkStyle.style.width = "calc(100% / " + String(videonum) + ")"
-    }
-    if (await ifScrollBottom()) videoLoad() //サイズ変更時に一番下まで移動してしまったら読み込む
 }
 async function updateState() {
     updateRatio()
@@ -334,7 +348,7 @@ class createVT {
     }
 }
 //ネットから見つけたやぁつぅ
-async function getRuleBySelector(sele) {
+async function getRuleBySelector(sele: string) {
     const styleSheets = document.styleSheets; //全てのcssを取得する
 
     for (let i = 0; i < styleSheets.length; i++) { //cssの数だけ
