@@ -12,9 +12,9 @@
 /passCache.json
 ./dataPass.json
 /cache
-/ts-library/*.js
-/ts-library/*.js.map
-/ts-library/*.d.ts
+/ts-library/**/*.js
+/ts-library/**/*.js.map
+/ts-library/**/*.d.ts
 /main.js
 /main.js.map
 /main.d.ts

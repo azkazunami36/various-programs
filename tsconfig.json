@@ -14,7 +14,7 @@
     },
     "include": [
         "main.ts",
-        "ts-library/*"
+        "ts-library/**/*.ts"
     ],
     "exclude": [
         "node_modules"
