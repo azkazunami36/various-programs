@@ -82,7 +82,7 @@ export namespace vpManageClass {
             message({type: "wait", status: "start"})
             await handyTool.wait(5000)
             message({type: "wait", status: "end"})
-            process.exit(0)
+            process.exit(1)
         } else {
             if (shareData.cuiIO && shareData.cuiIO.funcSelect) shareData.cuiIO.funcSelect.end = true
             message({type: "exited", status: "end"})
