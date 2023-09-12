@@ -524,7 +524,7 @@ export class cuiIO {
                 if (!invFileIgnore) {
                     listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
                 }
-                const fileList = await dataIO.fileLister(beforePass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFIleIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
+                const fileList = await dataIO.fileLister(beforePass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFileIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
                 if (!fileList) {
                     console.log("ファイルの取得ができなかったようです。")
                     return
@@ -823,9 +823,9 @@ export class cuiIO {
                                     const option: dataIO.fileListerOption = {
                                         contain: await booleanIO("フォルダ内にあるフォルダも変換に含めますか？yで同意します。"),
                                         extensionFilter: ["mp4", "mov", "mkv", "avi", "m4v", "mts", "mp3", "m4a", "wav", "opus", "caf", "aif", "aiff", "m4r", "alac", "flac", "3gp", "3g2", "webm", "aac", "hevc"],
-                                        invFIleIgnored: await booleanIO("最初に「.」が付くファイルを省略しますか？")
+                                        invFileIgnored: await booleanIO("最初に「.」が付くファイルを省略しますか？")
                                     }
-                                    if (!option.invFIleIgnored) option.macosInvIgnored = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
+                                    if (!option.invFileIgnored) option.macosInvIgnored = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
                                     const fileList = await dataIO.fileLister(beforePass, option)
                                     const presetChoice = await choice((() => {
                                         let presetNames: string[] = []
@@ -1165,7 +1165,7 @@ namespace getFunction {
         const folderPath = await dataIO.pathChecker(await question("フォルダを入力してください。"))
         if (!folderPath) return console.log("フォルダが見つかりませんでした。")
         const dotignore = await booleanIO("「.」から始まるファイルを省略しますか？")
-        const list = await dataIO.fileLister(folderPath, { invFIleIgnored: dotignore })
+        const list = await dataIO.fileLister(folderPath, { invFileIgnored: dotignore })
         let text = ""
         for (let i = 0; i !== list.length; i++) text += list[i].name + "\n"
         const savePath = await dataIO.pathChecker(await question("テキストの保存先フォルダを入力してください。"))
