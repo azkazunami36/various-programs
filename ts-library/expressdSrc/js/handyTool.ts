@@ -22,7 +22,7 @@ interface APISendReturns {
     DiscordBot: { type: "DiscordBot" }
     FFmpegConverter: { type: "FFmpegConverter" }
 }
-export async function APISend<K extends keyof APISendReturns>(request: K, send): Promise<APISendReturns[K]> {
+export async function APISend<K extends keyof APISendReturns>(request: K, send: string): Promise<APISendReturns[K]> {
     let sa = ""
     return sa as any
 }

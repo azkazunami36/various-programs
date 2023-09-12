@@ -67,7 +67,7 @@ export class windowSystem {
      * ウィンドウと見なした、クラスで作成したElementを保管しています。
      * @type {{[name: string]: windows | null}}
      */
-    #windows: {[name: string]: windows | undefined} = {}
+    #windows: { [name: string]: windows | undefined } = {}
     /**
      * 移動中のウィンドウのid(識別名)やウィンドウバーからマウスの間のズレを記録します。
      */
@@ -126,7 +126,7 @@ export class windowSystem {
     /**
      * ウィンドウサイズ変更要素のID(ClassName)
      */
-    #windowSizeID = {
+    #windowSizeID: { [x: string]: string } = {
         /**
          * 中央のウィンドウサイズ変更ID
          * 上側
@@ -227,13 +227,12 @@ export class windowSystem {
         constructor(windowSystem: windowSystem) {
             this.#windowSystem = windowSystem
         }
-        #depthListTemp: {[num: string]: string} | undefined
+        #depthListTemp: { [num: string]: string } | undefined
         depthList() {
             /**
              * 奥行順にidを並べ替えています。
-             * @type {{[num: string]: string}}
              */
-            const depthList = {}
+            const depthList: { [num: string]: string } = {}
             const ids = Object.keys(this.#windowSystem.#windows)
             for (let i = 0; i !== ids.length; i++) {
                 const window = this.#windowSystem.#windows[ids[i]]
@@ -278,14 +277,14 @@ export class windowSystem {
         /**
          * depthListからidを元に現状の奥行を取得します。
          */
-        #getDepth(depthList: {[num: string]: string}, id: string) {
+        #getDepth(depthList: { [num: string]: string }, id: string) {
             const depthLen = Object.keys(depthList)
             for (let i = 0; i !== depthLen.length; i++) if (depthList[depthLen[i]] === id) return depthLen[i]
         }
         /**
          * depthList内の数字と数字の間に間隔がある場合、詰めます
          */
-        #packmove(depthList: {[num: string]: string}) {
+        #packmove(depthList: { [num: string]: string }) {
             const depths = Object.keys(depthList)
             const length = depths.length
             for (let i = 0; i !== length; i++) {
@@ -440,9 +439,8 @@ export class windowSystem {
     }
     /**
      * マウスの移動イベントの受付です。
-     * @param {MouseEvent} e 
      */
-    async #mousemove(e) {
+    async #mousemove(e: MouseEvent) {
         this.#clickTime = 0
         if (this.#moveingWindow) {
             const stat = this.#windows[this.#moveingWindow.name]
