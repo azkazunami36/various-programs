@@ -223,8 +223,7 @@ namespace youTubeDownloader {
                     const e = new ReferenceError()
                     e.message = "dataIOの準備ができませんでした。"
                     e.name = "YouTube Downloader"
-                    this.emit("error", e)
-                    return
+                    throw e
                 }
                 this.data = data
                 this.emit("ready", undefined)
@@ -245,27 +244,25 @@ namespace youTubeDownloader {
         async playSourceGet(str: string, type: "videoonly" | "audioonly") {
             const videoId = await this.getVideoId(str)
             if (!videoId) return
-            if (!this.data) {
+            if (!this.data) { // dataIOが初期化されていない場合リターン
                 const e = new ReferenceError()
                 e.message = "dataIOの準備ができませんでした。"
                 e.name = "YouTube Downloader"
-                this.emit("error", e)
-                return
-            } // dataIOが初期化されていない場合リターン
+                throw e
+            }
             const youtubedl = ytdl(videoId, { filter: type, quality: "highest" }) //ytdlに指定
             const pass = await this.data.passGet(["youtubeSource", "temp", videoId], type) // 保存パスを指定
             if (!pass) { // パスが存在しない場合リターン
                 const error = new ReferenceError()
                 error.message = "dataIOの疑似パスの取得に失敗しました。"
                 error.name = "YouTube Downloader"
-                this.emit("error", error)
-                return
+                throw error
             }
-            await new Promise<void>((resolve, reject) => {
+            await new Promise<void>(async (resolve, reject) => {
                 const stream = fs.createWriteStream(pass) // パス先に書き込みストリームを作成
                 stream.on("error", err => {
                     this.emit("error", err)
-                    reject()
+                    reject(err)
                 })
                 youtubedl.pipe(stream) // ダウンロードを開始
                 youtubedl.on("progress", (chunkLength, downloaded, total) => { //進行状況を作成・保存
@@ -273,8 +270,7 @@ namespace youTubeDownloader {
                         const e = new ReferenceError()
                         e.message = "dataIOの準備ができませんでした。"
                         e.name = "YouTube Downloader"
-                        this.emit("error", e)
-                        return
+                        throw e
                     }
                     if (!this.data.json.progress) this.data.json.progress = {}
                     if (!this.data.json.progress[videoId]) this.data.json.progress[videoId] = {}
@@ -292,9 +288,7 @@ namespace youTubeDownloader {
             if (!this.data.json.progress) this.data.json.progress = {} // 進行状況が空の場合作成
             this.data.json.progress[videoId].status = "downloaded" // ダウンロード済みとする
             async function ffprobe(pass: string): Promise<ffmpeg.FfprobeData> { // FFprobeの関数
-                return await new Promise(resolve => {
-                    ffmpeg(pass).ffprobe((err, data) => { resolve(data) })
-                })
+                return await new Promise(resolve => ffmpeg(pass).ffprobe((err, data) => { resolve(data) }))
             }
             const data = await ffprobe(pass) // FFprobeで情報を入手
             const video = data.streams[0]
