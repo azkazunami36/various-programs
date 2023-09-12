@@ -362,9 +362,7 @@ export namespace dataIO {
      * 名前、設定にアクセスすることができ、基本クラスの内容を書き換えることは避けてください。
      */
     export class dataIOClient extends EventEmitter {
-        /**
-         * クラス内の内容を書き換えるために利用される文字列です。特定の関数に入力し一致することで書き換えが可能になります。
-         */
+        /** クラス内の内容を書き換えるために利用される文字列です。特定の関数に入力し一致することで書き換えが可能になります。 */
         #accessKey: string
         #data: {
             name?: string
@@ -392,23 +390,15 @@ export namespace dataIO {
             return
         }
     }
-    /**
-     * 文字列配列を元にスラッシュ付きのパス型に変換します。
-     * @param passArray 文字列配列を入力します。
-     * @returns 
-     */
-    export function slashPathStr(dataPath: dataPath) {
+    /** 文字列配列を元にスラッシュ付きのパス型に変換します。 */
+    export function slashPathStr(/** 文字列配列を入力します。 */dataPath: dataPath) {
         let pathtmp = ""
         for (let i = 0; i !== dataPath.path.length; i++) pathtmp += dataPath.path[i] + "/" 
         pathtmp += dataPath.name + (dataPath.extension ? "." + dataPath.extension : "")
         return pathtmp
     }
-    /**
-     * 有効なパスかをチェックします。そして、dataIO用のパスデータに変換します。
-     * @param string 文字列を入力します。
-     * @returns 
-     */
-    export async function pathChecker(str: string | dataPath): Promise<dataPath | undefined> {
+    /** 有効なパスかをチェックします。そして、dataIO用のパスデータに変換します。 */
+    export async function pathChecker(/** 文字列を入力します。 */str: string | dataPath): Promise<dataPath | undefined> {
         const path = await (async () => {
             const string = (() => {
                 if (typeof str === "string") return str
@@ -446,30 +436,15 @@ export namespace dataIO {
             path: pathArray
         })
     }
-    /**
-     * dataPath型をパス配列に変換します。以前のdataIO用型ですが、dataPath.pathに置き換える等の変更が必要でない限り利用しないでください。
-     * @param path dataPathを入力
-     * @returns 
-     */
+    /** dataPath型をパス配列に変換します。以前のdataIO用型ですが、dataPath.pathに置き換える等の変更が必要でない限り利用しないでください。 */
     export function filePathToPath(path: dataPath | dataRelativePath) { return [...path.path, path.name + (path.extension ? "." + path.extension : "")] }
-    /**
-     * dataPath型にします。内部の形式は殆ど変わりませんが、コーディングの精度が上がります。
-     * @param path 
-     * @returns 
-     */
+    /** dataPath型にします。内部の形式は殆ど変わりませんが、コーディングの精度が上がります。 */
     export function typeToDataPath(path: dataPath | {
-        /**
-         * 目的のファイルの名前です。
-         * 拡張子は含まれません。
-         */
+        /** 目的のファイルの名前です。 拡張子は含まれません。 */
         name: string
-        /**
-         * 目的のファイルの拡張子です。存在しない場合はundefinedです。
-         */
+        /*** 目的のファイルの拡張子です。存在しない場合はundefinedです。 */
         extension?: string
-        /**
-         * 目的のファイルまでのパスです。
-         */
+        /** 目的のファイルまでのパスです。 */
         path: string[]
         /**
          * 必要に応じて絶対パスと相対パスを配置します。
@@ -477,13 +452,9 @@ export namespace dataIO {
          * 主にFile Listerに利用されます。
          */
         relativePath?: {
-            /**
-             * 絶対パス
-             */
+            /** 絶対パス */
             absolute: dataPath
-            /**
-             * 相対パス
-             */
+            /** 相対パス */
             relative: dataRelativePath
         }
         absolute?: boolean | true
@@ -491,24 +462,13 @@ export namespace dataIO {
         path.absolute = true
         return path as dataPath
     }
-    /**
-     * dataRelativePath型にします。内部の形式は変わりませんが、コーディングの精度が上がります。
-     * @param path 
-     * @returns 
-     */
+    /** dataRelativePath型にします。内部の形式は変わりませんが、コーディングの精度が上がります。 */
     export function typeToDataRelativePath(path: dataRelativePath | {
-        /**
-         * 目的のファイルの名前です。
-         * 拡張子は含まれません。
-         */
+        /** 目的のファイルの名前です。拡張子は含まれません。 */
         name: string
-        /**
-         * 目的のファイルの拡張子です。存在しない場合はundefinedです。
-         */
+        /** 目的のファイルの拡張子です。存在しない場合はundefinedです。 */
         extension?: string
-        /**
-         * 目的のファイルまでのパスです。
-         */
+        /** 目的のファイルまでのパスです。 */
         path: string[]
         relative?: boolean | true
     }) {
@@ -516,158 +476,93 @@ export namespace dataIO {
         return path as dataRelativePath
     }
     export interface fileListerOption {
-        /**
-         * フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか
-         */
+        /** フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか */
         contain?: boolean,
-        /**
-         * 拡張子を限定し、検索範囲を絞る
-         */
+        /** 拡張子を限定し、検索範囲を絞る */
         extensionFilter?: string[],
-        /**
-         * 「.」を使った隠しファイルを検出し、検索から除外する
-         */
-        invFIleIgnored?: boolean,
-        /**
-         * 「._」を使った隠しパラメーターファイルを検出し、検索から除外する
-         */
+        /** 「.」を使った隠しファイルを検出し、検索から除外する */
+        invFileIgnored?: boolean,
+        /** 「._」を使った隠しパラメーターファイルを検出し、検索から除外する */
         macosInvIgnored?: boolean
     }
-    /**
-     * フォルダ内のファイルを配列として出力します。
-     * @param pass フォルダへのパスを入力します。
-     * @param option オプションを設定します。
-     * @returns 配列を返します。
-     */
+    /** フォルダ内のファイルを配列として出力します。 */
     export async function fileLister(
-        /**
-         * フォルダパスを入力。その中のファイルやフォルダを配列化する。
-         */
+        /** フォルダパスを入力。その中のファイルやフォルダを配列化する。 */
         path: dataPath,
-        /**
-         * 様々なオプションを入力
-         */
+        /** 様々なオプションを入力 */
         option?: fileListerOption
     ) {
-        //オプションデータの格納用
-        /**
-         * フォルダ内のフォルダにアクセス、階層内のデータを読み込むかどうか
-         */
-        let contain = false
-        /**
-         * 拡張子を限定し、検索範囲を絞る
-         */
-        let extensionFilter: string[] = []
-        /**
-         * 「.」を使った隠しファイルを検出し、検索から除外する
-         */
-        let invFIleIgnored = false
-        /**
-         * 「._」を使った隠しパラメーターファイルを検出し、検索から除外する
-         */
-        let macosInvIgnored = false
-        if (option !== undefined) {
-            if (option.contain) contain = true
-            if (option.extensionFilter !== undefined) extensionFilter = option.extensionFilter
-            if (option.invFIleIgnored) invFIleIgnored = true
-            if (option.macosInvIgnored) macosInvIgnored = true
-        }
-
-        const processd: dataPath[] = [] // 出力データの保存場所
-        if (!await pathChecker(path)) return processd
-        const point: string[] = [] // パス場所を設定
-        /**
-         * キャッシュデータの格納
-         */
-        const filepoint: {
-            /**
-             * マークとなるディレクトリのパスを入力
-             * @param lpass どこのパスかを記述する
-             */
-            [lpass: string]: {
-                /**
-                 * キャッシュからファイルを指定する
-                 */
-                point: number,
-                /**
-                 * ディレクトリやファイルリストのキャッシュを保存
-                 */
+        if (!await pathChecker(path)) return []
+        /** 本命の収集した情報の保存場所 */
+        const dataPaths: dataPath[] = []
+        /** 引数で指定されたフォルダパス内にあるフォルダを参照する場合、相対パスを配列で記述 */
+        const relativePathPoint: string[] = []
+        /** キャッシュデータの格納 */
+        const folderCache: {
+            /** マークとなるディレクトリのパスを入力 @param tempPath どこのパスかを記述する */
+            [tempPath: string]: {
+                /** このフォルダ内で現在参照中のデータ */
+                filePoint: number,
+                /** ディレクトリやファイルリストのキャッシュを保存 */
                 dirents: fs.Dirent[]
             }
         } = {}
-
         while (true) {
-            const pathArrTmp = filePathToPath(path)
-            let lpass = pathArrTmp //ファイル処理時の一時的パス場所
-            for (let i = 0; i !== point.length; i++) lpass.push(point[i]) // パス解析、配列化
-
+            const tempPath = [...filePathToPath(path), ...relativePathPoint] //ファイル処理時の一時的パス場所
             function listerSlash(str: string[]) {
                 let tmp = ""
                 for (let i = 0; i !== str.length; i++) tmp += str[i] + (i !== str.length - 1 ? "/" : "")
                 return tmp
             }
-            // filepointの初期化
-            if (!filepoint[listerSlash(lpass)]) filepoint[listerSlash(lpass)] = {
-                point: 0,
-                dirents: await new Promise(resolve => {
-                    fs.readdir(listerSlash(lpass), { withFileTypes: true }, (err, dirents) => {
-                        if (err) throw err
+            if (!folderCache[listerSlash(tempPath)]) folderCache[listerSlash(tempPath)] = {
+                filePoint: 0,
+                dirents: await new Promise((resolve, reject) => {
+                    fs.readdir(listerSlash(tempPath), { withFileTypes: true }, (err, dirents) => {
+                        if (err) reject(err)
                         resolve(dirents)
                     })
                 })
             }
-            /**
-             * 保存されたリストを取得
-             */
-            const dirents = filepoint[listerSlash(lpass)].dirents
-            // もしディレクトリ内のファイル数とファイル指定番号が同じな場合
-            if (dirents.length === filepoint[listerSlash(lpass)].point)
-                // lpassが初期値「pass + "/"」と同じ場合ループを抜ける
-                if (listerSlash(lpass) === listerSlash(pathArrTmp)) break
-                // そうでない場合上の階層へ移動する
-                else point.pop()
+            const { dirents, filePoint } = folderCache[listerSlash(tempPath)]
+            /** dirent */
+            const sourceData = dirents[filePoint]
+            if (dirents.length === filePoint) // もしディレクトリ内のファイル数とファイル指定番号が同じな場合
+                if (listerSlash(tempPath) === listerSlash(filePathToPath(path))) break // lpassが初期値「pass + "/"」と同じ場合ループを抜ける
+                else relativePathPoint.pop() // そうでない場合上の階層へ移動する
             else {
-                // ファイル名の取得
-                const name = dirents[filepoint[listerSlash(lpass)].point].name
-                // フォルダ、ディレクトリでない場合
-                if (!dirents[filepoint[listerSlash(lpass)].point].isDirectory()) {
-                    // ドットで分割
-                    const namedot = name.split(".")
-                    // 拡張子を取得
-                    const extension = namedot[namedot.length - 1]
+                const name = sourceData.name // ファイル名の取得
+                if (!sourceData.isDirectory()) { // フォルダ、ディレクトリでない場合
+                    const namedot = name.split(".") // ドットで分割
+                    const extension = namedot[namedot.length - 1] // 拡張子を取得
                     if ((() => { //もしも
-                        if (extensionFilter[0]) { // 拡張子指定がある場合
+                        if (option?.extensionFilter && option?.extensionFilter[0]) { // 拡張子指定がある場合
                             let stats = false
-                            for (let i = 0; i !== extensionFilter.length; i++)
-                                if (extensionFilter[i].match(new RegExp(extension, "i"))) stats = true
+                            for (let i = 0; i !== option.extensionFilter.length; i++)
+                                if (option.extensionFilter[i].match(new RegExp(extension, "i"))) stats = true
                             if (!stats) return false // 拡張子がマッチしなかったらfalse
                         }
-                        // 末端が一致した場合false
-                        if (invFIleIgnored && name[0] === ".") return false
-                        if (macosInvIgnored && name[0] === "." && name[1] === "_") return false
+                        if (option?.invFileIgnored && name[0] === ".") return false // 末端が一致した場合false
+                        if (option?.macosInvIgnored && name[0] === "." && name[1] === "_") return false
                         return true // 全てがreturnしない場合true
                     })()) {
-                        const outPath = await pathChecker(listerSlash(lpass) + "/" + name)
+                        const outPath = await pathChecker(listerSlash(tempPath) + "/" + name)
                         if (outPath) {
                             outPath.relativePath = {
                                 absolute: path,
                                 relative: typeToDataRelativePath({
                                     name: name.slice(0, -(extension.length + 1)),
                                     extension: extension,
-                                    path: point
+                                    path: relativePathPoint
                                 })
                             }
-                            processd.push(outPath)
+                            dataPaths.push(outPath)
                         }
                     }
-                    // ディレクトりの場合は階層を移動し、ディレクトリ内に入り込む
-                } else if (contain && dirents[filepoint[listerSlash(lpass)].point].isDirectory()) point.push(name)
-                // 次のファイルへ移動する
-                filepoint[listerSlash(lpass)].point++
+                } else if (option?.contain && sourceData.isDirectory()) relativePathPoint.push(name) // ディレクトりの場合は階層を移動し、ディレクトリ内に入り込む
+                folderCache[listerSlash(tempPath)].filePoint++ // 次のファイルへ移動する
             }
         }
-        // データを出力
-        return processd
+        return dataPaths // データを出力
     }
 }
 export default dataIO
