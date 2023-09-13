@@ -5,27 +5,43 @@
  * @returns 
  */
 export async function httpDataRequest(request: string, send: string) {
-    return new Promise(resolve => {
-        const xhr = new XMLHttpRequest()
-        xhr.open("POST", "http://" + location.hostname + ":" + location.port + "/" + request)
-        xhr.setRequestHeader("content-type", "text/plain;charset=UTF-8")
-        xhr.send(send); //データを送信
-        xhr.onreadystatechange = async () => { if (xhr.readyState === 4 && xhr.status === 200) resolve(xhr.responseText) } //レスポンスを返す
+    return await new Promise(resolve => {
+        const req = new XMLHttpRequest()
+        req.open("POST", "http://" + location.hostname + ":" + location.port + "/" + request)
+        req.setRequestHeader("content-type", "text/plain;charset=UTF-8")
+        req.send(send); //データを送信
+        req.onreadystatechange = async () => { if (req.readyState === 4 && req.status === 200) resolve(req.responseText) } //レスポンスを返す
     })
 }
 
-interface APISendReturns {
-    YouTubeDownLoader: { type: "YouTubeDownLoader" }
-    dataIO: { type: "dataIO" }
-    Log: { type: "Log" }
-    EnvSetting: { type: "EnvSetting" }
-    DiscordBot: { type: "DiscordBot" }
-    FFmpegConverter: { type: "FFmpegConverter" }
-}
-export async function APISend<K extends keyof APISendReturns>(request: K, send: string): Promise<APISendReturns[K]> {
-    let sa = ""
-    return sa as any
-}
+/**
+ * Various Programsのメインプロセスと通信するためのAPIです。  
+ * 状況を受け取ったり、作業を指示したりすることが出来ます。
+ */
+export const API = Object.freeze({
+    dataIO: {
+        parentFolder: async () => { },
+        /** このファイル送信APIはベータ&未完成です。保存される場所がおかしい、重いなどの異常な現状が予期されています。 */
+        sendFile: async (blob: Blob) => {
+            const status = await new Promise<string>(resolve => {
+                const req = new XMLHttpRequest()
+                req.open("POST", "http://" + location.hostname + ":" + location.port + "/API/dataIO/sendFile")
+                req.send(blob); //データを送信
+                req.onreadystatechange = async () => {
+                    if (req.readyState === 4 && req.status === 200) resolve(req.responseText)
+                    console.log(req.readyState, req.status)
+                } //レスポンスを返す
+            })
+            console.log(status)
+            return (status === "Not Found") ? false : true
+        }
+    },
+    YouTubeDownLoader: {},
+    Log: {},
+    EnvSetting: {},
+    DiscordBot: {},
+    FFmpegConverter: {}
+})
 
 /**
  * 待機します。ライブラリでは使用しすぎないでください。IOや高負荷の回避におすすめです。

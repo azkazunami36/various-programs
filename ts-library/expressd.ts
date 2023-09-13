@@ -5,6 +5,7 @@ import { EventEmitter } from "events"
 
 import dataIO from "./dataIO.js"
 import vpManageClass from "./vpManageClass.js"
+import sfs from "./fsSumwave.js"
 
 /**
  * # expressd
@@ -15,7 +16,12 @@ export namespace expressd {
     /**
      * 利用出来るイベントです。
      */
-    interface expressdEvents { ready: [void], error: [Error] }
+    interface expressdEvents { ready: [void], error: [Error] }/**
+    * JSON型定義の上書き
+    */
+    interface expressdDataIOextJSON extends dataIO.dataIO {
+        json: {}
+    }
     export declare interface expressd {
         on<K extends keyof expressdEvents>(s: K, listener: (...args: expressdEvents[K]) => any): this
         emit<K extends keyof expressdEvents>(eventName: K, ...args: expressdEvents[K]): boolean
@@ -30,6 +36,7 @@ export namespace expressd {
      */
     export class expressd extends EventEmitter {
         app: express.Express
+        data: expressdDataIOextJSON
         server?: http.Server
         #port = "80"
         shareData: vpManageClass.shareData
@@ -42,6 +49,15 @@ export namespace expressd {
                 app.post("*", (req, res) => this.#post(req, res))
                 await new Promise<void>(resolve => this.server = app.listen(this.#port, () => { resolve() }))
                 if (this.server) this.server.on("error", err => { this.emit("error", err) })
+                const data = await dataIO.dataIO.initer("expressd")
+                if (!data) {
+                    const e = new ReferenceError()
+                    e.message = "dataIOの準備ができませんでした。"
+                    e.name = "Discord Bot"
+                    this.emit("error", e)
+                    return
+                }
+                this.data = data
                 this.emit("ready", undefined)
                 this.shareData = shareData
             })()
@@ -51,18 +67,26 @@ export namespace expressd {
             await new Promise<void>(resolve => exp.on("ready", () => resolve()))
             shareData.expressd = exp
         }
+        #typeGet(string: string, type: "extension" | "contentType") {
+            const data = [
+                ["html", "text/html"],
+                ["css", "text/css"],
+                ["js", "application/javascript"],
+                ["json", "application/json"],
+                ["png", "image/png"],
+                ["jpg", "image/jpeg"],
+                ["mp4", "video/mp4"],
+                ["mp3", "audio/mp3"],
+                ["opus", "audio/opus"],
+                ["webm", "video/webm"]
+            ]
+            for (let i = 0; i !== data.length; i++) if (data[i][type === "extension" ? 1 : 0] === string) return data[i][type === "extension" ? 0 : 1]
+        }
         async #get(req: express.Request | http.IncomingMessage, res: express.Response) {
             if (req.url !== undefined) {
                 const url = await dataIO.pathChecker(process.cwd() + "/ts-library/expressdSrc" + (req.url !== "/" ? req.url : "/index.html"))
-                if (url) {
-                    const contentType = (() => {
-                        switch (url.extension) {
-                            case "html": return "text/html"
-                            case "css": return "text/css"
-                            case "js": return "application/javascript"
-                            case "json": return "application/json"
-                        }
-                    })()
+                if (url && url.extension) {
+                    const contentType = this.#typeGet(url.extension, "contentType")
                     res.header("Content-Type", contentType + ";charset=utf-8")
                     const stream = fs.createReadStream(dataIO.slashPathStr(url))
                     stream.on("data", chunk => res.write(chunk))
@@ -88,15 +112,28 @@ export namespace expressd {
                             "parentFolder": async () => {
                                 this.shareData.dataIO
                                 return ""
+                            },
+                            "sendFile": async () => {
+                                let data: string
+                                req.on("data", chunk => data = (data ? data + chunk : chunk))
+                                req.on("end", async () => {
+                                    const contentType = req.headers["content-type"]
+                                    if (contentType) {
+                                        const path = await this.data.passGet(["sendFile"], String(Date.now()), { extension: this.#typeGet(contentType, "extension") })
+                                        if (path) await sfs.writeFile(path, data)
+                                    }
+                                    res.end()
+                                })
+                                return ""
                             }
                         }
                     }
                 }
-                const urlOne = reqData[urlSplit[0]]
+                const urlOne = reqData[urlSplit[1]]
                 if (!urlOne) { res.end("Not Found"); return }
-                const urlTwo = urlOne[urlSplit[1]]
+                const urlTwo = urlOne[urlSplit[2]]
                 if (!urlTwo) { res.end("Not Found"); return }
-                const urlThree = urlTwo[urlSplit[2]]
+                const urlThree = urlTwo[urlSplit[3]]
                 if (!urlThree) { res.end("Not Found"); return }
                 res.end(await urlThree())
             }
