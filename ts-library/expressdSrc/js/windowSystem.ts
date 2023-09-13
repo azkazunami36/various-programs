@@ -21,10 +21,19 @@ interface windows {
         topSize: number
         leftSize: number
     }
+    /** ウィンドウの深度 */
     depth: number
+    /** オプション */
     option?: {
         front?: boolean
         background?: boolean
+        /** 最小ウィンドウサイズを決定 */
+        minSize?: {
+            /** 立幅を決める */
+            top?: number
+            /** 横幅を決める */
+            left?: number
+        }
     }
 }
 
@@ -41,32 +50,9 @@ export class windowSystem {
         addEventListener("pointerup", e => this.#mouseup(e))
         this.#body = body
     }
-    /**
-     * document.bodyにあたるものです。
-     */
+    /** document.bodyにあたるものです。 */
     #body: HTMLElement
-    /**
-     * @typedef {object} windows ウィンドウと見なした、クラスで作成したElementを保管しています。
-     * @prop {HTMLElement} element
-     * @prop {number} top 縦の位置
-     * @prop {number} left 横の位置
-     * @prop {number} topSize 縦の大きさ
-     * @prop {number} leftSize 横の大きさ
-     * @prop {object} full フルスクリーン状態
-     * @prop {boolean} full.is フルスクリーンかどうか
-     * @prop {number} full.top フルスクリーン前の縦座標の状態
-     * @prop {number} full.left フルスクリーン前の横座標の状態
-     * @prop {number} full.topSize フルスクリーン前の縦の大きさの状態
-     * @prop {number} full.leftSize フルスクリーン前の横の大きさの状態
-     * @prop {number} depth ウィンドウの奥行を決定
-     * @prop {object} [option] ウィンドウの特別な設定
-     * @prop {boolean} [option.front] 最前面に表示するかどうか(タスクバー等)
-     * @prop {boolean} [option.background] 最背面に表示するかどうか(背景など)
-     */
-    /**
-     * ウィンドウと見なした、クラスで作成したElementを保管しています。
-     * @type {{[name: string]: windows | null}}
-     */
+    /** * ウィンドウと見なした、クラスで作成したElementを保管しています。 */
     #windows: { [name: string]: windows | undefined } = {}
     /**
      * 移動中のウィンドウのid(識別名)やウィンドウバーからマウスの間のズレを記録します。
@@ -466,9 +452,9 @@ export class windowSystem {
             const stat = this.#windows[this.#resizeingWindow.name]
             if (stat) {
                 const rewin = this.#resizeingWindow
-                const windowBarLength = 50
-                const windowHeightLowLenght = (rewin.windowBarLeftLength + rewin.windowBarRightLength) + 24
-                if (
+                const windowBarLength = 50 + (stat.option?.minSize?.top ? stat.option.minSize.top : 0)
+                const windowHeightLowLenght = (rewin.windowBarLeftLength + rewin.windowBarRightLength) + 24 + (stat.option?.minSize?.left ? stat.option.minSize.left : 0)
+                if ( // つかまれているリサイズ用要素のIDと一致すると
                     type === ids.top
                     || type === ids.topLeft
                     || type === ids.leftTop
@@ -476,13 +462,13 @@ export class windowSystem {
                     || type === ids.rightTop
                 ) {
                     stat.top = e.clientY - rewin.clientTop
-                    stat.topSize = rewin.topSize - (e.clientY - rewin.clientY)
-                    if (stat.topSize < windowBarLength) {
+                    stat.topSize = rewin.topSize - (e.clientY - rewin.clientY) // マウスに合わせてサイズ変更
+                    if (stat.topSize < windowBarLength) { // 最小サイズより小さくしようとした場合は回避する
                         stat.top = (e.clientY - rewin.clientTop) + (rewin.topSize - (e.clientY - rewin.clientY)) - windowBarLength
                         stat.topSize = windowBarLength
                     }
                 }
-                if (
+                if ( // つかまれているリサイズ用要素のIDと一致すると
                     type === ids.left
                     || type === ids.topLeft
                     || type === ids.leftTop
@@ -490,33 +476,33 @@ export class windowSystem {
                     || type === ids.leftBottom
                 ) {
                     stat.left = e.clientX - rewin.clientLeft
-                    stat.leftSize = rewin.leftSize - (e.clientX - rewin.clientX)
-                    if (stat.leftSize < windowHeightLowLenght) {
+                    stat.leftSize = rewin.leftSize - (e.clientX - rewin.clientX) // マウスに合わせてサイズ変更
+                    if (stat.leftSize < windowHeightLowLenght) { // 最小サイズより小さくしようとした場合は回避する
                         stat.left = (e.clientX - rewin.clientLeft) + (rewin.leftSize - (e.clientX - rewin.clientX)) - windowHeightLowLenght
                         stat.leftSize = windowHeightLowLenght
                     }
                 }
-                if (
+                if ( // つかまれているリサイズ用要素のIDと一致すると
                     type === ids.right
                     || type === ids.bottomRight
                     || type === ids.rightBottom
                     || type === ids.topRight
                     || type === ids.rightTop
                 ) {
-                    stat.leftSize = this.#resizeingWindow.leftSize + (e.clientX - this.#resizeingWindow.clientX)
-                    if (stat.leftSize < windowHeightLowLenght) {
+                    stat.leftSize = this.#resizeingWindow.leftSize + (e.clientX - this.#resizeingWindow.clientX) // マウスに合わせてサイズ変更
+                    if (stat.leftSize < windowHeightLowLenght) { // 最小サイズより小さくしようとした場合は回避する
                         stat.leftSize = windowHeightLowLenght
                     }
                 }
-                if (
+                if ( // つかまれているリサイズ用要素のIDと一致すると
                     type === ids.bottom
                     || type === ids.bottomRight
                     || type === ids.rightBottom
                     || type === ids.bottomLeft
                     || type === ids.leftBottom
                 ) {
-                    stat.topSize = this.#resizeingWindow.topSize + (e.clientY - this.#resizeingWindow.clientY)
-                    if (stat.topSize < windowBarLength) {
+                    stat.topSize = this.#resizeingWindow.topSize + (e.clientY - this.#resizeingWindow.clientY) // マウスに合わせてサイズ変更
+                    if (stat.topSize < windowBarLength) { // 最小サイズより小さくしようとした場合は回避する
                         stat.topSize = windowBarLength
                     }
                 }
@@ -679,6 +665,13 @@ export class windowSystem {
             top?: number
             /** 横幅を決める */
             left?: number
+        },
+        /** 最小ウィンドウサイズを決定 */
+        minSize?: {
+            /** 立幅を決める */
+            top?: number
+            /** 横幅を決める */
+            left?: number
         }
     }) {
         // ウィンドウのメイン
@@ -803,23 +796,22 @@ export class windowSystem {
         }
         this.#windowInitPosition.top += 50
         this.#windowInitPosition.left += 50
-        if (option) {
-            if (option.size) {
-                const window = this.#windows["window" + name]
-                if (window) {
-                    if (option.size.top) window.topSize = option.size.top
-                    if (option.size.left) window.leftSize = option.size.left
-                    await this.viewReflash("window" + name)
-                }
+        const window = this.#windows["window" + name]
+        if (window) {
+            if (option?.size) {
+                if (option.size.top) window.topSize = option.size.top
+                if (option.size.left) window.leftSize = option.size.left
+                await this.viewReflash("window" + name)
             }
-            if (option.title) title.innerText = option.title
-            if (option.layout) {
-                if (option.layout.center) {
+            if (option?.title) title.innerText = option.title
+            if (option?.layout?.center) {
 
-                }
             }
+            if (!window.option) window.option = {}
+            if (!window.option.minSize) window.option.minSize = {}
+            if (option.minSize?.top) window.option.minSize.top = option.minSize.top
+            if (option.minSize?.left) window.option.minSize.top = option.minSize.top
         }
-
         // 表示
         this.#body.appendChild(master)
         await wait(20)
