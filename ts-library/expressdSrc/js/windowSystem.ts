@@ -37,81 +37,55 @@ interface windows {
     }
 }
 
+interface createWindowOption {
+    /** ウィンドウにつけるアイコンを指定する */
+    iconURL?: string
+    /** ウィンドウタイトルを決定 */
+    title?: string
+    /** レイアウトを指定。上から順に適用され、上書きされる。sizeを指定しないといけないオプションもある */
+    layout?: {
+        /** 上下左右を中央配置にするか。sizeパラメータがないと反応しない */
+        center?: boolean
+        /** 横幅を最大まで広げるかどうか */
+        widthFull?: boolean
+        /** 立幅を最大まで広げるかどうか */
+        heigthFull?: boolean
+    }
+    /** ウィンドウサイズを決定 */
+    size?: {
+        /** 立幅を決める */
+        top?: number
+        /** 横幅を決める */
+        left?: number
+    },
+    /** 最小ウィンドウサイズを決定 */
+    minSize?: {
+        /** 立幅を決める */
+        top?: number
+        /** 横幅を決める */
+        left?: number
+    }
+    /** ウィンドウバーの設定 */
+    windowBarSetting?: {
+        /** 最大化ボタンを表示するか。デフォルトはtrue */
+        maximumButton?: boolean
+        /** 最小化ボタンを表示するか。デフォルトはtrue */
+        minimumButton?: boolean
+    }
+    /** サイズ変更が可能かどうか。デフォルトはtrue */
+    sizeChange?: boolean
+}
+
 /**
  * # Window System
  * Windowsでいうウィンドウマネージャーの役割をするクラスです。
  * ウィンドウのサイズや位置、重ね合わせなどの処理を管理します。マウス入力などの処理が内蔵されているため、ほぼ自動で管理されます。
  */
 export class windowSystem {
-    constructor(body: HTMLElement) {
-        // マウスイベントです
-        addEventListener("pointerdown", e => this.#mousedown(e))
-        addEventListener("pointermove", e => this.#mousemove(e))
-        addEventListener("pointerup", e => this.#mouseup(e))
-        this.#body = body
-    }
     /** document.bodyにあたるものです。 */
     #body: HTMLElement
     /** * ウィンドウと見なした、クラスで作成したElementを保管しています。 */
     #windows: { [name: string]: windows | undefined } = {}
-    /**
-     * 移動中のウィンドウのid(識別名)やウィンドウバーからマウスの間のズレを記録します。
-     */
-    #moveingWindow: {
-        /** IDを記録します。 */
-        name: string
-        /** マウスの間のズレ(縦) */
-        top: number
-        /** マウスの間のズレ(横) */
-        left: number
-    } | undefined
-    /**
-     * サイズ変更中のウィンドウのid(識別名)や変更中の箇所、その位置等を記録します。
-     */
-    #resizeingWindow: {
-        /** ウィンドウの名前 */
-        name: string
-        /** 選択されたresizeのID名 */
-        type: string
-        /** 移動前の状態 */
-        top: number
-        /** 移動前の状態 */
-        left: number
-        /** 移動前の状態 */
-        topSize: number
-        /** 移動前の状態 */
-        leftSize: number
-        /** マウスの間のズレ */
-        clientTop: number
-        /** マウスの間のズレ */
-        clientLeft: number
-        clientX: number
-        clientY: number
-        windowBarLeftLength: number
-        windowBarRightLength: number
-    } | undefined
-    /**
-     * ウィンドウの初期位置を記録します。ウィンドウが複数起動した際、ばらばらに配置されるようになります。
-     */
-    #windowInitPosition = {
-        top: 0,
-        left: 0
-    }
-    /**
-     * 最大化ボタンを最初から押しているかどうかの判定をします。
-     */
-    #fullscreenBtn: string | undefined
-    /**
-     * 最小化ボタンを最初から押しているかどうかの判定をします。
-     */
-    #miniwindowBtn: string | undefined
-    /**
-     * 閉じるボタンを最初から押しているかどうかの判定をします。
-     */
-    #closeBtn: string | undefined
-    /**
-     * ウィンドウサイズ変更要素のID(ClassName)
-     */
     #windowSizeID: { [x: string]: string } = {
         /**
          * 中央のウィンドウサイズ変更ID
@@ -174,42 +148,66 @@ export class windowSystem {
          */
         bottomRight: "window-resize-bR-zone"
     }
-    /**
-     * クリックした時間が記録されます。クリックするたびに更新されます。
-     * これは主にダブルクリックの判定に使用されます。
-     */
-    #clickTime = 0
-    /**
-     * ウィンドウの位置や状態を全て確認し、更新します。
-     * @param id 識別名を指定すると、特定のウィンドウの状態だけ更新します。
-     */
-    async viewReflash(id?: string) {
-        const windows = this.#windows
-        async function reflash(id: string) {
-            const stat = windows[id]
-            if (stat) {
-                const style = stat.element.style
-                style.top = String(stat.top) + "px"
-                style.left = String(stat.left) + "px"
-                style.width = String(stat.leftSize) + "px"
-                style.height = String(stat.topSize) + "px"
-                style.zIndex = String(stat.depth)
-            }
+    /** 様々な情報の一時的な保管場所です。 */
+    #temp: {
+        /** 最大化ボタンを最初から押しているかどうかの判定をします。 */
+        fullscreenBtn?: string
+        /** 最小化ボタンを最初から押しているかどうかの判定をします。 */
+        miniwindowBtn?: string
+        /** 閉じるボタンを最初から押しているかどうかの判定をします。 */
+        closeBtn?: string
+        /** サイズ変更中のウィンドウのid(識別名)や変更中の箇所、その位置等を記録します。 */
+        resizeingWindow?: {
+            /** ウィンドウの名前 */
+            name: string
+            /** 選択されたresizeのID名 */
+            type: string
+            /** 移動前の状態 */
+            top: number
+            /** 移動前の状態 */
+            left: number
+            /** 移動前の状態 */
+            topSize: number
+            /** 移動前の状態 */
+            leftSize: number
+            /** マウスの間のズレ */
+            clientTop: number
+            /** マウスの間のズレ */
+            clientLeft: number
+            clientX: number
+            clientY: number
+            windowBarLeftLength: number
+            windowBarRightLength: number
         }
-        if (id) reflash(id)
-        else {
-            const ids = Object.keys(windows)
-            for (let i = 0; i !== ids.length; i++) {
-                const id = ids[i]
-                reflash(id)
-            }
+        /** 移動中のウィンドウのid(識別名)やウィンドウバーからマウスの間のズレを記録します。 */
+        moveingWindow?: {
+            /** IDを記録します。 */
+            name: string
+            /** マウスの間のズレ(縦) */
+            top: number
+            /** マウスの間のズレ(横) */
+            left: number
         }
-    }
-    /**
-     * ウィンドウの重ね合わせを管理します。
-     * 機能と独特のデータが多いため、クラス化しました。
-     */
+        /** ウィンドウの初期位置を記録します。ウィンドウが複数起動した際、ばらばらに配置されるようになります。 */
+        windowInitPosition: {
+            top: number,
+            left: number
+        }
+        /**
+         * クリックした時間が記録されます。クリックするたびに更新されます。
+         * これは主にダブルクリックの判定に使用されます。
+         */
+        clickTime: number
+    } = {
+            windowInitPosition: {
+                top: 0,
+                left: 0
+            },
+            clickTime: 0
+        }
+    /** ウィンドウの重ね合わせを管理します。 機能と独特のデータが多いため、クラス化しました。 */
     #windowDepthManage = new class {
+        #windowSystem: windowSystem
         constructor(windowSystem: windowSystem) {
             this.#windowSystem = windowSystem
         }
@@ -280,7 +278,6 @@ export class windowSystem {
                 }
             }
         }
-        #windowSystem: windowSystem
         /**
          * ウィンドウの重ね合わせを管理します。
          * @param id 手前にしたいウィンドウを選択します。
@@ -304,6 +301,206 @@ export class windowSystem {
                 if (window) window.depth = Number(depthLen[i])
             }
             this.#windowSystem.viewReflash() // 反映
+        }
+    }(this)
+    /** マウスイベントです。 */
+    #mouseEvent = new class {
+        windowSystem: windowSystem
+        constructor(t: windowSystem) { this.windowSystem = t }
+        /** クリック */
+        async mousedown(e: MouseEvent) {
+            const winSys = this.windowSystem
+            let doubleClick = (() => {
+                const nowTime = Date.now()
+                if (nowTime - winSys.#temp.clickTime < 200) {
+                    winSys.#temp.clickTime = 0
+                    return true
+                } else winSys.#temp.clickTime = nowTime
+                return false
+            })()
+            // ウィンドウドラッグ処理
+            const target = (() => { // タイトルバーのクリック範囲を歪ませます。
+                const target = e.target as HTMLElement
+                if (target) {
+                    if (target.classList.contains("window-bar-left")) {
+                        return target.parentElement as HTMLElement
+                    }
+                    if (target.classList.contains("window-title")) {
+                        return target.parentElement?.parentElement as HTMLElement
+                    }
+                }
+                return target
+            })()
+            if (target) {
+                const tar = target as HTMLElement
+                if (tar) {
+                    const clickWindowId = winSys.#clickWindowId(tar)
+                    const clickWindowIdOnly = winSys.#clickWindowId(tar, true)
+                    if (target.classList.contains("window-bar") && target.parentElement) {
+                        const stat = winSys.#windows[target.parentElement.id]
+                        if (stat) {
+                            winSys.#temp.moveingWindow = {
+                                name: target.parentElement.id,
+                                top: e.clientY - stat.top,
+                                left: e.clientX - stat.left
+                            }
+                        }
+                        if (doubleClick) {
+                            if (clickWindowIdOnly) {
+                                winSys.#temp.moveingWindow = undefined
+                                winSys.fullscreenSetting(clickWindowIdOnly, true)
+                            }
+                        }
+                    }
+                    if (clickWindowId) {
+                        winSys.#windowDepthManage.windowDepthChange(clickWindowId)
+                        if (target.classList.contains("window-max")) winSys.#temp.fullscreenBtn = clickWindowId // ウィンドウ最大化処理
+                        if (target.classList.contains("window-min")) winSys.#temp.miniwindowBtn = clickWindowId // ウィンドウ最大化処理
+                        if (target.classList.contains("window-close")) winSys.#temp.closeBtn = clickWindowId // ウィンドウ最大化処理
+                        // ウィンドウサイズ変更処理
+                        const windowSizegenre = Object.keys(winSys.#windowSizeID)
+                        const type = (() => {
+                            for (let i = 0; i !== windowSizegenre.length; i++)
+                                if (target.classList.contains(winSys.#windowSizeID[windowSizegenre[i]]))
+                                    return winSys.#windowSizeID[windowSizegenre[i]]
+                            return null
+                        })()
+                        if (type) {
+                            const clickWindowId = winSys.#clickWindowId(tar, true)
+                            if (clickWindowId) {
+                                const stat = winSys.#windows[clickWindowId]
+                                if (stat) {
+                                    const left = stat.element.getElementsByClassName("window-bar-left")[0]
+                                    const right = stat.element.getElementsByClassName("window-bar-right")[0]
+                                    if (left && right) winSys.#temp.resizeingWindow = {
+                                        name: clickWindowId,
+                                        type: type,
+                                        top: stat.top,
+                                        left: stat.left,
+                                        topSize: stat.topSize,
+                                        leftSize: stat.leftSize,
+                                        clientTop: e.clientY - stat.top,
+                                        clientLeft: e.clientX - stat.left,
+                                        clientX: e.clientX,
+                                        clientY: e.clientY,
+                                        windowBarLeftLength: left.clientWidth,
+                                        windowBarRightLength: right.clientWidth
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        /** マウスの移動 */
+        async mousemove(e: MouseEvent) {
+            const winSys = this.windowSystem
+            winSys.#temp.clickTime = 0
+            if (winSys.#temp.moveingWindow) {
+                const stat = winSys.#windows[winSys.#temp.moveingWindow.name]
+                if (stat) {
+                    if (stat.full.is) {
+                        winSys.#temp.moveingWindow.top = e.clientY + stat.top + 10
+                        if (winSys.#body.clientWidth / 2 > e.clientX) {
+                            winSys.#temp.moveingWindow.left = e.clientX + stat.left + 11
+                        } else if (winSys.#body.clientWidth / 2 < e.clientX) {
+                            winSys.#temp.moveingWindow.left = (stat.full.leftSize / 2) + 11
+                        }
+                        stat.full.top = e.clientY - winSys.#temp.moveingWindow.top
+                        winSys.fullscreenSetting(winSys.#temp.moveingWindow.name, true)
+                    }
+                    stat.top = e.clientY - winSys.#temp.moveingWindow.top // 場所を保存
+                    stat.left = e.clientX - winSys.#temp.moveingWindow.left // ry
+                    winSys.viewReflash(winSys.#temp.moveingWindow.name)
+                }
+            } else if (winSys.#temp.resizeingWindow) {
+                const type = winSys.#temp.resizeingWindow.type
+                const ids = winSys.#windowSizeID
+                const stat = winSys.#windows[winSys.#temp.resizeingWindow.name]
+                if (stat) {
+                    const rewin = winSys.#temp.resizeingWindow
+                    const windowBarLength = 50 + (stat.option?.minSize?.top ? stat.option.minSize.top : 0)
+                    const windowHeightLowLenght = (rewin.windowBarLeftLength + rewin.windowBarRightLength) + 24 + (stat.option?.minSize?.left ? stat.option.minSize.left : 0)
+                    if ( // つかまれているリサイズ用要素のIDと一致すると
+                        type === ids.top
+                        || type === ids.topLeft
+                        || type === ids.leftTop
+                        || type === ids.topRight
+                        || type === ids.rightTop
+                    ) {
+                        stat.top = e.clientY - rewin.clientTop
+                        stat.topSize = rewin.topSize - (e.clientY - rewin.clientY) // マウスに合わせてサイズ変更
+                        if (stat.topSize < windowBarLength) { // 最小サイズより小さくしようとした場合は回避する
+                            stat.top = (e.clientY - rewin.clientTop) + (rewin.topSize - (e.clientY - rewin.clientY)) - windowBarLength
+                            stat.topSize = windowBarLength
+                        }
+                    }
+                    if ( // つかまれているリサイズ用要素のIDと一致すると
+                        type === ids.left
+                        || type === ids.topLeft
+                        || type === ids.leftTop
+                        || type === ids.bottomLeft
+                        || type === ids.leftBottom
+                    ) {
+                        stat.left = e.clientX - rewin.clientLeft
+                        stat.leftSize = rewin.leftSize - (e.clientX - rewin.clientX) // マウスに合わせてサイズ変更
+                        if (stat.leftSize < windowHeightLowLenght) { // 最小サイズより小さくしようとした場合は回避する
+                            stat.left = (e.clientX - rewin.clientLeft) + (rewin.leftSize - (e.clientX - rewin.clientX)) - windowHeightLowLenght
+                            stat.leftSize = windowHeightLowLenght
+                        }
+                    }
+                    if ( // つかまれているリサイズ用要素のIDと一致すると
+                        type === ids.right
+                        || type === ids.bottomRight
+                        || type === ids.rightBottom
+                        || type === ids.topRight
+                        || type === ids.rightTop
+                    ) {
+                        stat.leftSize = winSys.#temp.resizeingWindow.leftSize + (e.clientX - winSys.#temp.resizeingWindow.clientX) // マウスに合わせてサイズ変更
+                        if (stat.leftSize < windowHeightLowLenght) { // 最小サイズより小さくしようとした場合は回避する
+                            stat.leftSize = windowHeightLowLenght
+                        }
+                    }
+                    if ( // つかまれているリサイズ用要素のIDと一致すると
+                        type === ids.bottom
+                        || type === ids.bottomRight
+                        || type === ids.rightBottom
+                        || type === ids.bottomLeft
+                        || type === ids.leftBottom
+                    ) {
+                        stat.topSize = winSys.#temp.resizeingWindow.topSize + (e.clientY - winSys.#temp.resizeingWindow.clientY) // マウスに合わせてサイズ変更
+                        if (stat.topSize < windowBarLength) { // 最小サイズより小さくしようとした場合は回避する
+                            stat.topSize = windowBarLength
+                        }
+                    }
+                    winSys.viewReflash(winSys.#temp.resizeingWindow.name)
+                }
+            }
+        }
+        /** クリック終了 */
+        async mouseup(e: MouseEvent) {
+            const winSys = this.windowSystem
+            winSys.#temp.moveingWindow = undefined // ウィンドウドラッグを終了
+            winSys.#temp.resizeingWindow = undefined // ウィンドウリサイズを終了
+            // フルスクリーンボタンのイベント
+            const target = e.target as HTMLElement
+            if (
+                target?.classList.contains("window-max")
+                && target.parentElement?.parentElement?.parentElement?.classList.contains("window-body")
+            ) {
+                const id = target.parentElement.parentElement.parentElement.id
+                await winSys.fullscreenSetting(id)
+            } else if (
+                target?.classList.contains("window-close")
+                && target.parentElement?.parentElement?.parentElement?.classList.contains("window-body")
+            ) {
+                const id = target.parentElement.parentElement.parentElement.id
+                await winSys.windowClose(id)
+            }
+            winSys.#temp.miniwindowBtn = undefined // 最小化ボタンをリセット
+            winSys.#temp.closeBtn = undefined // 閉じるボタンをリセット
+            winSys.#temp.fullscreenBtn = undefined // フルスクリーンボタンをリセット
         }
     }(this)
     /**
@@ -336,212 +533,43 @@ export class windowSystem {
         else elementTemp = undefined
         return
     }
-    /**
-     * マウスのクリックイベントの受付です。
-     */
-    async #mousedown(e: MouseEvent) {
-        let doubleClick = (() => {
-            const nowTime = Date.now()
-            if (nowTime - this.#clickTime < 200) {
-                this.#clickTime = 0
-                return true
-            } else this.#clickTime = nowTime
-            return false
-        })()
-        // ウィンドウドラッグ処理
-        const target = (() => { // タイトルバーのクリック範囲を歪ませます。
-            const target = e.target as HTMLElement
-            if (target) {
-                if (target.classList.contains("window-bar-left")) {
-                    return target.parentElement as HTMLElement
-                }
-                if (target.classList.contains("window-title")) {
-                    return target.parentElement?.parentElement as HTMLElement
-                }
-            }
-            return target
-        })()
-        if (target) {
-            const tar = target as HTMLElement
-            if (tar) {
-                const clickWindowId = this.#clickWindowId(tar)
-                const clickWindowIdOnly = this.#clickWindowId(tar, true)
-                if (target.classList.contains("window-bar") && target.parentElement) {
-                    const stat = this.#windows[target.parentElement.id]
-                    if (stat) {
-                        this.#moveingWindow = {
-                            name: target.parentElement.id,
-                            top: e.clientY - stat.top,
-                            left: e.clientX - stat.left
-                        }
-                    }
-                    if (doubleClick) {
-                        if (clickWindowIdOnly) {
-                            this.#moveingWindow = undefined
-                            this.fullscreenSetting(clickWindowIdOnly, true)
-                        }
-                    }
-                }
-                if (clickWindowId) {
-                    this.#windowDepthManage.windowDepthChange(clickWindowId)
-                    if (target.classList.contains("window-max")) this.#fullscreenBtn = clickWindowId // ウィンドウ最大化処理
-                    if (target.classList.contains("window-min")) this.#miniwindowBtn = clickWindowId // ウィンドウ最大化処理
-                    if (target.classList.contains("window-close")) this.#closeBtn = clickWindowId // ウィンドウ最大化処理
-                    // ウィンドウサイズ変更処理
-                    const windowSizegenre = Object.keys(this.#windowSizeID)
-                    const type = (() => {
-                        for (let i = 0; i !== windowSizegenre.length; i++)
-                            if (target.classList.contains(this.#windowSizeID[windowSizegenre[i]]))
-                                return this.#windowSizeID[windowSizegenre[i]]
-                        return null
-                    })()
-                    if (type) {
-                        const clickWindowId = this.#clickWindowId(tar, true)
-                        if (clickWindowId) {
-                            const stat = this.#windows[clickWindowId]
-                            if (stat) {
-                                const left = stat.element.getElementsByClassName("window-bar-left")[0]
-                                const right = stat.element.getElementsByClassName("window-bar-right")[0]
-                                if (left && right) this.#resizeingWindow = {
-                                    name: clickWindowId,
-                                    type: type,
-                                    top: stat.top,
-                                    left: stat.left,
-                                    topSize: stat.topSize,
-                                    leftSize: stat.leftSize,
-                                    clientTop: e.clientY - stat.top,
-                                    clientLeft: e.clientX - stat.left,
-                                    clientX: e.clientX,
-                                    clientY: e.clientY,
-                                    windowBarLeftLength: left.clientWidth,
-                                    windowBarRightLength: right.clientWidth
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    constructor(body: HTMLElement) {
+        // マウスイベントです
+        addEventListener("pointerdown", e => this.#mouseEvent.mousedown(e))
+        addEventListener("pointermove", e => this.#mouseEvent.mousemove(e))
+        addEventListener("pointerup", e => this.#mouseEvent.mouseup(e))
+        this.#body = body
     }
     /**
-     * マウスの移動イベントの受付です。
+     * ウィンドウの位置や状態を全て確認し、更新します。
+     * @param id 識別名を指定すると、特定のウィンドウの状態だけ更新します。
      */
-    async #mousemove(e: MouseEvent) {
-        this.#clickTime = 0
-        if (this.#moveingWindow) {
-            const stat = this.#windows[this.#moveingWindow.name]
+    async viewReflash(id?: string) {
+        const windows = this.#windows
+        async function reflash(id: string) {
+            const stat = windows[id]
             if (stat) {
-                if (stat.full.is) {
-                    this.#moveingWindow.top = e.clientY + stat.top + 10
-                    if (this.#body.clientWidth / 2 > e.clientX) {
-                        this.#moveingWindow.left = e.clientX + stat.left + 11
-                    } else if (this.#body.clientWidth / 2 < e.clientX) {
-                        this.#moveingWindow.left = (stat.full.leftSize / 2) + 11
-                    }
-                    console.log(this.#moveingWindow.left)
-                    stat.full.top = e.clientY - this.#moveingWindow.top
-                    this.fullscreenSetting(this.#moveingWindow.name, true)
-                }
-                stat.top = e.clientY - this.#moveingWindow.top // 場所を保存
-                stat.left = e.clientX - this.#moveingWindow.left // ry
-                this.viewReflash(this.#moveingWindow.name)
+                const style = stat.element.style
+                style.top = String(stat.top) + "px"
+                style.left = String(stat.left) + "px"
+                style.width = String(stat.leftSize) + "px"
+                style.height = String(stat.topSize) + "px"
+                style.zIndex = String(stat.depth)
             }
-        } else if (this.#resizeingWindow) {
-            const type = this.#resizeingWindow.type
-            const ids = this.#windowSizeID
-            const stat = this.#windows[this.#resizeingWindow.name]
-            if (stat) {
-                const rewin = this.#resizeingWindow
-                const windowBarLength = 50 + (stat.option?.minSize?.top ? stat.option.minSize.top : 0)
-                const windowHeightLowLenght = (rewin.windowBarLeftLength + rewin.windowBarRightLength) + 24 + (stat.option?.minSize?.left ? stat.option.minSize.left : 0)
-                if ( // つかまれているリサイズ用要素のIDと一致すると
-                    type === ids.top
-                    || type === ids.topLeft
-                    || type === ids.leftTop
-                    || type === ids.topRight
-                    || type === ids.rightTop
-                ) {
-                    stat.top = e.clientY - rewin.clientTop
-                    stat.topSize = rewin.topSize - (e.clientY - rewin.clientY) // マウスに合わせてサイズ変更
-                    if (stat.topSize < windowBarLength) { // 最小サイズより小さくしようとした場合は回避する
-                        stat.top = (e.clientY - rewin.clientTop) + (rewin.topSize - (e.clientY - rewin.clientY)) - windowBarLength
-                        stat.topSize = windowBarLength
-                    }
-                }
-                if ( // つかまれているリサイズ用要素のIDと一致すると
-                    type === ids.left
-                    || type === ids.topLeft
-                    || type === ids.leftTop
-                    || type === ids.bottomLeft
-                    || type === ids.leftBottom
-                ) {
-                    stat.left = e.clientX - rewin.clientLeft
-                    stat.leftSize = rewin.leftSize - (e.clientX - rewin.clientX) // マウスに合わせてサイズ変更
-                    if (stat.leftSize < windowHeightLowLenght) { // 最小サイズより小さくしようとした場合は回避する
-                        stat.left = (e.clientX - rewin.clientLeft) + (rewin.leftSize - (e.clientX - rewin.clientX)) - windowHeightLowLenght
-                        stat.leftSize = windowHeightLowLenght
-                    }
-                }
-                if ( // つかまれているリサイズ用要素のIDと一致すると
-                    type === ids.right
-                    || type === ids.bottomRight
-                    || type === ids.rightBottom
-                    || type === ids.topRight
-                    || type === ids.rightTop
-                ) {
-                    stat.leftSize = this.#resizeingWindow.leftSize + (e.clientX - this.#resizeingWindow.clientX) // マウスに合わせてサイズ変更
-                    if (stat.leftSize < windowHeightLowLenght) { // 最小サイズより小さくしようとした場合は回避する
-                        stat.leftSize = windowHeightLowLenght
-                    }
-                }
-                if ( // つかまれているリサイズ用要素のIDと一致すると
-                    type === ids.bottom
-                    || type === ids.bottomRight
-                    || type === ids.rightBottom
-                    || type === ids.bottomLeft
-                    || type === ids.leftBottom
-                ) {
-                    stat.topSize = this.#resizeingWindow.topSize + (e.clientY - this.#resizeingWindow.clientY) // マウスに合わせてサイズ変更
-                    if (stat.topSize < windowBarLength) { // 最小サイズより小さくしようとした場合は回避する
-                        stat.topSize = windowBarLength
-                    }
-                }
-                this.viewReflash(this.#resizeingWindow.name)
+        }
+        if (id) reflash(id)
+        else {
+            const ids = Object.keys(windows)
+            for (let i = 0; i !== ids.length; i++) {
+                const id = ids[i]
+                reflash(id)
             }
         }
     }
-    /**
-     * マウスのクリック終了イベントの受付です。
-     */
-    async #mouseup(e: MouseEvent) {
-        this.#moveingWindow = undefined // ウィンドウドラッグを終了
-        this.#resizeingWindow = undefined // ウィンドウリサイズを終了
-        // フルスクリーンボタンのイベント
-        const target = e.target as HTMLElement
-        if (
-            target?.classList.contains("window-max")
-            && target.parentElement?.parentElement?.parentElement?.classList.contains("window-body")
-        ) {
-            const id = target.parentElement.parentElement.parentElement.id
-            await this.fullscreenSetting(id)
-        } else if (
-            target?.classList.contains("window-close")
-            && target.parentElement?.parentElement?.parentElement?.classList.contains("window-body")
-        ) {
-            const id = target.parentElement.parentElement.parentElement.id
-            await this.windowClose(id)
-        }
-        this.#miniwindowBtn = undefined // 最小化ボタンをリセット
-        this.#closeBtn = undefined // 閉じるボタンをリセット
-        this.#fullscreenBtn = undefined // フルスクリーンボタンをリセット
-    }
-    /**
-     * 
-     * @param buttonnull ボタンの状況にかかわらず状態を切り替え
-     */
+    /** @param buttonnull ボタンの状況にかかわらず状態を切り替え */
     async fullscreenSetting(id: string, buttonnull?: boolean) {
         const stat = this.#windows[id]
-        if ((id === this.#fullscreenBtn || buttonnull) && stat) if (stat.full.is) {
+        if ((id === this.#temp.fullscreenBtn || buttonnull) && stat) if (stat.full.is) {
             stat.full.is = false
             stat.top = stat.full.top
             stat.left = stat.full.left
@@ -645,35 +673,7 @@ export class windowSystem {
      * @param element 各自プログラムが管理することの出来るElementを入力します。その周りにウィンドウバーなどを装飾します。
      * @param option オプションを指定する
      */
-    async createWindow(name: string, element: HTMLElement, option: {
-        /** ウィンドウにつけるアイコンを指定する */
-        iconURL?: string
-        /** ウィンドウタイトルを決定 */
-        title?: string
-        /** レイアウトを指定。上から順に適用され、上書きされる。sizeを指定しないといけないオプションもある */
-        layout?: {
-            /** 上下左右を中央配置にするか。sizeパラメータがないと反応しない */
-            center?: boolean
-            /** 横幅を最大まで広げるかどうか */
-            widthFull?: boolean
-            /** 立幅を最大まで広げるかどうか */
-            heigthFull?: boolean
-        }
-        /** ウィンドウサイズを決定 */
-        size?: {
-            /** 立幅を決める */
-            top?: number
-            /** 横幅を決める */
-            left?: number
-        },
-        /** 最小ウィンドウサイズを決定 */
-        minSize?: {
-            /** 立幅を決める */
-            top?: number
-            /** 横幅を決める */
-            left?: number
-        }
-    }) {
+    async createWindow(name: string, element: HTMLElement, option: createWindowOption) {
         // ウィンドウのメイン
         const master = document.createElement("div")
         master.classList.add("window-master")
@@ -781,8 +781,8 @@ export class windowSystem {
         // 保存
         this.#windows["window" + name] = {
             element: master,
-            top: this.#windowInitPosition.top,
-            left: this.#windowInitPosition.left,
+            top: this.#temp.windowInitPosition.top,
+            left: this.#temp.windowInitPosition.left,
             topSize: 400,
             leftSize: 350,
             full: {
@@ -794,8 +794,8 @@ export class windowSystem {
             },
             depth: front ? front.num + 1 : 50
         }
-        this.#windowInitPosition.top += 50
-        this.#windowInitPosition.left += 50
+        this.#temp.windowInitPosition.top += 50
+        this.#temp.windowInitPosition.left += 50
         const window = this.#windows["window" + name]
         if (window) {
             if (option?.size) {
@@ -805,7 +805,8 @@ export class windowSystem {
             }
             if (option?.title) title.innerText = option.title
             if (option?.layout?.center && option?.size?.top && option?.size?.left) {
-                
+                window.leftSize = this.#body.clientWidth / 2 - (window.leftSize / 2)
+                window.topSize = this.#body.clientHeight / 2 - (window.topSize / 2)
             }
             if (!window.option) window.option = {}
             if (!window.option.minSize) window.option.minSize = {}
@@ -817,9 +818,7 @@ export class windowSystem {
         await wait(20)
         body.classList.add("window-viewed")
     }
-    /**
-     * ウィンドウを閉じます。この際に一部のデータを解放し負荷が減少します。
-     */
+    /** ウィンドウを閉じます。この際に一部のデータを解放し負荷が減少します。 */
     async windowClose(id: string) {
         const stat = this.#windows[id]
         if (stat) {
@@ -830,4 +829,94 @@ export class windowSystem {
             delete this.#windows[id]
         }
     }
+}
+namespace Builder {
+    export namespace createWindowOption {
+        export class layoutOption {
+            #cwob: createWindowOptionBuilder
+            constructor(t: createWindowOptionBuilder) { this.#cwob = t }
+            /** 上下左右を中央配置にするか。sizeパラメータがないと反応しない */
+            setCenter(a: boolean) { this.#cwob.layout.center = a; return this }
+            /** 横幅を最大まで広げるかどうか */
+            setWidthFull(a: boolean) { this.#cwob.layout.widthFull = a; return this }
+            /** 立幅を最大まで広げるかどうか */
+            setHeigthFull(a: boolean) { this.#cwob.layout.heigthFull = a; return this }
+        }
+
+        export class sizeOption {
+            #cwob: createWindowOptionBuilder
+            constructor(t: createWindowOptionBuilder) { this.#cwob = t }
+            /** 立幅を決める */
+            setTop(a: number) { this.#cwob.size.top = a; return this }
+            /** 横幅を決める */
+            setLeft(a: number) { this.#cwob.size.left = a; return this }
+        }
+
+        export class minSizeOption {
+            #cwob: createWindowOptionBuilder
+            constructor(t: createWindowOptionBuilder) { this.#cwob = t }
+            /** 立幅を決める */
+            setTop(a: number) { this.#cwob.minSize.top = a; return this }
+            /** 横幅を決める */
+            setLeft(a: number) { this.#cwob.minSize.left = a; return this }
+        }
+
+        export class windowBarSettingOption {
+            #cwob: createWindowOptionBuilder
+            constructor(t: createWindowOptionBuilder) { this.#cwob = t }
+            /** 最大化ボタンを表示するか。デフォルトはtrue */
+            setMaximumButton(a: boolean) { this.#cwob.windowBarSetting.maximumButton = a; return this }
+            /** 最小化ボタンを表示するか。デフォルトはtrue */
+            setMinimumButton(a: boolean) { this.#cwob.windowBarSetting.minimumButton = a; return this }
+        }
+    }
+}
+export class createWindowOptionBuilder {
+    get iconURL() { return this.#iconURL }
+    #iconURL?: string
+    /** ウィンドウにつけるアイコンを指定する */
+    setIconURL(a: string) { this.#iconURL = a; return this }
+
+    get title() { return this.#title }
+    #title?: string
+    /** ウィンドウタイトルを決定 */
+    setTitle(a: string) { this.#title = a; return this }
+
+    get layout() { return this.#layout }
+    #layout: {
+        center?: boolean
+        widthFull?: boolean
+        heigthFull?: boolean
+    } = {}
+    /** レイアウトを指定。上から順に適用され、上書きされる。sizeを指定しないといけないオプションもある */
+    setLayoutOption(callback: ((option: Builder.createWindowOption.layoutOption) => void)) { callback(new Builder.createWindowOption.layoutOption(this)); return this }
+
+    get size() { return this.#size }
+    #size: {
+        top?: number
+        left?: number
+    } = {}
+    /** レイアウトを指定。上から順に適用され、上書きされる。sizeを指定しないといけないオプションもある */
+    setSizeOption(callback: ((option: Builder.createWindowOption.sizeOption) => void)) { callback(new Builder.createWindowOption.sizeOption(this)); return this }
+
+    get minSize() { return this.#minSize }
+    #minSize: {
+        top?: number
+        left?: number
+    } = {}
+    /** レイアウトを指定。上から順に適用され、上書きされる。sizeを指定しないといけないオプションもある */
+    setMinSizeOption(callback: ((option: Builder.createWindowOption.minSizeOption) => void)) { callback(new Builder.createWindowOption.minSizeOption(this)); return this }
+
+    get windowBarSetting() { return this.#windowBarSetting }
+    #windowBarSetting: {
+        maximumButton?: boolean
+        minimumButton?: boolean
+    } = {}
+    /** レイアウトを指定。上から順に適用され、上書きされる。sizeを指定しないといけないオプションもある */
+    setWindowBarSettingOption(callback: ((option: Builder.createWindowOption.windowBarSettingOption) => void)) { callback(new Builder.createWindowOption.windowBarSettingOption(this)); return this }
+
+    get sizeChange() { return this.#sizeChange }
+    #sizeChange?: boolean
+    /** ウィンドウにつけるアイコンを指定する */
+    setSizeChange(a: boolean) { this.#sizeChange = a; return this }
 }

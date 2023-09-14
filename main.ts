@@ -27,3 +27,11 @@ const shareData: vpManageClass.shareData = {};
         }
     }
 })()
+process.on("SIGINT", async () => {
+    console.log(
+        "終了キーが押されました。この方法でVarious Programsを終了しないでください。\n" +
+        "シャットダウンの準備をしています。終了するまで時間がかかる恐れがあります。"
+    )
+    await vpManageClass.shutdown(shareData, { message: msg => { console.log(msg) }, forced: false })
+    console.log("シャットダウンが終了しました。")
+})

@@ -1,4 +1,4 @@
-import { windowSystem } from "./js/windowSystem.js"
+import { createWindowOptionBuilder, windowSystem } from "./js/windowSystem.js"
 import { httpDataRequest, API } from "./js/handyTool.js"
 
 addEventListener("load", async () => {
@@ -10,78 +10,115 @@ addEventListener("load", async () => {
     } = {}
     shareData.windowSystem = new windowSystem(document.body)
     const mainWindow = document.createElement("div")
-    shareData.windowSystem.createWindow("mainWindow", mainWindow, {
-        size: {
-            top: 600,
-            left: 900
-        },
-        title: "メインウィンドウ"
-    })
+    shareData.windowSystem.createWindow("mainWindow", mainWindow, new createWindowOptionBuilder()
+        .setTitle("メインウィンドウ")
+        .setSizeOption(option => option
+            .setTop(600)
+            .setLeft(900)
+        )
+    )
     const createButton = document.createElement("div")
-    createButton.style.padding = "5px"
-    createButton.style.width = "fit-content"
-    createButton.style.background = "white"
-    createButton.style.borderRadius = "10px"
+    Object.assign(createButton.style, {
+        padding: "5px",
+        width: "fit-content",
+        background: "white",
+        borderRadius: "10px"
+    })
     createButton.innerText = "新しいウィンドウ"
     createButton.addEventListener("click", () => {
-        shareData.windowSystem?.createWindow(String(Date.now()), document.createElement("div"), {
-            size: {
-                top: 600,
-                left: 900
-            },
-            title: "サブウィンドウ"
-        })
+        shareData.windowSystem?.createWindow(String(Date.now()), document.createElement("div"), new createWindowOptionBuilder()
+            .setTitle("サブウィンドウ")
+            .setSizeOption(option => option
+                .setTop(600)
+                .setLeft(900)
+            )
+        )
     })
     const postUrl = "dataIO"
     const testPost = document.createElement("div")
-    testPost.style.padding = "5px"
-    testPost.style.width = "fit-content"
-    testPost.style.background = "white"
-    testPost.style.borderRadius = "10px"
+    Object.assign(testPost.style, {
+        padding: "5px",
+        width: "fit-content",
+        background: "white",
+        borderRadius: "10px"
+    })
     testPost.innerText = "テストPOSTを送信: " + postUrl
     testPost.addEventListener("click", async () => {
     })
     const fileSendWindow = document.createElement("div")
-    fileSendWindow.style.padding = "5px"
-    fileSendWindow.style.width = "fit-content"
-    fileSendWindow.style.background = "white"
-    fileSendWindow.style.borderRadius = "10px"
+
+    Object.assign(fileSendWindow.style, {
+        padding: "5px",
+        width: "fit-content",
+        background: "white",
+        borderRadius: "10px"
+    })
     fileSendWindow.innerText = "ファイル送信"
     fileSendWindow.addEventListener("click", async () => {
         const sendWindow = document.createElement("div")
-        sendWindow.style.display = "flex"
-        sendWindow.style.alignItems = "center"
-        sendWindow.style.justifyContent = "center"
-        sendWindow.style.flexDirection = "column"
-        sendWindow.style.background = "rgb(200, 230, 255)"
-        shareData.windowSystem?.createWindow(String(Date.now()), sendWindow, {
-            size: {
-                top: 400,
-                left: 600
-            },
-            title: "ファイル送信",
-            minSize: {
-                top: 150,
-                left: 200
-            }
+        Object.assign(sendWindow.style, {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            background: "rgb(200, 230, 255)"
         })
+        shareData.windowSystem?.createWindow(String(Date.now()), sendWindow, new createWindowOptionBuilder()
+            .setTitle("ファイル送信")
+            .setSizeOption(option => option
+                .setTop(400)
+                .setLeft(600)
+            )
+            .setMinSizeOption(option => option
+                .setTop(150)
+                .setLeft(200)
+            ))
         const fileSelect = document.createElement("input")
         fileSelect.type = "file"
-        const imgPreview = document.createElement("img")
-        imgPreview.style.width = "100%"
-        imgPreview.style.height = "50%"
-        imgPreview.style.objectFit = "contain"
+        const preview = document.createElement("div")
+        Object.assign(preview.style, {
+            width: "100%",
+            height: "50%",
+            overflow: "hidden"
+        })
         const sendButton = document.createElement("button")
         sendButton.innerText = "送信"
         fileSelect.addEventListener("change", async () => {
             if (fileSelect.files && fileSelect.files[0]) {
                 const data = await fileSelect.files[0].arrayBuffer()
                 console.log(fileSelect.files[0].type)
-                const imgBlob = new Blob([data], { type: fileSelect.files[0].type })
-                imgPreview.src = URL.createObjectURL(imgBlob)
+                switch (fileSelect.files[0].type) {
+                    case "image/png":
+                    case "image/jpeg": {
+                        console.log("image")
+                        const imgPreview = document.createElement("img")
+                        imgPreview.style.width = "100%"
+                        imgPreview.style.height = "100%"
+                        imgPreview.style.objectFit = "contain"
+                        const blob = new Blob([data], { type: fileSelect.files[0].type })
+                        imgPreview.src = URL.createObjectURL(blob)
+                        preview.innerHTML = ""
+                        preview.appendChild(imgPreview)
+                        break
+                    }
+                    case "video/mp4":
+                    case "video/mpeg": {
+                        console.log("video")
+                        const imgPreview = document.createElement("video")
+                        imgPreview.controls = true
+                        imgPreview.style.width = "100%"
+                        imgPreview.style.height = "100%"
+                        imgPreview.style.objectFit = "contain"
+                        const blob = new Blob([data], { type: fileSelect.files[0].type })
+                        imgPreview.src = URL.createObjectURL(blob)
+                        preview.innerHTML = ""
+                        preview.appendChild(imgPreview)
+                        break
+                    }
+                }
             }
         })
-        sendButton.addEventListener("click", async  () => {
+        sendButton.addEventListener("click", async () => {
             if (fileSelect.files && fileSelect.files[0]) {
                 const data = await fileSelect.files[0].arrayBuffer()
                 console.log(fileSelect.files[0].type)
@@ -89,7 +126,7 @@ addEventListener("load", async () => {
                 console.log(await API.dataIO.sendFile(imgBlob))
             }
         })
-        sendWindow.appendChild(imgPreview)
+        sendWindow.appendChild(preview)
         sendWindow.appendChild(fileSelect)
         sendWindow.appendChild(sendButton)
     })
@@ -97,3 +134,11 @@ addEventListener("load", async () => {
     mainWindow.appendChild(createButton)
     mainWindow.appendChild(fileSendWindow)
 })
+
+namespace fileManager {
+    class fileManager {
+        async startup() {
+            
+        }
+    }
+}

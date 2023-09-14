@@ -141,7 +141,7 @@
 .window-main {
     width: 100%;
     height: calc(100% - 30px);
-    background-color: rgb(60, 60, 60);
+    background-color: rgba(0, 0, 0, 0.5);
     position: relative;
     overflow: hidden;
 }
