@@ -52,6 +52,6 @@ export namespace sfs {
      * @param data 書き込む文字列を入力します。
      * @returns 
      */
-    export async function writeFile(path: string, data: string): Promise<void> { return await new Promise<void>(resolve => fs.writeFile(path, data, () => resolve())) }
+    export async function writeFile(path: string, data: string | NodeJS.ArrayBufferView): Promise<void> { return await new Promise<void>(resolve => fs.writeFile(path, data, () => resolve())) }
 }
 export default sfs

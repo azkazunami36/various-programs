@@ -33,7 +33,7 @@ export const API = Object.freeze({
                 } //レスポンスを返す
             })
             console.log(status)
-            return (status === "Not Found") ? false : true
+            return (status === "Request Not Found") ? false : true
         }
     },
     YouTubeDownLoader: {},
