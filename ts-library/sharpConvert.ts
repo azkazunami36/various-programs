@@ -1,8 +1,6 @@
 import EventEmitter from "events"
 import fs from "fs"
 import imageSize from "image-size"
-import sharp from "sharp"
-
 
 import dataIO from "./dataIO.js"
 
@@ -65,6 +63,14 @@ export class sharpConvert extends EventEmitter {
                         try {
                             const image = imageSize(dataIO.slashPathStr(oldPath))
                             if (image.width) {
+                                const sharp = (f:any) => {
+                                    return {
+                                        resize: (d:any) => {},
+                                        pipe: (d:any) => {},
+                                        png: () => {},
+                                        jpeg: () => {}
+                                    }
+                                }
                                 const sha = sharp(dataIO.slashPathStr(oldPath))
                                 sha.resize((this.size < image.width) ? this.size : this.size)
                                 switch (sharpConvert.extType[this.type]) {

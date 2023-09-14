@@ -652,7 +652,7 @@ export class windowSystem {
         title?: string
         /** レイアウトを指定。上から順に適用され、上書きされる。sizeを指定しないといけないオプションもある */
         layout?: {
-            /** 中央配置にするか。size必須 */
+            /** 上下左右を中央配置にするか。sizeパラメータがないと反応しない */
             center?: boolean
             /** 横幅を最大まで広げるかどうか */
             widthFull?: boolean
@@ -804,8 +804,8 @@ export class windowSystem {
                 await this.viewReflash("window" + name)
             }
             if (option?.title) title.innerText = option.title
-            if (option?.layout?.center) {
-
+            if (option?.layout?.center && option?.size?.top && option?.size?.left) {
+                
             }
             if (!window.option) window.option = {}
             if (!window.option.minSize) window.option.minSize = {}

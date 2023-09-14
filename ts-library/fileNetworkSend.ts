@@ -1,7 +1,7 @@
 import express from "express"
-import request from "request"
 import fs from "fs"
 import http from "http"
+import axios from "axios"
 
 import dataIO from "./dataIO.js"
 import bodyParser from "body-parser"
@@ -64,28 +64,22 @@ export class fileNetworkSend {
      * @param path 送信元のデータパス
      */
     async send(path: dataIO.dataPath) {
-        await new Promise<void>(async (resolve, reject) => {
-            const stream = fs.createReadStream(dataIO.slashPathStr(path))
-            stream.on("error", e => { reject(e) })
-            try {
-                const req = request.post("http://" + this.ipAddress, {
-                    port: this.#port,
-                    body: stream,
-                    headers: {
-                        "Content-length": await new Promise<number>((resolve, reject) => {
-                            fs.stat(dataIO.slashPathStr(path), (err, stat) => {
-                                if (err) reject(err)
-                                resolve(stat.size)
-                            })
-                        }),
-                        "File-Name": path.name + (path.extension ? "." + path.extension : "")
-                    },
-                })
-                req.on("error", err => { reject(err) })
-                req.on("complete", () => { resolve() })
-            } catch (e) {
-                reject(e)
-            }
-        })
+        const stream = fs.createReadStream(dataIO.slashPathStr(path))
+        stream.on("error", e => { throw e })
+        try {
+            const req = await axios.post("http://" + this.ipAddress, {
+                port: this.#port,
+                body: stream,
+                headers: {
+                    "Content-length": await new Promise<number>((resolve, reject) => {
+                        fs.stat(dataIO.slashPathStr(path), (err, stat) => {
+                            if (err) reject(err)
+                            resolve(stat.size)
+                        })
+                    }),
+                    "File-Name": path.name + (path.extension ? "." + path.extension : "")
+                },
+            })
+        } catch (e) { throw e }
     }
 }

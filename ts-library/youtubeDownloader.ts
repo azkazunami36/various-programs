@@ -2,7 +2,7 @@ import EventEmitter from "events"
 import ytdl from "ytdl-core"
 import fs from "fs"
 import ffmpeg from "fluent-ffmpeg"
-import request from "request"
+import axios from "axios"
 import yts from "yt-search"
 
 import dataIO from "./dataIO.js"
@@ -425,12 +425,9 @@ namespace youTubeDownloader {
             if (ytdlID) return string
             if (ytdlURL) return ytdl.getVideoID(string) // URLからVideoIDを取得
             if (!ytdlID && !ytdlURL) { // どちらも存在しない場合
-                if (await new Promise(resolve => request.get({
-                    url: string,
-                    headers: {
-                        "content-type": "text/plain"
-                    }
-                }, resolve))) {
+                if (await axios.get(string, {
+                    headers: { "content-type": "text/plain" }
+                })) {
                     const data = await yts({ query: string }) // 検索
                     if (data.videos[0]) return data.videos[0].videoId // 検索から取得する
                 }
