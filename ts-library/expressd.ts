@@ -102,6 +102,7 @@ export namespace expressd {
                 ["mid", "audio/midi audio/x-midi"],
                 ["midi", "audio/midi audio/x-midi"],
                 ["mjs", "text/javascript"],
+                ["mkv", "video/x-matroska"],
                 ["mp3", "audio/mpeg"],
                 ["mp4", "video/mp4"],
                 ["mpeg", "video/mpeg"],

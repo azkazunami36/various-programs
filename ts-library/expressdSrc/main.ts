@@ -92,9 +92,11 @@ addEventListener("load", async () => {
                     case "image/jpeg": {
                         console.log("image")
                         const imgPreview = document.createElement("img")
-                        imgPreview.style.width = "100%"
-                        imgPreview.style.height = "100%"
-                        imgPreview.style.objectFit = "contain"
+                        Object.assign(imgPreview.style, {
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain"
+                        })
                         const blob = new Blob([data], { type: fileSelect.files[0].type })
                         imgPreview.src = URL.createObjectURL(blob)
                         preview.innerHTML = ""
@@ -106,9 +108,11 @@ addEventListener("load", async () => {
                         console.log("video")
                         const imgPreview = document.createElement("video")
                         imgPreview.controls = true
-                        imgPreview.style.width = "100%"
-                        imgPreview.style.height = "100%"
-                        imgPreview.style.objectFit = "contain"
+                        Object.assign(imgPreview.style, {
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain"
+                        })
                         const blob = new Blob([data], { type: fileSelect.files[0].type })
                         imgPreview.src = URL.createObjectURL(blob)
                         preview.innerHTML = ""
