@@ -47,19 +47,14 @@ export class ffmpegConverter extends EventEmitter {
     constructor() {
         super();
         (async () => {
-            const c = await dataIO.dataIO.initer("ffmpeg-converter")
-            if (c) this.data = c
-            this.readyIs = true
-            this.emit("ready", undefined)
         })()
     }
-    static async initer(shareData: vpManageClass.shareData) {
-        const convert = new ffmpegConverter()
-        await new Promise<void>(resolve => {
-            if (convert.readyIs) resolve()
-            convert.on("ready", () => resolve())
-        })
-        shareData.ffmpegConverter = convert
+    async initer(shareData: vpManageClass.shareData) {
+        const c = await dataIO.dataIO.initer("ffmpeg-converter")
+        if (c) this.data = c
+        this.readyIs = true
+        this.emit("ready", undefined)
+        shareData.ffmpegConverter = this
     }
     /** 主にFFmpeg Converterの初期化時に最初に置かれるプリセット一覧です。 */
     static presetSample = [

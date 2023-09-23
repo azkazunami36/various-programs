@@ -276,30 +276,24 @@ export namespace dataIO {
          * dataIOが利用できるかのステータスの状況
          */
         #dataIOstatus = false
-        constructor() {
-            super();
-            (async () => {
-                // パスが保存されたjsonがあるかどうかで、初期化する
-                if (!await sfs.exsits("pathCache.json")) {
-                    if (!await sfs.exsits("cache")) sfs.mkdir("cache")
-                    await sfs.writeFile("pathCache.json", "\"cache\"")
-                }
-                const dataIOjsonPath = await this.#dataIOjsonPath()
-                // 取得できない、またはパスが存在しなかったらreturn
-                if (!dataIOjsonPath || !sfs.exsits(dataIOjsonPath)) return
-                if (!sfs.exsits(dataIOjsonPath + "/dataIO.json")) sfs.writeFile(dataIOjsonPath + "/dataIO.json", JSON.stringify({}))
-                this.#dataIOstatus = true // 利用可能としてマークする
-                this.emit("ready", undefined)
-            })()
-        }
+        constructor() { super(); }
         /**
          * クラス定義時に非同期関数をawaitで待機できるようにしたもの
          * @returns 
          */
-        static async initer(shareData: vpManageClass.shareData) {
-            const dataIO = new ny()
-            await new Promise<void>(resolve => dataIO.on("ready", () => resolve()))
-            shareData.dataIO = dataIO
+        async initer(shareData: vpManageClass.shareData) {
+            // パスが保存されたjsonがあるかどうかで、初期化する
+            if (!await sfs.exsits("pathCache.json")) {
+                if (!await sfs.exsits("cache")) sfs.mkdir("cache")
+                await sfs.writeFile("pathCache.json", "\"cache\"")
+            }
+            const dataIOjsonPath = await this.#dataIOjsonPath()
+            // 取得できない、またはパスが存在しなかったらreturn
+            if (!dataIOjsonPath || !sfs.exsits(dataIOjsonPath)) return
+            if (!sfs.exsits(dataIOjsonPath + "/dataIO.json")) sfs.writeFile(dataIOjsonPath + "/dataIO.json", JSON.stringify({}))
+            this.#dataIOstatus = true // 利用可能としてマークする
+            this.emit("ready", undefined)
+            shareData.dataIO = this
         }
         /**
          * dataIOが現在利用できるかどうかを確認できます。
@@ -393,7 +387,7 @@ export namespace dataIO {
     /** 文字列配列を元にスラッシュ付きのパス型に変換します。 */
     export function slashPathStr(/** 文字列配列を入力します。 */dataPath: dataPath) {
         let pathtmp = ""
-        for (let i = 0; i !== dataPath.path.length; i++) pathtmp += dataPath.path[i] + "/" 
+        for (let i = 0; i !== dataPath.path.length; i++) pathtmp += dataPath.path[i] + "/"
         pathtmp += dataPath.name + (dataPath.extension ? "." + dataPath.extension : "")
         return pathtmp
     }

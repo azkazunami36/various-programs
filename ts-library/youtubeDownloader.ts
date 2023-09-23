@@ -215,25 +215,19 @@ namespace youTubeDownloader {
      */
     export class youTubeDownloader extends EventEmitter {
         data: ytdldataIOextJSON
-        constructor() {
-            super();
-            (async () => {
-                const data = await dataIO.dataIO.initer("youtube-downloader")
-                if (!data) {
-                    const e = new ReferenceError()
-                    e.message = "dataIOの準備ができませんでした。"
-                    e.name = "YouTube Downloader"
-                    throw e
-                }
-                this.data = data
-                this.emit("ready", undefined)
-            })()
-        }
+        constructor() { super(); }
         /** YouTube Downloaderの準備を行います。 */
-        static async initer(shareData: vpManageClass.shareData) {
-            const youtubedl = new youTubeDownloader()
-            await new Promise<void>(resolve => youtubedl.on("ready", () => resolve()))
-            shareData.youtubedl = youtubedl
+        async initer(shareData: vpManageClass.shareData) {
+            const data = await dataIO.dataIO.initer("youtube-downloader")
+            if (!data) {
+                const e = new ReferenceError()
+                e.message = "dataIOの準備ができませんでした。"
+                e.name = "YouTube Downloader"
+                throw e
+            }
+            this.data = data
+            this.emit("ready", undefined)
+            shareData.youtubedl = this
         }
         /**
          * YouTubeからソースを入手します。

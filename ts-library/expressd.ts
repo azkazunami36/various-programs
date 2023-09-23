@@ -41,33 +41,27 @@ export namespace expressd {
         server?: http.Server
         #port = "80"
         shareData: vpManageClass.shareData
-        constructor(shareData: vpManageClass.shareData) {
-            super();
-            (async () => {
-                this.app = express()
-                const app = this.app
-                app.use(bodyParser.urlencoded({ limit: "127gb", extended: true }));
-                app.get("*", async (req, res) => this.#get(req, res))
-                app.post("*", (req, res) => this.#post(req, res))
-                await new Promise<void>(resolve => this.server = app.listen(this.#port, () => { resolve() }))
-                if (this.server) this.server.on("error", err => { this.emit("error", err) })
-                const data = await dataIO.dataIO.initer("expressd")
-                if (!data) {
-                    const e = new ReferenceError()
-                    e.message = "dataIOの準備ができませんでした。"
-                    e.name = "Discord Bot"
-                    this.emit("error", e)
-                    return
-                }
-                this.data = data
-                this.emit("ready", undefined)
-                this.shareData = shareData
-            })()
-        }
-        static async initer(shareData: vpManageClass.shareData) {
-            const exp = new expressd(shareData)
-            await new Promise<void>(resolve => exp.on("ready", () => resolve()))
-            shareData.expressd = exp
+        constructor() { super(); }
+        async initer(shareData: vpManageClass.shareData) {
+            this.app = express()
+            const app = this.app
+            app.use(bodyParser.urlencoded({ limit: "127gb", extended: true }));
+            app.get("*", async (req, res) => this.#get(req, res))
+            app.post("*", (req, res) => this.#post(req, res))
+            await new Promise<void>(resolve => this.server = app.listen(this.#port, () => { resolve() }))
+            if (this.server) this.server.on("error", err => { this.emit("error", err) })
+            const data = await dataIO.dataIO.initer("expressd")
+            if (!data) {
+                const e = new ReferenceError()
+                e.message = "dataIOの準備ができませんでした。"
+                e.name = "Discord Bot"
+                this.emit("error", e)
+                return
+            }
+            this.data = data
+            this.emit("ready", undefined)
+            this.shareData = shareData
+            shareData.expressd = this
         }
         #typeGet(string: string, type: "extension" | "contentType") {
             const data = [

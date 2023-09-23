@@ -476,7 +476,7 @@ const { question, choice, booleanIO, progress, funcSelect } = consoleUIPrograms
  */
 export class cuiIO {
     constructor() { }
-    static async initer(shareData: vpManageClass.shareData) {
+    async initer(shareData: vpManageClass.shareData) {
         shareData.cuiIO = new cuiIO()
         shareData.cuiIO.shareData = shareData
         shareData.cuiIO.main()
