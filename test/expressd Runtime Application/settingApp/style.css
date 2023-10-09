@@ -1,0 +1,54 @@
+html,
+body {
+    margin: 0;
+}
+
+#mainAria {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+#mainSidebar {
+    width: 270px;
+    height: 100%;
+}
+
+#mainWindow {
+    width: calc(100% - 270px);
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.mainSideBarItem {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 50px;
+}
+
+.mainSideBarButton {
+    display: flex;
+    align-items: center;
+    width: calc(100% - 30px);
+    height: calc(100% - 10px);
+    padding-left: 10px;
+    border-radius: 10px;
+}
+
+.mainSideBarButton:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.mainSideBarButton:active {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.mainSideBarMargin {
+    margin: 5px;
+}
+
+.mainSideBarGroup {
+    margin-bottom: 15px;
+}
