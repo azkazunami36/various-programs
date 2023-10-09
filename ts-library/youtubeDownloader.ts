@@ -8,6 +8,7 @@ import yts from "yt-search"
 import dataIO from "./dataIO.js"
 import vpManageClass from "./vpManageClass.js"
 import musicManager from "./musicManager.js"
+import handyTool from "./handyTool.js"
 
 namespace youTubeDownloader {
     interface youTubeDownloaderEvents {
@@ -117,7 +118,7 @@ namespace youTubeDownloader {
         setTime: number
         /**
          * 様々な品質や種類のデータが入っています。  
-         * noには番号を入力しますが、管理方法はytdlのクラスに任せてください。勝手に操作をするとデータを失う恐れがあり、番号を変更しないでください。  
+         * noには番号を入力しますが、管理方法はytdlのクラスに任せてください。勝手に操作をするとデータを失う恐れがありますので、番号を変更しないでください。  
          * ちなみに、なぜそのような管理方法になったかの理由は不明です。
          */
         datas: { [no: string]: sourceMetadata }
@@ -170,34 +171,37 @@ namespace youTubeDownloader {
         json: {
             /**
              * 進行状況をJSONに書き込んでいます。完了した場合はdownloadedとなり、利用できる可能性が上がっています。  
-             * 進行中に中断された場合、検知し削除されるようにしています。
+             * 進行中に中断された場合、検知し容量を解放されるようにしています。
              */
             progress?: {
-                [videoId: string]: {
-                    /**
-                     * ダウンロード中かダウンロードが終わっているか
-                     */
-                    status?: "download" | "downloaded",
-                    /**
-                     * ダウンロード開始時間
-                     */
-                    startTime?: number,
-                    /**
-                     * ダウンロード速度？チャンクの長さ
-                     */
-                    chunkLength?: number,
-                    /**
-                     * ダウンロード済み
-                     */
-                    downloaded?: number,
-                    /**
-                     * ダウンロード終了
-                     */
-                    total?: number
+                /** 進行状況のID。一括処理を希望する入力があった場合に分別して管理するために使用する */
+                [progressID: string]: {
+                    [videoId: string]: {
+                        /**
+                         * ダウンロード中かダウンロードが終わっているか
+                         */
+                        status?: "download" | "downloaded",
+                        /**
+                         * ダウンロード開始時間
+                         */
+                        startTime?: number,
+                        /**
+                         * ダウンロード速度？チャンクの長さ
+                         */
+                        chunkLength?: number,
+                        /**
+                         * ダウンロード済み
+                         */
+                        downloaded?: number,
+                        /**
+                         * ダウンロード終了
+                         */
+                        total?: number
+                    }
                 }
             },
             /**
-             * 登録されているVideoIDの一覧です。
+             * 登録されているYouTubeの動画データ情報です。
              */
             videoMeta?: {
                 [videoId: string]: videoMetadata
@@ -229,185 +233,185 @@ namespace youTubeDownloader {
             this.emit("ready", undefined)
             shareData.youtubedl = this
         }
-        /**
-         * YouTubeからソースを入手します。
-         * @param videoId VideoIDを入力します。
-         * @param type 動画を入手するか音声を入手するかを決めます。
-         * @returns 
-         */
-        async playSourceGet(str: string, type: "videoonly" | "audioonly") {
-            const videoId = await this.getVideoId(str)
-            if (!videoId) return
-            if (!this.data) { // dataIOが初期化されていない場合リターン
-                const e = new ReferenceError()
-                e.message = "dataIOの準備ができませんでした。"
-                e.name = "YouTube Downloader"
-                throw e
-            }
-            const youtubedl = ytdl(videoId, { filter: type, quality: "highest" }) //ytdlに指定
-            const pass = await this.data.passGet(["youtubeSource", "temp", videoId], type) // 保存パスを指定
-            if (!pass) { // パスが存在しない場合リターン
-                const error = new ReferenceError()
-                error.message = "dataIOの疑似パスの取得に失敗しました。"
-                error.name = "YouTube Downloader"
-                throw error
-            }
-            await new Promise<void>(async (resolve, reject) => {
-                const stream = fs.createWriteStream(pass) // パス先に書き込みストリームを作成
-                stream.on("error", err => {
-                    this.emit("error", err)
-                    reject(err)
-                })
-                youtubedl.pipe(stream) // ダウンロードを開始
-                youtubedl.on("progress", (chunkLength, downloaded, total) => { //進行状況を作成・保存
-                    if (!this.data) {
-                        const e = new ReferenceError()
-                        e.message = "dataIOの準備ができませんでした。"
-                        e.name = "YouTube Downloader"
-                        throw e
-                    }
-                    if (!this.data.json.progress) this.data.json.progress = {}
-                    if (!this.data.json.progress[videoId]) this.data.json.progress[videoId] = {}
-                    const progress = this.data.json.progress[videoId]
-                    if (chunkLength && typeof chunkLength === "number") progress.chunkLength
-                    if (downloaded && typeof downloaded === "number") progress.downloaded = downloaded
-                    if (total && typeof total === "number") progress.total = total
-                    progress.status = "download"
-                    progress.startTime = progress.startTime ? progress.startTime : Date.now() // 書き込まれていない場合のみ現在時刻を入れ、開始時間とする。
-                })
-                youtubedl.on("end", async () => { // 操作が完了すると
-                    resolve()
-                })
-            })
-            if (!this.data.json.progress) this.data.json.progress = {} // 進行状況が空の場合作成
-            this.data.json.progress[videoId].status = "downloaded" // ダウンロード済みとする
-            async function ffprobe(pass: string): Promise<ffmpeg.FfprobeData> { // FFprobeの関数
-                return await new Promise(resolve => ffmpeg(pass).ffprobe((err, data) => { resolve(data) }))
-            }
-            const data = await ffprobe(pass) // FFprobeで情報を入手
-            const video = data.streams[0]
-            if (!this.data.json.videoMeta) this.data.json.videoMeta = {}
-            const getIs = await this.getInfo(videoId) // VideoIDのデータを取得し初期化
-            if (!getIs) {
-                const error = new ReferenceError()
-                error.message = "YouTubeから情報を取得できませんでした。"
-                error.name = "YouTube Downloader"
-                this.emit("error", error)
-                return
-            }
-            if (!video.codec_name) { // コーデック名が不明だと後々面倒なのでエラー
-                const error = new ReferenceError()
-                error.message = "コーデックが確認できませんでした。"
-                error.name = "YouTube Downloader"
-                this.emit("error", error)
-                return
-            }
-            const no = (() => { // VideoIDのJSON内にあるソースデータJSONに空きのある番号を確認する
-                let i = 0
-                while (true) {
-                    if (!this.data.json.videoMeta[videoId].datas[String(i)]) return String(i)
-                    else i++
+        #privateFunction = {
+            /**
+             * YouTubeからソースを入手します。
+             * @param videoId VideoIDを入力します。
+             * @param type 動画を入手するか音声を入手するかを決めます。
+             * @returns 
+             */
+            playSourceGet: async (videoId: string, type: "videoonly" | "audioonly") => {
+                if (!ytdl.validateID(videoId)) { // VideoIDではない場合エラー
+                    const e = new ReferenceError()
+                    e.message = "VideoIDが入力されるはずの場所にVideoIDではないものが入力されました。"
+                    e.name = "YouTube Downloader"
+                    throw e
                 }
-            })()
-            const path = await this.data.passGet(["youtubeSource", "sources", videoId], no)
-            if (!path) {
-                const error = new ReferenceError()
-                error.message = "dataIOの疑似パスの取得に失敗しました。"
-                error.name = "YouTube Downloader"
-                this.emit("error", error)
-                return
-            }
-            await new Promise<void>(resolve => {
-                const stream = fs.createReadStream(pass) // 読み込みストリーム
-                stream.on("error", err => {
-                    this.emit("error", err)
-                    resolve()
-                })
-                stream.pipe(fs.createWriteStream(path)) // 書き込みストリームを使い書き込む
-                stream.on("end", () => { resolve() })
-            })
-            this.data.json.videoMeta[videoId].datas[no] = {
-                path: {
-                    path: ["youtubeSource", "sources", videoId],
-                    name: no
-                },
-                source: "ytdl",
-                original: true,
-                userOriginal: false,
-                codec: video.codec_name,
-                fps: (() => { // もしfps値が「0」または「0/0」だった場合に自動で計算する関数
-                    if (!video.r_frame_rate) return
-                    if (video.r_frame_rate.match("/")) {
-                        const data = video.r_frame_rate.split("/")
-                        return Number(data[0]) / Number(data[1])
-                    } else return Number(video.r_frame_rate)
-                })(),
-                height: video.height ? video.height : undefined,
-                bits: video.sample_fmt ? video.sample_fmt : undefined,
-                samplerate: video.sample_rate ? video.sample_rate : undefined,
-                latency: 0,
-                sameAsOriginal: true
-            }
-        }
-        /**
-         * YouTubeにある動画の情報を入手します。
-         * @param videoId VideoIDを入力します。
-         * @return 操作が完了したかどうかを返します。
-         */
-        async getInfo(videoId: string) {
-            try {
-                const { videoDetails } = await ytdl.getInfo(videoId) // データを取得
-                if (!this.data.json.videoMeta) this.data.json.videoMeta = {} // 存在しない場合初期化
-                const thumbnailURLGet = (videoDetails: ytdl.MoreVideoDetails) => { // 最も大きいサムネイルを探し、URLを返す
-                    let largeImageArray: number = 0
-                    let largeImageHeight: number = 0
-                    for (let i = 0; i !== videoDetails.thumbnails.length; i++) {
-                        const thumbnail = videoDetails.thumbnails[i]
-                        if (largeImageHeight < thumbnail.height) {
-                            largeImageArray = i
-                            largeImageHeight = thumbnail.height
+                if (!this.data) { // dataIOが初期化されていない場合エラー
+                    const e = new ReferenceError()
+                    e.message = "dataIOの準備ができませんでした。"
+                    e.name = "YouTube Downloader"
+                    throw e
+                }
+                const youtubedl = ytdl(videoId, { filter: type, quality: "highest" }) //ytdlに指定
+                const pass = await this.data.passGet(["youtubeSource", "temp", videoId], type) // 保存パスを指定
+                if (!pass) { // パスが存在しない場合エラー
+                    const error = new ReferenceError()
+                    error.message = "dataIOの疑似パスの取得に失敗しました。"
+                    error.name = "YouTube Downloader"
+                    throw error
+                }
+                const progressId = handyTool.randomStringCreate(10, { timeNow: { end: true } })
+                await new Promise<void>(async (resolve, reject) => {
+                    const stream = fs.createWriteStream(pass) // パス先に書き込みストリームを作成
+                    stream.on("error", err => {
+                        this.emit("error", err)
+                        reject(err)
+                    })
+                    youtubedl.pipe(stream) // ダウンロードを開始
+                    youtubedl.on("progress", (chunkLength, downloaded, total) => { //進行状況を作成・保存
+                        if (!this.data) {
+                            const e = new ReferenceError()
+                            e.message = "dataIOの準備ができませんでした。"
+                            e.name = "YouTube Downloader"
+                            throw e
                         }
+                        if (!this.data.json.progress) this.data.json.progress = {}
+                        if (!this.data.json.progress[videoId]) this.data.json.progress[videoId] = {}
+                        const progress = this.data.json.progress[videoId]
+                        if (chunkLength && typeof chunkLength === "number") progress.chunkLength
+                        if (downloaded && typeof downloaded === "number") progress[progressId].downloaded = downloaded
+                        if (total && typeof total === "number") progress[progressId].total = total
+                        progress[progressId].status = "download"
+                        if (!progress[progressId].startTime) progress[progressId].startTime = Date.now() // 書き込まれていない場合のみ現在時刻を入れ、開始時間とする。
+                    })
+                    youtubedl.on("end", async () => { resolve() })
+                })
+                if (!this.data.json.progress) this.data.json.progress = {} // 進行状況が空の場合作成
+                this.data.json.progress[progressId][videoId].status = "downloaded" // ダウンロード済みとする
+                async function ffprobe(pass: string): Promise<ffmpeg.FfprobeData> { // FFprobeの関数
+                    return await new Promise((resolve, reject) => ffmpeg(pass).ffprobe((err, data) => {
+                        if (err) reject(err)
+                        resolve(data)
+                    }))
+                }
+                const data = await ffprobe(pass) // FFprobeで情報を入手
+                const video = data.streams[0]
+                if (!this.data.json.videoMeta) this.data.json.videoMeta = {}
+                if (!video.codec_name) { // コーデック名が不明だと後々面倒なのでエラー
+                    const error = new ReferenceError()
+                    error.message = "コーデックが確認できませんでした。"
+                    error.name = "YouTube Downloader"
+                    this.emit("error", error)
+                    return
+                }
+                const no = (() => { // VideoIDのJSON内にあるソースデータJSONに空きのある番号を確認する
+                    let i = 0
+                    while (true) {
+                        if (!this.data.json.videoMeta[videoId].datas[String(i)]) return String(i)
+                        else i++
                     }
-                    return videoDetails.thumbnails[largeImageArray].url
+                })()
+                const path = await this.data.passGet(["youtubeSource", "sources", videoId], no)
+                if (!path) {
+                    const error = new ReferenceError()
+                    error.message = "dataIOの疑似パスの取得に失敗しました。"
+                    error.name = "YouTube Downloader"
+                    this.emit("error", error)
+                    return
                 }
-                if (!this.data.json.videoMeta[videoId]) this.data.json.videoMeta[videoId] = { // 初期化データのセット
-                    title: videoDetails.title,
-                    description: videoDetails.description ? videoDetails.description : "",
-                    author: videoDetails.author,
-                    category: videoDetails.category,
-                    setTime: Date.now(),
-                    thumbnailURL: thumbnailURLGet(videoDetails),
-                    ytdlRawData: videoDetails,
-                    datas: {},
-                    history: {}
+                await new Promise<void>(resolve => {
+                    const stream = fs.createReadStream(pass) // 読み込みストリーム
+                    stream.on("error", err => {
+                        this.emit("error", err)
+                        resolve()
+                    })
+                    stream.pipe(fs.createWriteStream(path)) // 書き込みストリームを使い書き込む
+                    stream.on("end", () => { resolve() })
+                })
+                this.data.json.videoMeta[videoId].datas[no] = {
+                    path: {
+                        path: ["youtubeSource", "sources", videoId],
+                        name: no
+                    },
+                    source: "ytdl",
+                    original: true,
+                    userOriginal: false,
+                    codec: video.codec_name,
+                    fps: (() => { // もしfps値が「0」または「0/0」だった場合に自動で計算する関数
+                        if (!video.r_frame_rate) return
+                        if (video.r_frame_rate.match("/")) {
+                            const data = video.r_frame_rate.split("/")
+                            return Number(data[0]) / Number(data[1])
+                        } else return Number(video.r_frame_rate)
+                    })(),
+                    height: video.height ? video.height : undefined,
+                    bits: video.sample_fmt ? video.sample_fmt : undefined,
+                    samplerate: video.sample_rate ? video.sample_rate : undefined,
+                    latency: 0,
+                    sameAsOriginal: true
                 }
-                const data = this.data.json.videoMeta[videoId]
-                if ((() => {
-                    if (data.title !== videoDetails.title) return true
-                    if (data.description !== videoDetails.description ? videoDetails.description : "") return true
-                    if (data.author !== videoDetails.author) return true
-                    if (data.category !== videoDetails.category) return true
-                    if (data.thumbnailURL !== thumbnailURLGet(videoDetails)) return true
-                })()) {
-                    data.history[String(data.setTime)] = {
-                        title: data.title,
-                        description: data.description,
-                        author: data.author,
-                        category: data.category,
-                        thumbnailURL: data.thumbnailURL
+            },
+            /**
+             * YouTubeにある動画の情報を入手します。
+             * @param videoId VideoIDを入力します。
+             * @return 操作が完了したかどうかを返します。
+             */
+            getInfo: async (videoId: string) => {
+                try {
+                    const { videoDetails } = await ytdl.getInfo(videoId) // データを取得
+                    if (!this.data.json.videoMeta) this.data.json.videoMeta = {} // 存在しない場合初期化
+                    const thumbnailURLGet = (videoDetails: ytdl.MoreVideoDetails) => { // 最も大きいサムネイルを探し、URLを返す
+                        let largeImageArray: number = 0
+                        let largeImageHeight: number = 0
+                        for (let i = 0; i !== videoDetails.thumbnails.length; i++) {
+                            const thumbnail = videoDetails.thumbnails[i]
+                            if (largeImageHeight < thumbnail.height) {
+                                largeImageArray = i
+                                largeImageHeight = thumbnail.height
+                            }
+                        }
+                        return videoDetails.thumbnails[largeImageArray].url
                     }
-                    data.title = videoDetails.title
-                    data.description = videoDetails.description ? videoDetails.description : ""
-                    data.author = videoDetails.author
-                    data.category = videoDetails.category
-                    data.thumbnailURL = thumbnailURLGet(videoDetails)
-                    data.setTime = Date.now()
-                    data.ytdlRawData = videoDetails
+                    if (!this.data.json.videoMeta[videoId]) this.data.json.videoMeta[videoId] = { // 初期化データのセット
+                        title: videoDetails.title,
+                        description: videoDetails.description ? videoDetails.description : "",
+                        author: videoDetails.author,
+                        category: videoDetails.category,
+                        setTime: Date.now(),
+                        thumbnailURL: thumbnailURLGet(videoDetails),
+                        ytdlRawData: videoDetails,
+                        datas: {},
+                        history: {}
+                    }
+                    const data = this.data.json.videoMeta[videoId]
+                    if ((() => {
+                        if (data.title !== videoDetails.title) return true
+                        if (data.description !== videoDetails.description ? videoDetails.description : "") return true
+                        if (data.author !== videoDetails.author) return true
+                        if (data.category !== videoDetails.category) return true
+                        if (data.thumbnailURL !== thumbnailURLGet(videoDetails)) return true
+                    })()) {
+                        data.history[String(data.setTime)] = {
+                            title: data.title,
+                            description: data.description,
+                            author: data.author,
+                            category: data.category,
+                            thumbnailURL: data.thumbnailURL
+                        }
+                        data.title = videoDetails.title
+                        data.description = videoDetails.description ? videoDetails.description : ""
+                        data.author = videoDetails.author
+                        data.category = videoDetails.category
+                        data.thumbnailURL = thumbnailURLGet(videoDetails)
+                        data.setTime = Date.now()
+                        data.ytdlRawData = videoDetails
+                    }
+                    return true
+                } catch (e) {
+                    return false
                 }
-                return true
-            } catch (e) {
-                return false
-            }
+            },
         }
         /**
          * VideoIDを取得します。
@@ -430,9 +434,9 @@ namespace youTubeDownloader {
         /**
          * 現状のJSONを取得します。
          */
-        async getJSON() {
-            return this.data.json
-        }
+        async getJSON() { return this.data.json }
+        async playSourcesGet(req: { str: string, type: "videoonly" | "audioonly" }[]) { }
     }
+    new youTubeDownloader()
 }
 export default youTubeDownloader
