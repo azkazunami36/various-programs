@@ -72,7 +72,11 @@ export namespace expressd {
                     },
                     app
                 )
-            } else { this.server = http.createServer(app) }
+                this.#port = "443"
+            } else {
+                this.server = http.createServer(app)
+                this.#port = "80"
+            }
             app.use(bodyParser.urlencoded({ limit: "127gb", extended: true }));
             app.get("*", async (req, res) => this.#get(req, res))
             app.post("*", (req, res) => this.#post(req, res))
