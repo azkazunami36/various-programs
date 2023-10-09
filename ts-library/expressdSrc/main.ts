@@ -137,12 +137,28 @@ addEventListener("load", async () => {
     mainWindow.appendChild(testPost)
     mainWindow.appendChild(createButton)
     mainWindow.appendChild(fileSendWindow)
+    const box = document.createElement("div")
+    box.style.width = "50px"
+    box.style.height = "50px"
+    box.style.zIndex = "9999"
+    box.style.position = "fixed"
+    box.style.cursor = "none"
+    box.style.pointerEvents = "none"
+    const image = document.createElement("img")
+    image.style.filter = "drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.3)) drop-shadow(-1px 0px 1px rgba(0, 0, 0, 0.1))"
+    image.src = "svgIcon/mouseCursor/default.svg"
+    box.appendChild(image)
+    document.body.appendChild(box)
+    addEventListener("pointermove", e => {
+        box.style.top = (e.clientY - 25) + "px"
+        box.style.left = (e.clientX - 25) + "px"
+    })
 })
 
 namespace fileManager {
     class fileManager {
         async startup() {
-            
+
         }
     }
 }

@@ -7,3 +7,7 @@ body {
     overflow: hidden;
     font-family: '游ゴシック Medium', 'メイリオ', 'ヒラギノ角ゴ ProN W3', 'ＭＳ Ｐゴシック', sans-serif;
 }
+
+* {
+    cursor: none;
+}
