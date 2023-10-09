@@ -29,6 +29,31 @@ export namespace consoleUIPrograms {
         return await new Promise(resolve => iface.question(text + "> ", answer => { iface.close(); resolve(answer) }))
     }
     /**
+     * ユーザーの文字列から数字を取り出します。
+     * @param text ユーザーへの質問文を入力します。
+     * @param length 期待する数字の範囲を決めます。これを満たさない場合、Undefinedとなります。
+     */
+    export async function numberIO(text: string, length?: {
+        /** 最大数 */
+        max?: number
+        /** 最小数 */
+        min?: number
+        /** 自動で数字を範囲内にし、Undefinedになる確立を下げる */
+        autocorrect?: boolean
+    }) {
+        let number: number | undefined = Number(await question(text || "数字を入力してください。"))
+        if (Number.isNaN(number)) number = undefined
+        if (length) {
+            if (number && length.max && length.max < number)
+                if (length.autocorrect) number = length.max
+                else number = undefined
+            if (number && length.min && length.min > number)
+                if (length.autocorrect) number = length.min
+                else number = undefined
+        }
+        return number
+    }
+    /**
      * 文字列配列からユーザー入力を利用し番号を選択させます。
      * @param array 文字列配列を入力します。
      * @param title 文字列配列の意図を入力します。
@@ -219,115 +244,83 @@ export namespace consoleUIPrograms {
                     if (this.errorView) console.log(e)
                     stats = false
                 }
-            } while ( this.loop && !this.end )
+            } while (this.loop && !this.end)
             return stats
         }
     }
-    type userIOGetRequest = {
-        /**
-         * 文字列を要求します。
-         */
-        type: "string"
-        /**
-         * 質問文を決めます。デフォルトは「文字を入力してください。」となります。
-         */
-        text?: string
-        /**
-         * 要求するデータが必須でないかどうかを決めます。デフォルトは「false」です。
-         */
-        notRequire?: boolean
-    } | {
-        /**
-         * 正か負かを要求します。
-         */
-        type: "boolean"
-        /**
-         * 質問文を決めます。デフォルトは「はいかいいえかをY/Nで入力してください。」となります。
-         */
-        text?: string
-        /**
-         * 要求するデータが必須でないかどうかを決めます。デフォルトは「false」です。
-         */
-        notRequire?: boolean
-    } | {
-        /**
-         * 文字列の配列から選択を要求します。
-         */
-        type: "choice"
-        /**
-         * 必須です。選択するためのリストが表示されます。
-         */
-        array: string[]
-        /**
-         * 質問文を決めます。デフォルトは「上記から数字で選択してください。」となります。
-         */
-        text?: string
-        /**
-         * リストのタイトルを決めます。デフォルトは「一覧」となります。
-         */
-        title?: string
-        /**
-         * 配列の範囲外を指定した際、undefinedにならないようにするかどうかを決めます。デフォルトは「false」です。
-         */
-        manyNumNotDetected?: boolean
-        /**
-         * 要求するデータが必須でないかどうかを決めます。デフォルトは「false」です。
-         */
-        notRequire?: boolean
-    } | {
-        /**
-         * パスを要求します。
-         */
-        type: "path"
-        /**
-         * 質問文を決めます。デフォルトは「パスを入力してください。」となります。
-         */
-        text?: string
-        /**
-         * 要求するデータが必須でないかどうかを決めます。デフォルトは「false」です。
-         */
-        notRequire?: boolean
-    }
-    type userIOGetResponse = {
-        type: "string"
-        data: string
-    } | {
-        type: "boolean"
-        data: boolean
-    } | {
-        type: "choice"
-        data?: number
-    } | {
-        type: "path"
-        data?: dataIO.dataPath
-    }
-    /**
-     * 欲しいデータのリストを入力すると、ユーザーに質問文で要求し、集まったデータを返します。
-     * @param request 
-     */
-    export async function userIOGet(requests: {
-        name: string
-        request: userIOGetRequest
-    }[]) {
-        const res: userIOGetResponse[] = []
-        for (let i = 0; i !== requests.length; i++) {
-            switch (requests[i].request.type) {
-                case "string": {
-                    break
-                }
-                case "boolean": {
-                    break
-                }
-                case "choice": {
-                    break
-                }
-                case "path": {
-                    break
+    interface userIOGetType {
+        string: {
+            return: string
+            body: {
+                type: "string"
+                /** 質問文を決めます。デフォルトは「文字を入力してください。」となります。 */
+                text?: string
+            }
+        }
+        boolean: {
+            return: boolean
+            body: {
+                type: "boolean"
+                /** 質問文を決めます。デフォルトは「はいかいいえかをY/Nで入力してください。」となります。 */
+                text?: string
+            }
+        }
+        choice: {
+            return: number
+            body: {
+                type: "choice"
+                /** 必須です。選択するためのリストが表示されます。 */
+                array: string[]
+                /** 質問文を決めます。デフォルトは「上記から数字で選択してください。」となります。 */
+                text?: string
+                /** リストのタイトルを決めます。デフォルトは「一覧」となります。 */
+                title?: string
+                /** 配列の範囲外を指定した際、undefinedにならないようにするかどうかを決めます。デフォルトは「false」です。 */
+                manyNumNotDetected?: boolean
+            }
+        }
+        path: {
+            return: dataIO.dataPath
+            body: {
+                type: "path"
+                /** 質問文を決めます。デフォルトは「パスを入力してください。」となります。 */
+                text?: string
+            }
+        }
+        number: {
+            return: number
+            body: {
+                type: "number"
+                /** 質問文を決めます。デフォルトは「数字を入力してください。」となります。 */
+                text?: string
+                /** 期待する数字の大きさを入力します。指定以外の数字が選ばれると、自動でundefined判定となります。 */
+                length?: {
+                    /** 数字の最小値を入力します。 */
+                    min?: number
+                    /** 数字の最大値を入力します。 */
+                    max?: number
+                    /** 自動で範囲内に修正をするかどうかを決めます。 */
+                    autocorrect?: boolean
                 }
             }
         }
-        return res
     }
+    /** 欲しいデータタイプを入力すると、ユーザーに質問文で要求し、データを返します。型定義のバグがあるため、出力されたデータの分析を行い型を特定しないといけない状況になっております。 */
+    export async function userIOGet<T extends string, K extends keyof userIOGetType>(...requests: {
+        name: T, type: K, options: userIOGetType[K]["body"]
+    }[]): Promise<{ [name in T]: userIOGetType[K]["return"] | undefined }> {
+        const obj: Record<T, userIOGetType[K]["return"] | undefined> = {} as any
+        for (const request of requests) switch (request.options.type) {
+            case "string": obj[request.name] = await question(request.options.text || "文字を入力してください。"); break
+            case "boolean": obj[request.name] = await booleanIO(request.options.text || "はいかいいえかをY/Nで入力してください。"); break
+            case "choice": obj[request.name] = await choice(request.options.array, request.options.title || "一覧", request.options.text || "上記から数字で入力してください。", request.options.manyNumNotDetected); break
+            case "path": obj[request.name] = await dataIO.pathChecker(await question(request.options.text || "パスを入力してください。")); break
+            case "number": obj[request.name] = await numberIO(request.options.text || "数字を入力してください。", request.options.length); break
+            default: obj[request.name] = undefined; break
+        }
+        return obj
+    }
+
     type userIOMenuMain = {
         /**
          * 関数が必須かどうかを決めます。  
@@ -467,7 +460,7 @@ export namespace consoleUIPrograms {
     }
 }
 
-const { question, choice, booleanIO, progress, funcSelect } = consoleUIPrograms
+const { question, choice, booleanIO, progress, funcSelect, userIOGet } = consoleUIPrograms
 
 /**
  * # cuiIO
@@ -487,51 +480,32 @@ export class cuiIO {
         const shareData = this.shareData
         this.funcSelect = new funcSelect({
             "Image Resize": async () => {
-                const imageSize = Number(await question("指定の画像サイズを入力してください。"))
-                if (Number.isNaN(imageSize)) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                const beforePass = await dataIO.pathChecker(await question("変換元の画像フォルダを指定してください。"))
-                if (!beforePass) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                const afterPass = await dataIO.pathChecker(await question("変換先のフォルダを指定してください。(空フォルダ推奨)"))
-                if (!afterPass) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                const nameing = await choice(sharpConvert.type, "命名方法", "上記から命名方法を選択してください。")
-                if (!nameing) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                const type = await choice(sharpConvert.extType, "拡張子一覧", "利用する拡張子と圧縮技術を選択してください。")
-                if (!type) {
-                    console.log("入力が間違っているようです。最初からやり直してください。")
-                    return
-                }
-                if (type !== 1 && type !== 2) {
-                    console.log("プログラム内で予期せぬエラーを回避するため、中断されました。")
-                    return
-                }
+                const datas = await userIOGet(
+                    { name: "imageSize", type: "number", options: { type: "number", text: "指定の画像サイズを入力してください。" } },
+                    { name: "beforePath", type: "path", options: { type: "path", text: "変換元の画像フォルダを指定してください。" } },
+                    { name: "afterPath", type: "path", options: { type: "path", text: "変換先のフォルダを指定してください。(空フォルダ推奨)" } },
+                    { name: "nameing", type: "choice", options: { type: "choice", array: sharpConvert.type, text: "上記から命名方法を選択してください。", title: "命名方法" } },
+                    { name: "type", type: "choice", options: { type: "choice", array: sharpConvert.extType, text: "利用する拡張子と圧縮技術を選択してください。", title: "拡張子一覧" } }
+                )
+                const { imageSize, beforePath, afterPath, nameing, type } = datas
+                if (!(
+                    typeof imageSize === "number"
+                    && typeof beforePath !== "undefined"
+                    && typeof beforePath !== "number"
+                    && typeof afterPath !== "undefined"
+                    && typeof afterPath !== "number"
+                    && typeof nameing === "number"
+                    && typeof type === "number"
+                )) return console.log("正しい情報が取得できませんでした。")
                 const folderContain = await booleanIO("フォルダ内にあるフォルダも画像変換に含めますか？yで同意します。")
                 const invFileIgnore = await booleanIO("最初に「.」が付くファイルを省略しますか？")
-                const listerOptions = {
-                    macOSFileIgnote: false
-                }
-                if (!invFileIgnore) {
-                    listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
-                }
-                const fileList = await dataIO.fileLister(beforePass, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFileIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
-                if (!fileList) {
-                    console.log("ファイルの取得ができなかったようです。")
-                    return
-                }
+                const listerOptions = { macOSFileIgnote: false }
+                if (!invFileIgnore) listerOptions.macOSFileIgnote = await booleanIO("macOSに使用される「._」から始まるファイルを除外しますか？")
+                const fileList = await dataIO.fileLister(beforePath, { contain: folderContain, extensionFilter: ["png", "jpg", "jpeg", "tiff"], invFileIgnored: invFileIgnore, macosInvIgnored: listerOptions.macOSFileIgnote })
+                if (!fileList) return console.log("ファイルの取得ができなかったようです。")
                 console.log(
-                    "変換元パス: " + dataIO.slashPathStr(beforePass) + "\n" +
-                    "変換先パス: " + dataIO.slashPathStr(afterPass) + "\n" +
+                    "変換元パス: " + dataIO.slashPathStr(beforePath) + "\n" +
+                    "変換先パス: " + dataIO.slashPathStr(afterPath) + "\n" +
                     "変換先サイズ(縦): " + imageSize + "\n" +
                     "変換するファイル数: " + fileList.length + "\n" +
                     "命名方法: " + sharpConvert.type[nameing - 1] + "\n" +
@@ -552,7 +526,7 @@ export class cuiIO {
                 const permission = await booleanIO("上記のデータで実行してもよろしいですか？yと入力すると続行します。")
                 if (permission) {
                     const convert = new sharpConvert()
-                    convert.afterPass = afterPass
+                    convert.afterPass = afterPath
                     convert.nameing = nameing - 1
                     convert.size = imageSize
                     convert.processd = fileList
@@ -1028,7 +1002,7 @@ export class cuiIO {
                         "動画を取得": async () => {
                             const videoId = await question("VideoIDを入力してください。")
                             console.log("少々おまちください...")
-                            await youtubedl.playSourceGet(videoId, "videoonly")
+                            await youtubedl.playSourcesGet([{ str: videoId, type: "videoonly" }])
                             console.log("完了しました。")
                         },
                         "VideoIDを取得": async () => {
@@ -1091,6 +1065,59 @@ export class cuiIO {
                         }
                         await sfs.writeFile("passCache.json", JSON.stringify(dataIO.slashPathStr(pass)))
                         console.log(JSON.parse(String(await sfs.readFile("passCache.json"))) + "に変更されました。")
+                    },
+                    "expressd設定": async () => {
+                        const fc = new funcSelect({
+                            "SSL設定": async () => {
+                                const fc = new funcSelect({
+                                    "SSLの有効化・無効化": async () => {
+                                        if (!shareData.expressd?.data.json.sslCongig) return console.log("秘密鍵・証明書のパスが保存されていません。登録してからやり直してください。")
+                                        console.log("現在SSLによるhttps接続は" + (shareData.expressd.data.json.sslCongig.status ? "有効" : "無効") + "です。")
+                                        const status = await booleanIO("有効にする場合はY、無効にする場合はNを入力してください。")
+                                        if (shareData.expressd.data.json.sslCongig.status === status)
+                                            console.log((status ? "有効" : "無効") + "の状態を維持しました。")
+                                        else {
+                                            shareData.expressd.data.json.sslCongig.status = status
+                                            await shareData.expressd.data.save()
+                                            console.log((status ? "有効" : "無効") + "にしました。変更はVarious Programsを再起動した後に反映されます。")
+                                        }
+                                    },
+                                    "秘密鍵・証明書の登録": async () => {
+                                        const datas = await userIOGet(
+                                            {
+                                                name: "key", type: "path", options: {
+                                                    type: "path", text: "秘密鍵へのファイルパスを入力してください。"
+                                                }
+                                            },
+                                            {
+                                                name: "cert", type: "path", options: {
+                                                    type: "path", text: "証明書へのファイルパスを入力してください。"
+                                                }
+                                            }
+                                        )
+                                        if (datas.key && datas.cert) {
+                                            if (!shareData.expressd) return console.log("不明なエラーが発生しました。")
+                                            if (!shareData.expressd.data.json.sslCongig) shareData.expressd.data.json.sslCongig = {
+                                                status: false,
+                                                key: datas.key,
+                                                cert: datas.cert
+                                            }
+                                            shareData.expressd.data.json.sslCongig.key = datas.key
+                                            shareData.expressd.data.json.sslCongig.cert = datas.cert
+                                            await shareData.expressd.data.save()
+                                            console.log("設定が完了しました。変更はVarious Programsを再起動した後に反映されます。")
+                                        } else console.log("入力されたパスが無効のため、変更は適用されませんでした。")
+                                    },
+                                    "戻る": async () => { fc.end = true }
+                                })
+                                fc.errorView = true
+                                await fc.view()
+                            },
+                            "終了": async () => { fc.end = true }
+                        })
+                        fc.loop = true
+                        fc.errorView = true
+                        await fc.view()
                     }
                 }
                 const programChoice = await choice(Object.keys(programs), "設定・情報一覧", "実行したい操作を選択してください。")
@@ -1157,10 +1184,6 @@ export class cuiIO {
  * 操作の共通化を図っています。
  */
 namespace getFunction {
-    /**
-     * 
-     * @returns 
-     */
     async function fileNameTextList() {
         const folderPath = await dataIO.pathChecker(await question("フォルダを入力してください。"))
         if (!folderPath) return console.log("フォルダが見つかりませんでした。")

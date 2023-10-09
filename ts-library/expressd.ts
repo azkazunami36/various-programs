@@ -1,5 +1,6 @@
 import express from "express"
 import http from "http"
+import https from "https"
 import fs from "fs"
 import { EventEmitter } from "events"
 
@@ -21,7 +22,13 @@ export namespace expressd {
     * JSON型定義の上書き
     */
     interface expressdDataIOextJSON extends dataIO.dataIO {
-        json: {}
+        json: {
+            sslCongig?: {
+                status: boolean
+                key: dataIO.dataPath
+                cert: dataIO.dataPath
+            }
+        }
     }
     export declare interface expressd {
         on<K extends keyof expressdEvents>(s: K, listener: (...args: expressdEvents[K]) => any): this
@@ -45,11 +52,6 @@ export namespace expressd {
         async initer(shareData: vpManageClass.shareData) {
             this.app = express()
             const app = this.app
-            app.use(bodyParser.urlencoded({ limit: "127gb", extended: true }));
-            app.get("*", async (req, res) => this.#get(req, res))
-            app.post("*", (req, res) => this.#post(req, res))
-            await new Promise<void>(resolve => this.server = app.listen(this.#port, () => { resolve() }))
-            if (this.server) this.server.on("error", err => { this.emit("error", err) })
             const data = await dataIO.dataIO.initer("expressd")
             if (!data) {
                 const e = new ReferenceError()
@@ -59,6 +61,24 @@ export namespace expressd {
                 return
             }
             this.data = data
+            if (this.data.json.sslCongig?.status) {
+                const key = await sfs.readFile(dataIO.slashPathStr(this.data.json.sslCongig.key))
+                const cert = await sfs.readFile(dataIO.slashPathStr(this.data.json.sslCongig.cert))
+                console.log(key, cert)
+                this.server = https.createServer(
+                    {
+                        key: key,
+                        cert: cert
+                    },
+                    app
+                )
+            } else { this.server = http.createServer(app) }
+            app.use(bodyParser.urlencoded({ limit: "127gb", extended: true }));
+            app.get("*", async (req, res) => this.#get(req, res))
+            app.post("*", (req, res) => this.#post(req, res))
+            const server = this.server
+            await new Promise<void>(resolve => server.listen(this.#port, () => { resolve() }))
+            server.on("error", err => { console.log(err); this.emit("error", err) })
             this.emit("ready", undefined)
             this.shareData = shareData
             shareData.expressd = this
@@ -148,9 +168,9 @@ export namespace expressd {
         async #get(req: express.Request | http.IncomingMessage, res: express.Response) {
             if (req.url !== undefined) {
                 const url = await dataIO.pathChecker(process.cwd() + "/ts-library/expressdSrc" + (req.url !== "/" ? req.url : "/index.html"))
-                if (url && url.extension) {
-                    const contentType = this.#typeGet(url.extension, "contentType")
-                    res.header("Content-Type", contentType + ";charset=utf-8")
+                if (url) {
+                    if (url.extension) res.header("Content-Type", this.#typeGet(url.extension, "contentType") + ";charset=utf-8")
+                    else res.header("Content-Type", "text/plain;charset=utf-8")
                     const stream = fs.createReadStream(dataIO.slashPathStr(url))
                     stream.on("data", chunk => res.write(chunk))
                     stream.on("end", () => res.end())
@@ -204,6 +224,7 @@ export namespace expressd {
                 res.end(await urlThree())
             }
         }
+
     }
     /**
      * 動画や音声をスムーズにクライアントに送信する関数です
