@@ -14,7 +14,8 @@
     },
     "include": [
         "main.ts",
-        "ts-library/**/*.ts"
+        "ts-library/**/*.ts",
+        "test/expressd Runtime Application/**/*.ts"
     ],
     "exclude": [
         "node_modules"
