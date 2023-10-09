@@ -46,6 +46,7 @@ export namespace expressd {
         app: express.Express
         data: expressdDataIOextJSON
         server?: http.Server
+        redirectServer?: http.Server
         #port = "80"
         shareData: vpManageClass.shareData
         constructor() { super(); }
@@ -64,7 +65,6 @@ export namespace expressd {
             if (this.data.json.sslCongig?.status) {
                 const key = await sfs.readFile(dataIO.slashPathStr(this.data.json.sslCongig.key))
                 const cert = await sfs.readFile(dataIO.slashPathStr(this.data.json.sslCongig.cert))
-                console.log(key, cert)
                 this.server = https.createServer(
                     {
                         key: key,
@@ -72,9 +72,29 @@ export namespace expressd {
                     },
                     app
                 )
+                const reapp = express()
+                this.redirectServer = http.createServer(reapp)
+                const redirectServer = this.redirectServer
+                reapp.all("*", (req, res) => res.redirect("https://" + req.hostname + req.url))
+                await new Promise<void>(resolve => redirectServer.listen("80", () => { resolve() }))
                 this.#port = "443"
             } else {
                 this.server = http.createServer(app)
+                if (this.data.json.sslCongig?.key && this.data.json.sslCongig.cert) {
+                    const key = await sfs.readFile(dataIO.slashPathStr(this.data.json.sslCongig.key))
+                    const cert = await sfs.readFile(dataIO.slashPathStr(this.data.json.sslCongig.cert))
+                    const reapp = express()
+                    this.redirectServer = https.createServer(
+                        {
+                            key: key,
+                            cert: cert
+                        },
+                        reapp
+                    )
+                    const redirectServer = this.redirectServer
+                    reapp.all("*", (req, res) => { res.redirect("http://" + req.hostname + req.url) })
+                    await new Promise<void>(resolve => redirectServer.listen("443", () => { resolve() }))
+                }
                 this.#port = "80"
             }
             app.use(bodyParser.urlencoded({ limit: "127gb", extended: true }));

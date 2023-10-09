@@ -75,6 +75,9 @@ export namespace vpManageClass {
             if (shareData.expressd.server) {
                 shareData.expressd.server.close()
             }
+            if (shareData.expressd.redirectServer) {
+                shareData.expressd.redirectServer.close()
+            }
             message({ type: "expressdExit", status: "end" })
         }
         message({type: "exited", status: "start"})
