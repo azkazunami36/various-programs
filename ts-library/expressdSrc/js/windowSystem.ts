@@ -811,7 +811,7 @@ export class windowSystem {
             if (!window.option) window.option = {}
             if (!window.option.minSize) window.option.minSize = {}
             if (option.minSize?.top) window.option.minSize.top = option.minSize.top
-            if (option.minSize?.left) window.option.minSize.top = option.minSize.top
+            if (option.minSize?.left) window.option.minSize.left = option.minSize.left
         }
         // 表示
         this.#body.appendChild(master)

@@ -49,7 +49,7 @@ export namespace expressd {
         redirectServer?: http.Server
         #port = "80"
         shareData: vpManageClass.shareData
-        constructor() { super(); }
+        constructor() { super() }
         async initer(shareData: vpManageClass.shareData) {
             this.app = express()
             const app = this.app
@@ -97,7 +97,7 @@ export namespace expressd {
                 }
                 this.#port = "80"
             }
-            app.use(bodyParser.urlencoded({ limit: "127gb", extended: true }));
+            app.use(bodyParser.urlencoded({ limit: "127gb", extended: true }))
             app.get("*", async (req, res) => this.#get(req, res))
             app.post("*", (req, res) => this.#post(req, res))
             const server = this.server
@@ -283,7 +283,7 @@ export namespace expressd {
         const Stream = fs.createReadStream(videopath, options) //ストリームにし、範囲のデータを読み込む
         Stream.on("error", error => {
             res.sendStatus(500)
-        });
+        })
         Stream.on("data", c => res.write(c))
         Stream.on("end", () => res.end())
     }
