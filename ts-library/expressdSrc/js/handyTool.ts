@@ -48,3 +48,17 @@ export const API = Object.freeze({
  * @param time 時間を入力
  */
 export async function wait(time: number) { await new Promise<void>(resolve => setTimeout(() => resolve(), time)) }
+
+/** CSSのセレクタ(.class、#idなど)を入力しそれに対応したスタイルを返す */
+export function getRuleBySelector(selecter: string) {
+    const styleSheets = document.styleSheets; //全てのcssを取得する
+    for (let i = 0; i !== styleSheets.length; i++) { //cssの数だけ
+        const cssRules = styleSheets[i].cssRules //ルールを取得
+        for (let i = 0; i !== cssRules.length; i++) { //ルールの数だけ
+            if (selecter === (cssRules[i] as CSSStyleRule).selectorText) { //ルール名と一致するか
+                return (cssRules[i] as CSSStyleRule).style //見つけたら返す
+            }
+        }
+    }
+    return undefined //見つからなかったらundefined
+}
