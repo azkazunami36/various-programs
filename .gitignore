@@ -16,9 +16,9 @@
 /ts-library/**/*.js
 /ts-library/**/*.js.map
 /ts-library/**/*.d.ts
-/test/expressd Runtime Application/**/*.js
-/test/expressd Runtime Application/**/*.js.map
-/test/expressd Runtime Application/**/*.d.ts
+/test/**/*.js
+/test/**/*.js.map
+/test/**/*.d.ts
 /main.js
 /main.js.map
 /main.d.ts

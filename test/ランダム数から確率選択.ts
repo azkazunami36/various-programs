@@ -56,7 +56,7 @@ console.log(
         for (let i = 0; i !== data.length; i++) {
             if (!maxNum || maxNum.num > data[i].num) maxNum = { num: data[i].num, no: i }
             if (!minNum || minNum.num < data[i].num) minNum = { num: data[i].num, no: i }
-            if ()
+            if (true) {}
         }
         console.log(maxNum, minNum)
         return 0;
