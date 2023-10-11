@@ -7,8 +7,6 @@
 }
 
 .window-body {
-    border: 1px solid black;
-    border-radius: 10px;
     width: calc(100% - 24px);
     height: 100%;
     overflow: hidden;
@@ -16,10 +14,15 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     transition: all 250ms 0s ease;
-    box-shadow: 2px 2px 20px -5px #000000A0;
     opacity: 0;
     transform: scale(0.95) rotateX(3deg);
     transform-style: preserve-3d;
+}
+
+.window-body-design {
+    border: 1px solid black;
+    border-radius: 10px;
+    box-shadow: 2px 2px 20px -5px #000000A0;
 }
 
 .window-viewed {

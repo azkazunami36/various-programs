@@ -1,4 +1,5 @@
-import { wait } from "./handyTool.js"
+import { wait, ShareData } from "./handyTool.js"
+import { SumMouseEvent } from "./mouseCursor.js"
 
 interface windows {
     element: HTMLElement
@@ -25,7 +26,9 @@ interface windows {
     depth: number
     /** オプション */
     option?: {
+        /** 最前面にするかどうか */
         front?: boolean
+        /** 最背面にするかどうか */
         background?: boolean
         /** 最小ウィンドウサイズを決定 */
         minSize?: {
@@ -50,6 +53,12 @@ interface createWindowOption {
         widthFull?: boolean
         /** 立幅を最大まで広げるかどうか */
         heigthFull?: boolean
+        /** 最前面にするかどうか */
+        front?: boolean
+        /** 最背面にするかどうか */
+        background?: boolean
+        /** 最も下に配置するかどうか */
+        under?: boolean
     }
     /** ウィンドウサイズを決定 */
     size?: {
@@ -74,6 +83,8 @@ interface createWindowOption {
     }
     /** サイズ変更が可能かどうか。デフォルトはtrue */
     sizeChange?: boolean
+    /** ウィンドウバーなどの装飾を無効にするかどうか。デフォルトはfalse */
+    windowDesignDisabled?: boolean
 }
 
 /**
@@ -207,10 +218,12 @@ export class windowSystem {
         }
     /** ウィンドウの重ね合わせを管理します。 機能と独特のデータが多いため、クラス化しました。 */
     #windowDepthManage = new class {
+        /** 親クラスへのリンク */
         #windowSystem: windowSystem
         constructor(windowSystem: windowSystem) {
             this.#windowSystem = windowSystem
         }
+        /** depthList関数で取得したデータを一時保存する。理由は多分変更適用前だから？ */
         #depthListTemp: { [num: string]: string } | undefined
         depthList() {
             /**
@@ -218,12 +231,12 @@ export class windowSystem {
              */
             const depthList: { [num: string]: string } = {}
             const ids = Object.keys(this.#windowSystem.#windows)
-            for (let i = 0; i !== ids.length; i++) {
+            for (let i = 0; i !== ids.length; i++) { // ウィンドウの数だけ
                 const window = this.#windowSystem.#windows[ids[i]]
-                if (window && !depthList[String(window.depth)]) depthList[String(window.depth)] = ids[i]
-                else {
+                if (window && !depthList[String(window.depth)]) depthList[String(window.depth)] = ids[i] // 同じ階層にウィンドウIDが存在しない場合IDを追加
+                else { // 存在したら
                     const front = this.#frontID(depthList)
-                    if (front) depthList[String(front.num + 1)] = ids[i]
+                    if (front) depthList[String(front.num + 1)] = ids[i] // 最も手前より１つ後ろに配置
                 }
             }
             return depthList
@@ -282,15 +295,25 @@ export class windowSystem {
          * ウィンドウの重ね合わせを管理します。
          * @param id 手前にしたいウィンドウを選択します。
          */
-        async windowDepthChange(id?: string) {
+        windowDepthChange(id?: string) {
             const depthList = this.depthList()
             this.#depthListTemp = depthList
             if (id) {
-                const nowWindowDepth = this.#getDepth(depthList, id)
-                const front = this.#frontID(depthList)
-                if (nowWindowDepth && front) {
-                    depthList[String(front.num + 1)] = depthList[nowWindowDepth]
-                    delete depthList[nowWindowDepth]
+                const getDepth = this.#getDepth
+                const frontID = this.#frontID
+                function apply(id: string) {
+                    const nowWindowDepth = getDepth(depthList, id)
+                    const front = frontID(depthList)
+                    if (nowWindowDepth && front) {
+                        depthList[String(front.num + 1)] = depthList[nowWindowDepth]
+                        delete depthList[nowWindowDepth]
+                    }
+                }
+                apply(id)
+                const ids = Object.keys(this.#windowSystem.#windows)
+                for (let i = 0; i !== ids.length; i++) {
+                    if (this.#windowSystem.#windows[ids[i]]?.option?.front) apply(ids[i])
+                    if (this.#windowSystem.#windows[ids[i]]?.option?.background) apply(ids[i])
                 }
             }
             this.#packmove(depthList)
@@ -308,7 +331,7 @@ export class windowSystem {
         windowSystem: windowSystem
         constructor(t: windowSystem) { this.windowSystem = t }
         /** クリック */
-        async mousedown(e: MouseEvent) {
+        async mousedown(e: SumMouseEvent) {
             const winSys = this.windowSystem
             let doubleClick = (() => {
                 const nowTime = Date.now()
@@ -394,7 +417,7 @@ export class windowSystem {
             }
         }
         /** マウスの移動 */
-        async mousemove(e: MouseEvent) {
+        async mousemove(e: SumMouseEvent) {
             const winSys = this.windowSystem
             winSys.#temp.clickTime = 0
             if (winSys.#temp.moveingWindow) {
@@ -479,7 +502,7 @@ export class windowSystem {
             }
         }
         /** クリック終了 */
-        async mouseup(e: MouseEvent) {
+        async mouseup(e: SumMouseEvent) {
             const winSys = this.windowSystem
             winSys.#temp.moveingWindow = undefined // ウィンドウドラッグを終了
             winSys.#temp.resizeingWindow = undefined // ウィンドウリサイズを終了
@@ -533,11 +556,13 @@ export class windowSystem {
         else elementTemp = undefined
         return
     }
-    constructor(body: HTMLElement) {
+    constructor(body: HTMLElement, shareData: ShareData) {
         // マウスイベントです
-        addEventListener("pointerdown", e => this.#mouseEvent.mousedown(e))
-        addEventListener("pointermove", e => this.#mouseEvent.mousemove(e))
-        addEventListener("pointerup", e => this.#mouseEvent.mouseup(e))
+        if (shareData.mouseCursor) {
+            shareData.mouseCursor.mousedown(e => this.#mouseEvent.mousedown(e))
+            shareData.mouseCursor.mousemove(e => this.#mouseEvent.mousemove(e))
+            shareData.mouseCursor.mouseup(e => this.#mouseEvent.mouseup(e))
+        }
         this.#body = body
     }
     /**
@@ -679,6 +704,7 @@ export class windowSystem {
         master.classList.add("window-master")
         const body = document.createElement("div")
         body.classList.add("window-body")
+        body.classList.add("window-body-design")
         body.id = "window" + name
 
         // ウィンドウバー
@@ -801,18 +827,41 @@ export class windowSystem {
             if (option?.size) {
                 if (option.size.top) window.topSize = option.size.top
                 if (option.size.left) window.leftSize = option.size.left
-                await this.viewReflash("window" + name)
             }
             if (option?.title) title.innerText = option.title
+            if (option?.layout?.widthFull) {
+                window.left = 0
+                window.leftSize = this.#body.clientWidth
+            }
+            if (option?.layout?.heigthFull) {
+                window.top = 0
+                window.topSize = this.#body.clientHeight
+            }
             if (option?.layout?.center && option?.size?.top && option?.size?.left) {
                 window.leftSize = this.#body.clientWidth / 2 - (window.leftSize / 2)
                 window.topSize = this.#body.clientHeight / 2 - (window.topSize / 2)
             }
+            if (option.layout?.under && option?.size?.top) window.top = this.#body.clientHeight - window.topSize
+            if (option.sizeChange === false) {
+                windowResizeTop.style.display = "none"
+                windowResizeBottom.style.display = "none"
+                windowResizeLeft.style.display = "none"
+                windowResizeRight.style.display = "none"
+                body.style.width = "100%"
+                windowResizeCenter.style.height = "100%"
+            }
             if (!window.option) window.option = {}
+            if (option.layout?.front) window.option.front = option.layout.front
             if (!window.option.minSize) window.option.minSize = {}
             if (option.minSize?.top) window.option.minSize.top = option.minSize.top
             if (option.minSize?.left) window.option.minSize.left = option.minSize.left
+            if (option.windowDesignDisabled) {
+                bar.style.display = "none"
+                element.style.height = "100%"
+                body.classList.remove("window-body-design")
+            }
         }
+        await this.viewReflash("window" + name)
         // 表示
         this.#body.appendChild(master)
         await wait(20)
@@ -841,6 +890,12 @@ namespace Builder {
             setWidthFull(a: boolean) { this.#cwob.layout.widthFull = a; return this }
             /** 立幅を最大まで広げるかどうか */
             setHeigthFull(a: boolean) { this.#cwob.layout.heigthFull = a; return this }
+            /** 最前面にするかどうか */
+            setFront(a: boolean) { this.#cwob.layout.front = a; return this }
+            /** 最背面にするかどうか */
+            setBackground(a: boolean) { this.#cwob.layout.background = a; return this }
+            /** 最も下に配置するかどうか */
+            setUnder(a: boolean)  { this.#cwob.layout.under = a; return this }
         }
 
         export class sizeOption {
@@ -887,6 +942,9 @@ export class createWindowOptionBuilder {
         center?: boolean
         widthFull?: boolean
         heigthFull?: boolean
+        front?: boolean
+        background?: boolean
+        under?: boolean
     } = {}
     /** レイアウトを指定。上から順に適用され、上書きされる。sizeを指定しないといけないオプションもある */
     setLayoutOption(callback: ((option: Builder.createWindowOption.layoutOption) => void)) { callback(new Builder.createWindowOption.layoutOption(this)); return this }
@@ -919,4 +977,9 @@ export class createWindowOptionBuilder {
     #sizeChange?: boolean
     /** ウィンドウにつけるアイコンを指定する */
     setSizeChange(a: boolean) { this.#sizeChange = a; return this }
+
+    get windowDesignDisabled() { return this.#windowDesignDisabled }
+    #windowDesignDisabled?: boolean
+    /** ウィンドウバーなどの装飾を無効にする */
+    setWindowDesignDisabled(a: boolean) { this.#windowDesignDisabled = a; return this }
 }

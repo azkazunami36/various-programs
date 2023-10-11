@@ -1,5 +1,5 @@
 import { createWindowOptionBuilder, windowSystem } from "./js/windowSystem.js"
-import { httpDataRequest, API } from "./js/handyTool.js"
+import { httpDataRequest, API, ShareData } from "./js/handyTool.js"
 import { mouseCursor } from "./js/mouseCursor.js"
 import { settingApp } from "./js/settingApp.js"
 
@@ -7,10 +7,9 @@ addEventListener("load", async () => {
     /**
      * メインプログラム同様、shareDataです。
      */
-    const shareData: {
-        windowSystem?: windowSystem
-    } = {}
-    shareData.windowSystem = new windowSystem(document.body)
+    const shareData: ShareData = {}
+    shareData.mouseCursor = new mouseCursor(document.body)
+    shareData.windowSystem = new windowSystem(document.body, shareData)
     const mainWindow = document.createElement("div")
     shareData.windowSystem.createWindow("mainWindow", mainWindow, new createWindowOptionBuilder()
         .setTitle("メインウィンドウ")
@@ -23,6 +22,20 @@ addEventListener("load", async () => {
             .setLeft(350)
         )
     )
+    const taskBar = document.createElement("div")
+    shareData.windowSystem?.createWindow("taskBar", taskBar, new createWindowOptionBuilder()
+        .setWindowDesignDisabled(true)
+        .setSizeChange(false)
+        .setLayoutOption(o => o
+            .setWidthFull(true)
+            .setFront(true)
+            .setUnder(true)
+        )
+        .setSizeOption(option => option
+            .setTop(50)
+        )
+    )
+    shareData.windowSystem?.createWindow("dsfdsd", document.createElement("div"), {})
     new settingApp(mainWindow)
     const fileSendWindow = document.createElement("div")
 
@@ -114,7 +127,6 @@ addEventListener("load", async () => {
         sendWindow.appendChild(sendButton)
     })
 
-    new mouseCursor(document.body)
 })
 
 namespace fileManager {

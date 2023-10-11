@@ -1,3 +1,6 @@
+import { mouseCursor } from "./mouseCursor"
+import { windowSystem } from "./windowSystem"
+
 /**
  * httpリクエストできる関数
  * @param request URLに含ませるリクエスト(処理分岐)を入力
@@ -61,4 +64,9 @@ export function getRuleBySelector(selecter: string) {
         }
     }
     return undefined //見つからなかったらundefined
+}
+
+export interface ShareData {
+    windowSystem?: windowSystem
+    mouseCursor?: mouseCursor
 }
