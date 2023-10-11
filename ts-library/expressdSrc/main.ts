@@ -11,6 +11,7 @@ addEventListener("load", async () => {
     shareData.mouseCursor = new mouseCursor(document.body)
     shareData.windowSystem = new windowSystem(document.body, shareData)
     const mainWindow = document.createElement("div")
+    new settingApp(mainWindow)
     shareData.windowSystem.createWindow("mainWindow", mainWindow, new createWindowOptionBuilder()
         .setTitle("メインウィンドウ")
         .setSizeOption(option => option
@@ -23,7 +24,7 @@ addEventListener("load", async () => {
         )
     )
     const taskBar = document.createElement("div")
-    shareData.windowSystem?.createWindow("taskBar", taskBar, new createWindowOptionBuilder()
+    shareData.windowSystem.createWindow("taskBar", taskBar, new createWindowOptionBuilder()
         .setWindowDesignDisabled(true)
         .setSizeChange(false)
         .setLayoutOption(o => o
@@ -35,8 +36,26 @@ addEventListener("load", async () => {
             .setTop(50)
         )
     )
-    shareData.windowSystem?.createWindow("dsfdsd", document.createElement("div"), {})
-    new settingApp(mainWindow)
+    const background = document.createElement("div")
+    const image = document.createElement("img")
+    image.src = "svgIcon/backgroundImage/imageOne.svg"
+    image.style.width = "100%"
+    image.style.height = "100%"
+    image.style.objectFit = "cover"
+    background.appendChild(image)
+    shareData.windowSystem.createWindow("backGround", background, new createWindowOptionBuilder()
+        .setWindowDesignDisabled(true)
+        .setSizeChange(false)
+        .setLayoutOption(o => o
+            .setWidthFull(true)
+            .setHeigthFull(true)
+            .setBackground(true)
+        )
+        .setSizeOption(option => option
+            .setTop(50)
+        )
+    )
+    
     const fileSendWindow = document.createElement("div")
 
     Object.assign(fileSendWindow.style, {

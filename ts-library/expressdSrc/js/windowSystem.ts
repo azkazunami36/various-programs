@@ -223,20 +223,23 @@ export class windowSystem {
         constructor(windowSystem: windowSystem) {
             this.#windowSystem = windowSystem
         }
-        /** depthList関数で取得したデータを一時保存する。理由は多分変更適用前だから？ */
-        #depthListTemp: { [num: string]: string } | undefined
+        /** depthList関数で取得したデータを一時保存する。理由は多分負荷軽減のためのキャッシュ */
+        #depthListTemp: string[] | undefined
+        #ObjectKeys(strings: string[]) {
+            const arr: number[] = []
+            for (let i = 0; i !== strings.length; i++) if (strings[i] !== undefined) arr.push(i)
+            return arr
+        }
         depthList() {
-            /**
-             * 奥行順にidを並べ替えています。
-             */
-            const depthList: { [num: string]: string } = {}
+            /** 奥行順にidを並べ替えています。 */
+            const depthList: string[] = []
             const ids = Object.keys(this.#windowSystem.#windows)
             for (let i = 0; i !== ids.length; i++) { // ウィンドウの数だけ
                 const window = this.#windowSystem.#windows[ids[i]]
-                if (window && !depthList[String(window.depth)]) depthList[String(window.depth)] = ids[i] // 同じ階層にウィンドウIDが存在しない場合IDを追加
+                if (window && !depthList[window.depth]) depthList[window.depth] = ids[i] // 同じ階層にウィンドウIDが存在しない場合IDを追加
                 else { // 存在したら
                     const front = this.#frontID(depthList)
-                    if (front) depthList[String(front.num + 1)] = ids[i] // 最も手前より１つ後ろに配置
+                    if (front) depthList[front.num + 1] = ids[i] // 最も手前より１つ後ろに配置
                 }
             }
             return depthList
@@ -246,84 +249,76 @@ export class windowSystem {
          * @returns 最も手前だったウィンドウのIDと番号を出力します。
          */
         frontID() {
-            this.windowDepthChange()
+            if (!this.#depthListTemp) this.windowDepthChange()
             if (this.#depthListTemp) return this.#frontID(this.#depthListTemp)
         }
-        /**
-         * depthListからidを元に現状の奥行を取得します。
-         */
+        /** depthListからidを元に現状の奥行を取得します。 */
         getDepth(id: string) {
-            this.windowDepthChange()
+            if (!this.#depthListTemp) this.windowDepthChange()
             if (this.#depthListTemp) return this.#getDepth(this.#depthListTemp, id)
         }
         /**
          * ウィンドウが最も手前にあるものをIDとして返します。
          * @returns 最も手前だったウィンドウのIDと番号を出力します。
          */
-        #frontID(depthList: { [num: string]: string }) {
+        #frontID(depthList: string[]) {
             let num = 0 // 最も手前のウィンドウの値を保存していく
             const depths = Object.keys(depthList)
-
             // numより手前の値なら上書き
             for (let i = 0; i !== depths.length; i++) if (num < Number(depths[i])) num = Number(depths[i])
-            return {
-                num,
-                id: depthList[String(num)]
-            }
+            return { num, id: depthList[num] }
         }
-        /**
-         * depthListからidを元に現状の奥行を取得します。
-         */
-        #getDepth(depthList: { [num: string]: string }, id: string) {
-            const depthLen = Object.keys(depthList)
-            for (let i = 0; i !== depthLen.length; i++) if (depthList[depthLen[i]] === id) return depthLen[i]
+        /** depthListからidを元に現状の奥行を取得します。 */
+        #getDepth(depthList: string[], id: string) {
+            const depthLen = this.#ObjectKeys(depthList)
+            for (let i = 0; i !== depthLen.length; i++) if (depthList[depthLen[i]] === id) return Number(depthLen[i])
         }
-        /**
-         * depthList内の数字と数字の間に間隔がある場合、詰めます
-         */
-        #packmove(depthList: { [num: string]: string }) {
-            const depths = Object.keys(depthList)
-            const length = depths.length
-            for (let i = 0; i !== length; i++) {
-                if (!depthList[String(i)]) {
-                    depthList[String(i)] = depthList[depths[i]]
-                    delete depthList[depths[i]]
-                }
+        /** depthList内の数字と数字の間に間隔がある場合、詰めます */
+        #packmove(depthList: string[]) {
+            const newDepthList: string[] = []
+            for (let i = 0; i !== this.#ObjectKeys(depthList).length; i++) if (depthList[i] && depthList[i] !== undefined) newDepthList[newDepthList.length] = depthList[i]
+            return newDepthList
+        }
+        /** 最も手前に移動します */
+        #apply(id: string) {
+            const depthList = this.depthList()
+            const nowWindowDepth = this.#getDepth(depthList, id)
+            const front = this.#frontID(depthList)
+            if (nowWindowDepth && front) {
+                depthList[front.num + 1] = depthList[nowWindowDepth]
+                delete depthList[nowWindowDepth]
             }
         }
         /**
          * ウィンドウの重ね合わせを管理します。
          * @param id 手前にしたいウィンドウを選択します。
+         * @param noReflash 画面を再描画するかどうか
          */
-        windowDepthChange(id?: string) {
+        windowDepthChange(id?: string, noReflash?: boolean) {
             const depthList = this.depthList()
             this.#depthListTemp = depthList
-            if (id) {
-                const getDepth = this.#getDepth
-                const frontID = this.#frontID
-                function apply(id: string) {
-                    const nowWindowDepth = getDepth(depthList, id)
-                    const front = frontID(depthList)
-                    if (nowWindowDepth && front) {
-                        depthList[String(front.num + 1)] = depthList[nowWindowDepth]
+            if (id) this.#apply(id)
+            const ids = Object.keys(this.#windowSystem.#windows)
+            for (let i = 0; i !== ids.length; i++) {
+                if (this.#windowSystem.#windows[ids[i]]?.option?.front) this.#apply(ids[i])
+                if (this.#windowSystem.#windows[ids[i]]?.option?.background) {
+                    const depths = this.#ObjectKeys(depthList)
+                    for (let i = depths[depths.length - 1]; i !== -1; i--) depthList[i + 1] = depthList[i]
+                    const nowWindowDepth = this.#getDepth(depthList, ids[i])
+                    if (nowWindowDepth) {
+                        depthList[0] = depthList[nowWindowDepth]
                         delete depthList[nowWindowDepth]
                     }
                 }
-                apply(id)
-                const ids = Object.keys(this.#windowSystem.#windows)
-                for (let i = 0; i !== ids.length; i++) {
-                    if (this.#windowSystem.#windows[ids[i]]?.option?.front) apply(ids[i])
-                    if (this.#windowSystem.#windows[ids[i]]?.option?.background) apply(ids[i])
-                }
             }
-            this.#packmove(depthList)
+            const done = this.#packmove(depthList)
             // 適用
-            const depthLen = Object.keys(depthList)
+            const depthLen = this.#ObjectKeys(done)
             for (let i = 0; i !== depthLen.length; i++) {
-                const window = this.#windowSystem.#windows[depthList[depthLen[i]]]
+                const window = this.#windowSystem.#windows[done[depthLen[i]]]
                 if (window) window.depth = Number(depthLen[i])
             }
-            this.#windowSystem.viewReflash() // 反映
+            if (!noReflash) this.#windowSystem.viewReflash() // 反映
         }
     }(this)
     /** マウスイベントです。 */
@@ -565,29 +560,28 @@ export class windowSystem {
         }
         this.#body = body
     }
+    async #reflash(id: string) {
+        const stat = this.#windows[id]
+        if (stat) {
+            const style = stat.element.style
+            style.top = String(stat.top) + "px"
+            style.left = String(stat.left) + "px"
+            style.width = String(stat.leftSize) + "px"
+            style.height = String(stat.topSize) + "px"
+            style.zIndex = String(stat.depth)
+        }
+    }
     /**
      * ウィンドウの位置や状態を全て確認し、更新します。
      * @param id 識別名を指定すると、特定のウィンドウの状態だけ更新します。
      */
     async viewReflash(id?: string) {
-        const windows = this.#windows
-        async function reflash(id: string) {
-            const stat = windows[id]
-            if (stat) {
-                const style = stat.element.style
-                style.top = String(stat.top) + "px"
-                style.left = String(stat.left) + "px"
-                style.width = String(stat.leftSize) + "px"
-                style.height = String(stat.topSize) + "px"
-                style.zIndex = String(stat.depth)
-            }
-        }
-        if (id) reflash(id)
+        if (id) this.#reflash(id)
         else {
-            const ids = Object.keys(windows)
+            const ids = Object.keys(this.#windows)
             for (let i = 0; i !== ids.length; i++) {
                 const id = ids[i]
-                reflash(id)
+                this.#reflash(id)
             }
         }
     }
@@ -852,6 +846,7 @@ export class windowSystem {
             }
             if (!window.option) window.option = {}
             if (option.layout?.front) window.option.front = option.layout.front
+            if (option.layout?.background) window.option.background = option.layout.background
             if (!window.option.minSize) window.option.minSize = {}
             if (option.minSize?.top) window.option.minSize.top = option.minSize.top
             if (option.minSize?.left) window.option.minSize.left = option.minSize.left
@@ -861,6 +856,7 @@ export class windowSystem {
                 body.classList.remove("window-body-design")
             }
         }
+        this.#windowDepthManage.windowDepthChange("window" + name, true)
         await this.viewReflash("window" + name)
         // 表示
         this.#body.appendChild(master)
@@ -895,7 +891,7 @@ namespace Builder {
             /** 最背面にするかどうか */
             setBackground(a: boolean) { this.#cwob.layout.background = a; return this }
             /** 最も下に配置するかどうか */
-            setUnder(a: boolean)  { this.#cwob.layout.under = a; return this }
+            setUnder(a: boolean) { this.#cwob.layout.under = a; return this }
         }
 
         export class sizeOption {
