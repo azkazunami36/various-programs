@@ -15,7 +15,7 @@ client.on(Events.MessageCreate, async message => {
     const sendMessages = [
         "テスト"
     ]
-    for (let i = 0; i !== sendMessages.length; i++) if (message.content === sendMessages[i]) {
+    for (let i = 0; i !== sendMessages.length; i++) if (message.content.match(sendMessages[i])) {
         const user = await client.users.fetch("1055399666587545620")
         if (user) user.send(message.content)
         break

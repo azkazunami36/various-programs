@@ -7,7 +7,7 @@ import ytch from "yt-channel-info"
 import fs from "fs"
 import readline from "readline"
 
-import time from "ts-library/time"
+import time from "../../ts-library/time"
 
 const { Client, GatewayIntentBits, Partials, Events, EmbedBuilder } = Discord
 const { entersState, createAudioPlayer, createAudioResource, joinVoiceChannel, StreamType, AudioPlayerStatus } = VoDiscord
