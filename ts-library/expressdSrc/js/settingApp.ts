@@ -23,6 +23,12 @@ export class settingApp {
                 id: string
             }[]
         })[]
+        interface settingItem {
+            name: string
+            id: string
+            svgIcon?: string
+            settingDesign: settingDesign
+        }
         const settingItem: {
             name: string
             id: string
@@ -83,30 +89,45 @@ export class settingApp {
                 const mainSideBarButton = ce("div")
                 const mainSideBarIcon = ce("img")
                 const mainSideBarButtonActiveColor = ce("div")
-                mainSideBarButtonActiveColor.style.background = "rgb(50, 50, 255)"
-                mainSideBarButtonActiveColor.style.width = "100%"
-                mainSideBarButtonActiveColor.style.height = "100%"
-                mainSideBarIcon.className = "settingApp-mainSideBarIcon"
-                mainSideBarButton.appendChild(mainSideBarIcon)
-                if (settingItem[i][j].svgIcon) mainSideBarIcon.src = "svgIcon/" + settingItem[i][j].svgIcon
                 const mainSideBarName = ce("div")
-                mainSideBarName.className = "settingApp-mainSideBarName"
-                mainSideBarButton.appendChild(mainSideBarName)
                 const title = ce("p")
+
+                mainSideBarButtonActiveColor.className = "settingApp-mainSideBarButtonHover"
+
+                mainSideBarIcon.className = "settingApp-mainSideBarIcon"
+                if (settingItem[i][j].svgIcon) mainSideBarIcon.src = "svgIcon/" + settingItem[i][j].svgIcon
+                
+                mainSideBarName.className = "settingApp-mainSideBarName"
+
                 title.style.minWidth = "200px"
-                mainSideBarName.appendChild(title)
                 title.innerText = settingItem[i][j].name
+
                 mainSideBarButton.className = "settingApp-mainSideBarButton"
-                mainSideBarItem.appendChild(mainSideBarButton)
+
+                mainSideBarItem.id = "setting" + settingItem[i][j].id
                 mainSideBarItem.className = "settingApp-mainSideBarItem"
+
+                mainSideBarButtonActiveColor.appendChild(mainSideBarIcon)
+                mainSideBarButtonActiveColor.appendChild(mainSideBarName)
+                mainSideBarButton.appendChild(mainSideBarButtonActiveColor)
+                mainSideBarName.appendChild(title)
+                mainSideBarItem.appendChild(mainSideBarButton)
                 mainSideBarGroup.appendChild(mainSideBarItem)
             }
             mainSideBar.appendChild(mainSideBarGroup)
         }
         const mainWindow = ce("div")
         mainWindow.id = "settingApp-mainWindow"
-        function itemSelect(settingDesign: settingDesign) {
-            itemConst(settingDesign)
+        function itemSelect(settingItem: settingItem) {
+            const ele = document.getElementById("setting" + settingItem.id)
+            console.log(ele, "setting" + settingItem.id)
+            if (ele) {
+                console.log(ele, ele.parentElement, ele.parentElement?.id)
+                if (ele.parentElement?.classList.contains("settingApp-mainSideBarButton")) {
+                    ele.parentElement.classList.add("settingApp-mainSideBarButtonSelected")
+                }
+            }
+            itemConst(settingItem.settingDesign)
         }
         function itemConst(settingDesign: settingDesign) {
             mainWindow.innerText = ""
@@ -122,7 +143,7 @@ export class settingApp {
                 }
             }
         }
-        if (settingItem[0][0].id) itemSelect(settingItem[0][0].settingDesign)
+        if (settingItem[0][0].id) itemSelect(settingItem[0][0])
         mainAria.appendChild(mainWindow)
         let sideBarStatus = false
         function sideBarOpen() {
