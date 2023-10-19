@@ -191,6 +191,13 @@ export namespace expressd {
         }
         async #get(req: express.Request | http.IncomingMessage, res: express.Response) {
             if (req.url !== undefined) {
+                if ((() => {
+                    if (req.url = "/various-programs") {
+                        res.redirect("https://github.com/azkazunami36/various-programs")
+                        return true
+                    }
+                    return false
+                })()) return
                 const url = await dataIO.pathChecker(process.cwd() + "/ts-library/expressdSrc" + (req.url !== "/" ? req.url : "/index.html"))
                 if (url) {
                     if (url.extension) res.header("Content-Type", this.#typeGet(url.extension, "contentType") + ";charset=utf-8")
@@ -202,7 +209,10 @@ export namespace expressd {
                     res.status(404)
                     res.end()
                 }
-            }
+            } else {
+                res.status(404)
+                res.end()
+            } 
         }
         async #post(req: express.Request | http.IncomingMessage, res: express.Response | http.ServerResponse) {
             const urlSplit = req.url?.split("/")
