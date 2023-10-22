@@ -192,7 +192,7 @@ export namespace expressd {
         async #get(req: express.Request | http.IncomingMessage, res: express.Response) {
             if (req.url !== undefined) {
                 if ((() => {
-                    if (req.url = "/various-programs") {
+                    if (req.url === "/various-programs") {
                         res.redirect("https://github.com/azkazunami36/various-programs")
                         return true
                     }
