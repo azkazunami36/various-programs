@@ -1,0 +1,28 @@
+<html>
+    <head>
+        <script>
+            addEventListener("load", () => {
+                function listChange() {
+                    const list = document.getElementById("list")
+                    list.innerHTML = ""
+                    for (let i = 0; i !== localStorage.length; i++) {
+                        const key = localStorage.key(i)
+                        const item = localStorage.getItem(key)
+                        const itemMain = document.createElement("div")
+                        itemMain.className = key
+                    }
+                }
+            })
+        </script>
+    </head>
+    <body>
+        <div id="inputs">
+            <input type="text" id="key" value="キー">
+            <input type="text" id="data" value="値 ※ここを空欄にすると削除されます。">
+            <input type="button" value="変更を書き込み">
+        </div>
+        <div id="list">
+
+        </div>
+    </body>
+</html>
