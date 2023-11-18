@@ -8,6 +8,7 @@ import dataIO from "./dataIO.js"
 import vpManageClass from "./vpManageClass.js"
 import sfs from "./fsSumwave.js"
 import bodyParser from "body-parser"
+import discordBot from "./discord-bot.js"
 
 /**
  * # expressd
@@ -108,6 +109,7 @@ export namespace expressd {
             shareData.expressd = this
         }
         #typeGet(string: string, type: "extension" | "contentType") {
+            /** 拡張子とコンテンツタイプの関連付け */
             const data = [
                 ["aac", "audio/aac"],
                 ["abw", "application/x-abiword"],
@@ -231,8 +233,7 @@ export namespace expressd {
                                 return ""
                             },
                             "sendFile": async () => {
-                                return await new Promise<string>(async (resolve, reject) => {
-                                    let data: string = ""
+                                return await new Promise<string>(async resolve => {
                                     const contentType = req.headers["content-type"]
                                     if (contentType) {
                                         const path = await this.data.passGet(["sendFile"], String(Date.now()), { extension: this.#typeGet(contentType, "extension") })
@@ -246,6 +247,9 @@ export namespace expressd {
                                     } else resolve("Content type cannot be identified")
                                 })
                             }
+                        },
+                        "discordBot": {
+
                         }
                     }
                 }
