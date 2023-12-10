@@ -4,6 +4,7 @@
     align-items: center;
     flex-wrap: wrap;
     position: absolute;
+    transition: all 34ms 0s ease;
 }
 
 .window-body {
