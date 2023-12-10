@@ -5,6 +5,7 @@ import sharpConvert from "./sharpConvert";
  * 前期cuiIOがゴミだなぁ～と感じるようになってきたので、２世代目を作成しました。
  * １から作った方が早いものですから。
  */
+
 export namespace cuiIO2 {
     /** クラスを実行するために必要な情報や動作を簡単に作成するための定義です。内容が空の場合は、選択肢として表示されなくなります。 */
     interface functions {
@@ -70,7 +71,7 @@ export namespace cuiIO2 {
             }
         }
     }
-    namespace appBuilder {
+    export namespace appBuilder {
         /** cuiIOにユーザーに利用させたい機能を簡単に提供させるための、アプリジェネレーターです。 */
         export class appGenerator {
             get id() { return this.#id }; #id: string = ""
@@ -103,15 +104,54 @@ export namespace cuiIO2 {
             ) => Promise<void>) { this.cla.function.function = a; return this }
             /** getDataのセットを行います。複数回実行することで、配列に追加を行うことが出来ます。 */
             setGetDataOption(callback: (option: generatorGetDataOption) => void) { callback(new generatorGetDataOption(this)); return this }
+            /** getFixedDataのセットを行います。複数回実行することで、配列に追加を行うことが出来ます。プログラム独自で定義されたデータの選択肢を決定させます。複数選択と単一選択のどちらかを決定することが出来ます。 */
+            setGetFixedDataOption(callback: (option: generatorGetFixedDataOption) => void) { callback(new generatorGetFixedDataOption(this)); return this }
         }
         class generatorGetDataOption {
-            cla: generatorFunctionsOption; constructor(t: generatorFunctionsOption) { this.cla = t }
+            #data: {
+                name: string;
+                type: "string" | "number" | "boolean" | "path";
+                required: string[];
+            } = {
+                    name: "",
+                    type: "string",
+                    required: []
+                }
+            cla: generatorFunctionsOption; constructor(t: generatorFunctionsOption) { this.cla = t; if (!this.cla.cla.function.getData) this.cla.cla.function.getData = []; this.cla.cla.function.getData.push(this.#data) }
+            /** 変数名を決定します。 */
+            setName(a: string) { this.#data.name = a; return this }
+            /** 取得したい型を決定します。 */
+            setType(a: "string" | "number" | "boolean" | "path") { this.#data.type = a; return this }
+            /** 絶対に必要とされるFunctionの名前を入力します。複数回入力するには、この関数を複数回呼び出し、毎度入力します。 */
+            setRequired(a: string) { this.#data.required.push(a); return this }
+        }
+        class generatorGetFixedDataOption {
+            #data: {
+                name: string;
+                list: string[];
+                multiple: boolean;
+                required: string[];
+            } = {
+                    name: "",
+                    list: [],
+                    multiple: false,
+                    required: []
+                }
+            cla: generatorFunctionsOption; constructor(t: generatorFunctionsOption) { this.cla = t; if (!this.cla.cla.function.getFixedData) this.cla.cla.function.getFixedData = []; this.cla.cla.function.getFixedData.push(this.#data) }
+            /** 変数名を決定します。 */
+            setName(a: string) { this.#data.name = a; return this }
+            /** 選択してほしい項目を入力します。 */
+            setList(a: string[]) { this.#data.list = a; return this }
+            /** 複数選択を可能にするかどうかを決定します。指定しない場合はFalseとなり、上書き選択となります。 */
+            setMultiple(a: boolean) { this.#data.multiple = a; return this }
+            /** 絶対に必要とされるFunctionの名前を入力します。複数回入力するには、この関数を複数回呼び出し、毎度入力します。 */
+            setRequired(a: string) { this.#data.required.push(a); return this }
         }
         class generatorSelectionOption {
-            cla: generatorFunctionsOption; constructor(t: generatorFunctionsOption) { this.cla = t }
             get function() { return this.#function }; #function: functions = {}
+            cla: generatorFunctionsOption; constructor(t: generatorFunctionsOption) { this.cla = t }
             /** 機能を識別するために使用する名前を決定します。 */
-            setName(a: string) { if (this.cla.cla.function.selection) this.cla.cla.function.selection[a] = this.#function; return this }
+            setName(a: string) { if (!this.cla.cla.function.selection) this.cla.cla.function.selection = {}; this.cla.cla.function.selection[a] = this.#function; return this }
             /** 機能の内容や動作などを決定します。 */
             setFunctionOption(callback: ((option: generatorFunctionsOption) => void)) { callback(new generatorFunctionsOption(this)); return this }
         }
@@ -119,27 +159,18 @@ export namespace cuiIO2 {
 
     export class cuiIO {
         appList: { [appName: string]: { id: string, function: functions } } = {
-            "Image Resize": {
-                id: "imageResize",
-                function: {
-                    getData: [
-                        { name: "imageSize", type: "number", required: ["変換を開始する"] },
-                        { name: "beforePath", type: "path", required: ["変換を開始する"] },
-                        { name: "afterPath", type: "path", required: ["変換を開始する"] },
-                        { name: "folderContain", type: "boolean" },
-                        { name: "invFileIgnore", type: "boolean" },
-                        { name: "macOSFileIgnote", type: "boolean" }
-                    ],
-                    getFixedData: [
-                        { name: "nameing", list: sharpConvert.type, required: ["変換を開始する"] },
-                        { name: "type", list: sharpConvert.extType, required: ["変換を開始する"] }
-                    ]
-                }
-            },
-            "i": new appBuilder.appGenerator()
+            "Image Resize": new appBuilder.appGenerator()
                 .setId("imageResize")
-                .setFunctionOption(option => option
-                    .setSelectionOption(option => option.setName("変換を開始する").setFunctionOption(option => option.setFunction(async data => {
+                .setFunctionOption(o => o
+                    .setGetDataOption(o => o.setName("imageSize").setType("number").setRequired("変換を開始する"))
+                    .setGetDataOption(o => o.setName("beforePath").setType("path").setRequired("変換を開始する"))
+                    .setGetDataOption(o => o.setName("afterPath").setType("path").setRequired("変換を開始する"))
+                    .setGetDataOption(o => o.setName("folderContain").setType("boolean"))
+                    .setGetDataOption(o => o.setName("invFileIgnore").setType("boolean"))
+                    .setGetDataOption(o => o.setName("macOSFileIgnote").setType("boolean"))
+                    .setGetFixedDataOption(o => o.setName("nameing").setList(sharpConvert.type).setRequired("変換を開始する"))
+                    .setGetFixedDataOption(o => o.setName("type").setList(sharpConvert.extType).setRequired("変換を開始する"))
+                    .setSelectionOption(o => o.setName("変換を開始する").setFunctionOption(o => o.setFunction(async data => {
                         if (data.data && data.fixedData) {
                             const nameing = sharpConvert.type.indexOf(data.fixedData["nameing"][0])
                             const type = sharpConvert.extType.indexOf(data.fixedData["type"][0])
