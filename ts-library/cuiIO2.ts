@@ -1,5 +1,8 @@
 import dataIO from "./dataIO";
+import discordBot from "./discord-bot";
+import kanaConvert from "./kanaConvert";
 import sharpConvert from "./sharpConvert";
+import vpManageClass from "./vpManageClass";
 
 /**
  * 前期cuiIOがゴミだなぁ～と感じるようになってきたので、２世代目を作成しました。
@@ -157,7 +160,17 @@ export namespace cuiIO2 {
         }
     }
 
+    /**
+     * # CUI IO 2
+     * このCUI IOはターミナルなどのテキストベース上でキーボード操作を利用したプログラムの実行を行うことが出来ます。
+     * Various Programsの実行源としても動作します。
+     */
     export class cuiIO {
+        #shareData: vpManageClass.ShareData
+        constructor(shareData: vpManageClass.ShareData) { this.#shareData = shareData; }
+        async start() {
+
+        }
         appList: { [appName: string]: { id: string, function: functions } } = {
             "Image Resize": new appBuilder.appGenerator()
                 .setId("imageResize")
@@ -193,7 +206,63 @@ export namespace cuiIO2 {
                             console.log("変換が完了しました。")
                         } else throw new Error("変換に必要な情報が準備されていませんでした。")
                     })))
+                ),
+            "QWERTY <-> Kana Convert": new appBuilder.appGenerator()
+                .setId("qwertyKanaConvert")
+                .setFunctionOption(o => o
+                    .setGetDataOption(o => o.setName("text").setType("string").setRequired("変換を開始"))
+                    .setGetFixedDataOption(o => o.setName("boolean").setList(["かな->ローマ字", "ローマ字->かな"]).setRequired("変換を開始"))
+                    .setSelectionOption(o => o.setName("変換を開始").setFunctionOption(o => o.setFunction(async data => {
+                        if (data.data && data.fixedData) {
+                            const text = typeDeter(data.data["text"]).isString()
+                            const boolean = data.fixedData["boolean"][0] === "ローマ字->かな"
+                            if (!(text && boolean)) throw new Error("変換に必要な情報が準備されていませんでした。")
+                            console.log(kanaConvert(text, boolean))
+                        }
+                    })))
+                ),
+            "Discord Bot": new appBuilder.appGenerator()
+                .setId("discordBot")
+                .setFunctionOption(o => o
+                    .setSelectionOption(o => o
+                        .setName("Botを利用する")
+                        .setFunctionOption(o => o
+                            .setGetFixedDataOption(async o => o
+                                .setName("利用するBot")
+                                .setList(await (async () => {
+                                    const data = await discordBot.outputJSON()
+                                    if (!data) return []
+                                    return Object.keys(data)
+                                })())
+                                .setRequired("操作を開始する")
+                            )
+                            .setSelectionOption(o => o
+                                .setName("操作を開始する")
+                                .setFunctionOption(o => o
+                                    .setGetFixedDataOption(o => o
+                                        .setName("botStartedIs")
+                                        .setList(["起動", "停止"])
+                                    )
+                                    
+                                )
+                            )
+
+                        )
+                    )
+                    .setSelectionOption(o => o
+                        .setName("Botの新規作成")
+                    )
+                    .setSelectionOption(o => o
+                        .setName("Botの削除")
+                    )
+                ),
+            "Time Class": new appBuilder.appGenerator(),
+            "FFmpeg Converter": new appBuilder.appGenerator()
+                .setId("ffmpegConverter")
+                .setFunctionOption(o => o
+
                 )
         }
     }
 }
+export default cuiIO2

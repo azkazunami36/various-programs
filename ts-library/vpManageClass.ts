@@ -3,7 +3,7 @@ import expressd from "./expressd.js"
 import youTubeDownloader from "./youtubeDownloader.js"
 import handyTool from "./handyTool.js"
 import dataIO from "./dataIO.js"
-import cuiIO from "./cuiIO.js"
+import cuiIO from "./cuiIO2.js"
 import ffmpegConverter from "./ffmpegConverter.js"
 
 /**
@@ -19,18 +19,50 @@ export namespace vpManageClass {
             [botName: string]: discordRealTimeData
         }
         expressd?: expressd.expressd
-        cuiIO?: cuiIO
+        cuiIO?: cuiIO.cuiIO
         youtubedl?: youTubeDownloader.youTubeDownloader
         dataIO?: dataIO.ny
         ffmpegConverter?: ffmpegConverter
     }
+    export class ShareData {
+        shareData: {
+            discordBot?: {
+                [botName: string]: discordRealTimeData
+            }
+            expressd?: expressd.expressd
+            cuiIO?: cuiIO.cuiIO
+            youtubedl?: youTubeDownloader.youTubeDownloader
+            dataIO?: dataIO.ny
+            ffmpegConverter?: ffmpegConverter
+        } = {}
+        get expressd(): expressd.expressd {
+            if (!this.shareData.expressd) this.shareData.expressd = new expressd.expressd()
+            return this.shareData.expressd
+        }
+        get cuiIO(): cuiIO.cuiIO {
+            if (!this.shareData.cuiIO) this.shareData.cuiIO = new cuiIO.cuiIO(this)
+            return this.shareData.cuiIO
+        }
+        get youtubedl(): youTubeDownloader.youTubeDownloader {
+            if (!this.shareData.youtubedl) this.shareData.youtubedl = new youTubeDownloader.youTubeDownloader()
+            return this.shareData.youtubedl
+        }
+        get dataIO(): dataIO.ny {
+            if (!this.shareData.dataIO) this.shareData.dataIO = new dataIO.ny()
+            return this.shareData.dataIO
+        }
+        get ffmpegConverter(): ffmpegConverter {
+            if (!this.shareData.ffmpegConverter) this.shareData.ffmpegConverter = new ffmpegConverter()
+            return this.shareData.ffmpegConverter
+        }
+    };
     /**
      * Various Programsの常駐プログラムをすべて終了します。
      * 一括で終了し、必要に応じて保存処理なども行うため、シャットダウンと呼べます。
      * @param shareData shareDataを入力してください。常駐プログラムにアクセスする上で欠かせません。
      * @param option オプションを設定します。
      */
-    export async function shutdown(shareData: shareData, option: {
+    export async function shutdown(ShareData: ShareData, option: {
         /**
          * 進行状況を表示します。
          * @param status どのような処理をしているかの状態を表しています。
@@ -60,23 +92,23 @@ export namespace vpManageClass {
             if (option.message) return option.message
             else return () => {}
         })()
-        if (shareData.discordBot) {
+        if (ShareData.shareData.discordBot) {
             message({ type: "discordBotExit", status: "start" })
-            const botNames = Object.keys(shareData.discordBot)
+            const botNames = Object.keys(ShareData.shareData.discordBot)
             for (let i = 0; i !== botNames.length; i++) {
                 message({ type: "discordBotExit", status: "working", string: botNames[i] })
-                const bot = shareData.discordBot[botNames[i]]
+                const bot = ShareData.shareData.discordBot[botNames[i]]
                 if (bot.status && bot.status.logined && bot.client) bot.client.destroy()
             }
             message({ type: "discordBotExit", status: "end" })
         }
-        if (shareData.expressd) {
+        if (ShareData.shareData.expressd) {
             message({ type: "expressdExit", status: "start" })
-            if (shareData.expressd.server) {
-                shareData.expressd.server.close()
+            if (ShareData.shareData.expressd.server) {
+                ShareData.shareData.expressd.server.close()
             }
-            if (shareData.expressd.redirectServer) {
-                shareData.expressd.redirectServer.close()
+            if (ShareData.shareData.expressd.redirectServer) {
+                ShareData.shareData.expressd.redirectServer.close()
             }
             message({ type: "expressdExit", status: "end" })
         }
@@ -87,7 +119,6 @@ export namespace vpManageClass {
             message({type: "wait", status: "end"})
             process.exit(1)
         } else {
-            if (shareData.cuiIO && shareData.cuiIO.funcSelect) shareData.cuiIO.funcSelect.end = true
             message({type: "exited", status: "end"})
         }
     }
