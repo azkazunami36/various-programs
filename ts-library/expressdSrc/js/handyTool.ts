@@ -8,7 +8,7 @@ import { windowSystem } from "./windowSystem"
  * @returns 
  */
 export async function httpDataRequest(request: string, send: string) {
-    return await new Promise(resolve => {
+    return await new Promise<string>(resolve => {
         const req = new XMLHttpRequest()
         req.open("POST", "http://" + location.hostname + ":" + location.port + "/" + request)
         req.setRequestHeader("content-type", "text/plain;charset=UTF-8")
@@ -20,6 +20,25 @@ export async function httpDataRequest(request: string, send: string) {
 /**
  * Various Programsのメインプロセスと通信するためのAPIです。  
  * 状況を受け取ったり、作業を指示したりすることが出来ます。
+ * ```
+ *  "メインネーム(プログラム名などを入力)": {
+        "名前を入力する(機能などを入力する。メインネームだけで済む場合はmainなどの名前を使用する。)": async () => { // 例１です。簡単なプログラムの場合
+            await httpDataRequest("メインネーム(プログラム名などを入力)/名前を入力する(機能などを入力する。メインネームだけで済む場合はmainなどの名前を使用する。)", "送信したいリクエストまたはデータを送る")
+        },
+        "例２です。複雑なプログラム用です。": async () => {
+            return await new Promise<string>(async resolve => { // 大きなデータを送り、処理をし、完了したかリクエストのデータが完成したら返答をする構文。
+                const response = await new Promise<string>(resolve => {
+                    const req = new XMLHttpRequest()
+                    req.open("POST", "http://" + location.hostname + ":" + location.port + "/API/dataIO/sendFile")
+                    req.send("大きなデータ"); //データを送信
+                    req.onreadystatechange = async () => {
+                        if (req.readyState === 4 && req.status === 200) resolve(req.responseText)
+                    } //レスポンスを返す
+                })
+            })
+        }
+    }
+    ```
  */
 export const API = Object.freeze({
     dataIO: {
@@ -43,7 +62,12 @@ export const API = Object.freeze({
     Log: {},
     EnvSetting: {},
     DiscordBot: {},
-    FFmpegConverter: {}
+    FFmpegConverter: {},
+    testAPI: {
+        one: async (data?: string) => {
+            return await httpDataRequest("API/testAPI/one", "TEST:" + (data ? data : "")) as string
+        }
+    }
 })
 
 /**
@@ -54,16 +78,10 @@ export async function wait(time: number) { await new Promise<void>(resolve => se
 
 /** CSSのセレクタ(.class、#idなど)を入力しそれに対応したスタイルを返す */
 export function getRuleBySelector(selecter: string) {
-    const styleSheets = document.styleSheets; //全てのcssを取得する
-    for (let i = 0; i !== styleSheets.length; i++) { //cssの数だけ
-        const cssRules = styleSheets[i].cssRules //ルールを取得
-        for (let i = 0; i !== cssRules.length; i++) { //ルールの数だけ
-            if (selecter === (cssRules[i] as CSSStyleRule).selectorText) { //ルール名と一致するか
-                return (cssRules[i] as CSSStyleRule).style //見つけたら返す
-            }
-        }
-    }
-    return undefined //見つからなかったらundefined
+    for (let i = 0; i !== document.styleSheets.length; i++) //cssの数だけ
+        for (let is = 0; is !== document.styleSheets[i].cssRules.length; is++) //ルールの数だけ
+            if (selecter === (document.styleSheets[i].cssRules[is] as CSSStyleRule).selectorText) //ルール名と一致するか
+                return (document.styleSheets[i].cssRules[is] as CSSStyleRule).style //見つけたら返す
 }
 
 export interface ShareData {

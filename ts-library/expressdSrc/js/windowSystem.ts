@@ -1,5 +1,6 @@
 import { wait, ShareData } from "./handyTool.js"
 import { SumMouseEvent } from "./mouseCursor.js"
+import { temp, windowSizeID } from "./windowSystemCodeHelper/typeDef.js"
 
 interface windows {
     element: HTMLElement
@@ -97,132 +98,20 @@ export class windowSystem {
     #body: HTMLElement
     /** * ウィンドウと見なした、クラスで作成したElementを保管しています。 */
     #windows: { [name: string]: windows | undefined } = {}
-    #windowSizeID: { [x: string]: string } = {
-        /**
-         * 中央のウィンドウサイズ変更ID
-         * 上側
-         */
-        top: "window-resize-top-zone",
-        /**
-         * 中央のウィンドウサイズ変更ID
-         * 左側
-         */
-        left: "window-resize-left-zone",
-        /**
-         * 中央のウィンドウサイズ変更ID
-         * 右側
-         */
-        right: "window-resize-right-zone",
-        /**
-         * 中央のウィンドウサイズ変更ID
-         * 下側
-         */
-        bottom: "window-resize-bottom-zone",
-        /**
-         * 端のウィンドウサイズ変更ID
-         * 左上側(上)
-         */
-        topLeft: "window-resize-tL-zone",
-        /**
-         * 端のウィンドウサイズ変更ID
-         * 左上側(左)
-         */
-        leftTop: "window-resize-lT-zone",
-        /**
-         * 端のウィンドウサイズ変更ID
-         * 右上側(右)
-         */
-        rightTop: "window-resize-rT-zone",
-        /**
-         * 端のウィンドウサイズ変更ID
-         * 左下側(下)
-         */
-        bottomLeft: "window-resize-bL-zone",
-        /**
-         * 端のウィンドウサイズ変更ID
-         * 右上側(上)
-         */
-        topRight: "window-resize-tR-zone",
-        /**
-         * 端のウィンドウサイズ変更ID
-         * 左下側(左)
-         */
-        leftBottom: "window-resize-lB-zone",
-        /**
-         * 端のウィンドウサイズ変更ID
-         * 右下側(右)
-         */
-        rightBottom: "window-resize-rB-zone",
-        /**
-         * 端のウィンドウサイズ変更ID
-         * 右下側(下)
-         */
-        bottomRight: "window-resize-bR-zone"
-    }
+    #windowSizeID = windowSizeID
     /** 様々な情報の一時的な保管場所です。 */
-    #temp: {
-        /** 最大化ボタンを最初から押しているかどうかの判定をします。 */
-        fullscreenBtn?: string
-        /** 最小化ボタンを最初から押しているかどうかの判定をします。 */
-        miniwindowBtn?: string
-        /** 閉じるボタンを最初から押しているかどうかの判定をします。 */
-        closeBtn?: string
-        /** サイズ変更中のウィンドウのid(識別名)や変更中の箇所、その位置等を記録します。 */
-        resizeingWindow?: {
-            /** ウィンドウの名前 */
-            name: string
-            /** 選択されたresizeのID名 */
-            type: string
-            /** 移動前の状態 */
-            top: number
-            /** 移動前の状態 */
-            left: number
-            /** 移動前の状態 */
-            topSize: number
-            /** 移動前の状態 */
-            leftSize: number
-            /** マウスの間のズレ */
-            clientTop: number
-            /** マウスの間のズレ */
-            clientLeft: number
-            clientX: number
-            clientY: number
-            windowBarLeftLength: number
-            windowBarRightLength: number
-        }
-        /** 移動中のウィンドウのid(識別名)やウィンドウバーからマウスの間のズレを記録します。 */
-        moveingWindow?: {
-            /** IDを記録します。 */
-            name: string
-            /** マウスの間のズレ(縦) */
-            top: number
-            /** マウスの間のズレ(横) */
-            left: number
-        }
-        /** ウィンドウの初期位置を記録します。ウィンドウが複数起動した際、ばらばらに配置されるようになります。 */
+    #temp: temp = {
         windowInitPosition: {
-            top: number,
-            left: number
-        }
-        /**
-         * クリックした時間が記録されます。クリックするたびに更新されます。
-         * これは主にダブルクリックの判定に使用されます。
-         */
-        clickTime: number
-    } = {
-            windowInitPosition: {
-                top: 0,
-                left: 0
-            },
-            clickTime: 0
-        }
+            top: 0,
+            left: 0
+        },
+        clickTime: 0
+    }
     /** ウィンドウの重ね合わせを管理します。 機能と独特のデータが多いため、クラス化しました。 */
     #windowDepthManage = new class {
         /** 親クラスへのリンク */
         #windowSystem: windowSystem
-        constructor(windowSystem: windowSystem) {
-            this.#windowSystem = windowSystem
-        }
+        constructor(windowSystem: windowSystem) { this.#windowSystem = windowSystem }
         /** depthList関数で取得したデータを一時保存する。理由は多分負荷軽減のためのキャッシュ */
         #depthListTemp: string[] | undefined
         #ObjectKeys(strings: string[]) {
@@ -522,7 +411,8 @@ export class windowSystem {
         }
     }(this)
     /**
-     * 触れた要素の親要素がここで管理されているウィンドウであるかどうかを自動で確認します。
+     * その要素の親要素がこのWindow Systemで管理されているウィンドウであるかどうかを確認します。
+     * そうでない場合は無視します。
      * @param e 触れられた要素を入力
      * @param only マウスで選択された要素が別のWindow System管理のウィンドウでないことを保障
      * @returns 
@@ -561,17 +451,17 @@ export class windowSystem {
         this.#body = body
     }
     async #reflash(id: string) {
-        const stat = this.#windows[id]
-        if (stat) {
-            const style = stat.element.style
-            style.top = String(stat.top) + "px"
-            style.left = String(stat.left) + "px"
-            style.width = String(stat.leftSize) + "px"
-            style.height = String(stat.topSize) + "px"
-            style.zIndex = String(stat.depth)
+                    const stat = this.#windows[id]
+            if (stat) {
+                const style = stat.element.style
+                style.top = String(stat.top) + "px"
+                style.left = String(stat.left) + "px"
+                style.width = String(stat.leftSize) + "px"
+                style.height = String(stat.topSize) + "px"
+                style.zIndex = String(stat.depth)
+            }
         }
-    }
-    /**
+        /**
      * ウィンドウの位置や状態を全て確認し、更新します。
      * @param id 識別名を指定すると、特定のウィンドウの状態だけ更新します。
      */
@@ -585,8 +475,7 @@ export class windowSystem {
             }
         }
     }
-    /** @param buttonnull ボタンの状況にかかわらず状態を切り替え */
-    async fullscreenSetting(id: string, buttonnull?: boolean) {
+    async fullscreenSetting(id: string, /** 最大化ボタンがホバーされてる状況かにかかわらず状態を切り替え */buttonnull?: boolean) {
         const stat = this.#windows[id]
         if ((id === this.#temp.fullscreenBtn || buttonnull) && stat) if (stat.full.is) {
             stat.full.is = false
@@ -688,11 +577,14 @@ export class windowSystem {
     /**
      * ウィンドウを作成します。  
      * Elementを入力する際、予め内容を完成させてから入力すると滑らかな動作、不具合が軽減することがあります。
-     * @param name ウィンドウを管理するための名前です。間違えると閉じられなくなります。
-     * @param element 各自プログラムが管理することの出来るElementを入力します。その周りにウィンドウバーなどを装飾します。
-     * @param option オプションを指定する
      */
-    async createWindow(name: string, element: HTMLElement, option: createWindowOption) {
+    async createWindow(
+        /** ウィンドウを管理するための名前です。間違えると閉じられなくなります。*/
+        name: string,
+        /** 各自プログラムが管理することの出来るElementを入力します。その周りにウィンドウバーなどを装飾します。 */
+        element: HTMLElement,
+        /** オプションを指定する */
+        option: createWindowOption) {
         // ウィンドウのメイン
         const master = document.createElement("div")
         master.classList.add("window-master")
@@ -875,6 +767,7 @@ export class windowSystem {
         }
     }
 }
+
 namespace Builder {
     export namespace createWindowOption {
         export class layoutOption {

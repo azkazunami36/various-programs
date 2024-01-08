@@ -87,6 +87,7 @@ namespace youTubeDownloader {
          */
         albumArtwork?: string
     }
+    /** VideoIDに関連付けられたテキスト情報を記録します。 */
     export interface videoMetadata {
         /**
          * VideoIDに関連付けられたYouTubeでのタイトルです。

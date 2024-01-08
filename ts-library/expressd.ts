@@ -214,7 +214,7 @@ export namespace expressd {
             } else {
                 res.status(404)
                 res.end()
-            } 
+            }
         }
         async #post(req: express.Request | http.IncomingMessage, res: express.Response | http.ServerResponse) {
             const urlSplit = req.url?.split("/")
@@ -222,7 +222,7 @@ export namespace expressd {
                 const reqData: {
                     [mainName: string]: {
                         [funcName: string]: {
-                            [name: string]: (() => Promise<string>) | undefined
+                            [name: string]: () => Promise<string> | undefined
                         } | undefined
                     } | undefined
                 } = {
@@ -250,15 +250,47 @@ export namespace expressd {
                         },
                         "discordBot": {
 
+                        },
+                        "testAPI": {
+                            "one": async () => {
+                                const response = await (async () => {
+                                    let data = ""
+                                    req.on("data", chunk => { data += chunk })
+                                    return await new Promise<string>(resolve => { req.on("end", () => { console.log(data + "1");resolve(data) }) })
+                                })()
+                                return "これは「" + response + "」です。"
+                            }
+                        },
+                        // APIの例です。
+                        "メインネーム(プログラム名などを入力)": {
+                            "名前を入力する(機能などを入力する。メインネームだけで済む場合はmainなどの名前を使用する。)": async () => { // 例１です。簡単なプログラムの場合
+                                return "返答" // 返答をreturnで書いた場合は、そのreturnに送った引数、希望はstringをそのまま返答して、通信が終了、操作が完了する。
+                            },
+                            "例２です。少しだけ複雑なプログラムである場合に使えます。": async () => {
+                                return await new Promise<string>(async resolve => { // エラーは起こさないようにする。
+                                    resolve("返答") // 時間がかかる処理の場合や待機が必要な処理、イベントリスナーのふるまいをする際に使用する構文。
+                                })
+                            },
+                            "例３です。複雑なプログラム用です。": async () => {
+                                return await new Promise<string>(async resolve => { // 大きなデータを受け取り、処理をし、完了したかリクエストのデータが完成したら返答をする構文。
+                                    // req.pipe() または
+                                    let data = ""
+                                    req.on("data", chunk => { data += chunk })
+                                    req.on("end", async () => {
+                                        // ...
+                                        resolve("")
+                                    })
+                                })
+                            }
                         }
                     }
                 }
                 const urlOne = reqData[urlSplit[1]]
-                if (!urlOne) { res.end("Request Not Found"); return }
+                if (!urlOne) { res.end("Request Not Found1"); return }
                 const urlTwo = urlOne[urlSplit[2]]
-                if (!urlTwo) { res.end("Request Not Found"); return }
+                if (!urlTwo) { res.end("Request Not Found2"); return }
                 const urlThree = urlTwo[urlSplit[3]]
-                if (!urlThree) { res.end("Request Not Found"); return }
+                if (!urlThree) { res.end("Request Not Found3"); return }
                 res.end(await urlThree())
             }
         }
